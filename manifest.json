@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-sample-plugin",
-	"name": "Sample Plugin",
-	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
-	"description": "This is a sample plugin for Obsidian. This plugin demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
+	"id": "obsidian-web-browser",
+	"name": "Obsidian Web Browser",
+	"version": "0.0.1",
+	"minAppVersion": "0.16.0",
+	"description": "Lets you browse the web within Obsidian.",
+	"author": "Dion Tryban (Trikzon)",
+	"authorUrl": "https://github.com/Trikzon",
 	"isDesktopOnly": false
 }
