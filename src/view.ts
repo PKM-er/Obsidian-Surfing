@@ -6,6 +6,9 @@ export class WebBrowserView extends ItemView {
     private frame: HTMLIFrameElement;
     private searchBar: HTMLInputElement;
     private favicon: HTMLImageElement;
+    private currentUrl: string = "https://duckduckgo.com"; // TODO: Allow customizing home page.
+    private backHistory: Array<string> = [];
+    private forwardHistory: Array<string> = [];
 
     constructor(leaf: WorkspaceLeaf) {
         super(leaf);
@@ -47,6 +50,18 @@ export class WebBrowserView extends ItemView {
         this.favicon.width = 16;
         this.favicon.height = 16;
 
+        // @ts-ignore Back button
+        this.headerEl.children[1].children[0].addEventListener("click", (event: any) => {
+            this.forwardHistory.push(this.currentUrl);
+            this.frame.setAttribute("src", this.backHistory.pop() || "https://duckduckgo.com");
+        });
+
+        // @ts-ignore Forward button
+        this.headerEl.children[1].children[1].addEventListener("click", (event: any) => {
+            this.backHistory.push(this.currentUrl);
+            this.frame.setAttribute("src", this.forwardHistory.pop() || "https://duckduckgo.com");
+        });
+
         // Event to change the view's title to the web page's title.
         this.frame.addEventListener("page-title-updated", (event: any) => {
             // @ts-ignore
@@ -67,6 +82,9 @@ export class WebBrowserView extends ItemView {
         // Event to change the search bar's url when the user navigates to another page.
         this.frame.addEventListener("will-navigate", (event: any) => {
             this.searchBar.value = event.url;
+            this.backHistory.push(this.currentUrl);
+            this.currentUrl = event.url;
+            this.forwardHistory = [];
         });
 
         // Event to change the frame's webpage when the enter key is pressed within the search bar.
@@ -74,6 +92,9 @@ export class WebBrowserView extends ItemView {
             if (!event) { var event: any = window.event; }
             if (event.keyCode == 13) {
                 this.frame.setAttribute("src", this.searchBar.value);
+                this.backHistory.push(this.currentUrl);
+                this.currentUrl = this.searchBar.value;
+                this.forwardHistory = [];
             }
         }, false);
     }
