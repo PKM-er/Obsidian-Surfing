@@ -4,7 +4,7 @@ export const WEB_BROWSER_VIEW_ID = "web-browser-view";
 
 export class WebBrowserView extends ItemView {
     private currentUrl: string;
-    private currentTitle: string = "Web Browser";
+    private currentTitle: string = "New tab";
 
     private searchBar: HTMLInputElement;
     private favicon: HTMLImageElement;
