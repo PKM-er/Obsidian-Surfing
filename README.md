@@ -1,16 +1,9 @@
 # Obsidian Web Browser
+An [Obsidian](https://obsidian.md/) plugin that allows you to browse the web within Obsidian using v0.16.+ tabs.
 
-## To-Do
-- [x] Automatically parse urls or use search engine
-- [ ] Be able to open new tabs on navigating to another site
-- [ ] Duplicate tabs
-- [ ] Working back and forward buttons with history
-- [ ] Home button
-- [ ] Refresh button
-- [ ] Save the page that was last opened on a tab
-- [ ] Setting for home page
-- [ ] Setting for search engine
-- [ ] Autocomplete seach bar
-- [ ] Bookmarks
-- [ ] Open external links within Obsidian
-- [ ] Display external links on the graph
+The core functionality of the plugin, rendering a web view, is greatly influenced by [Ellpeck's Obsidian Custom Frames](https://github.com/Ellpeck/ObsidianCustomFrames) plugin and this plugin wouldn't have be possible without it.
+
+## Road Map
+The [Road Map](https://github.com/users/Trikzon/projects/3/) (upcoming and planned features or enhancements) can be found on the Projects tab.
+
+[<img src="https://user-images.githubusercontent.com/14358394/115450238-f39e8100-a21b-11eb-89d0-fa4b82cdbce8.png" width="200">](https://ko-fi.com/trikzon)
