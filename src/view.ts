@@ -119,7 +119,9 @@ export class WebBrowserView extends ItemView {
 
         var urlRegEx = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
         if (urlRegEx.test(url)) {
-            if (!(url.slice(0, 7).toLowerCase() === "http://" || url.slice(0, 8).toLowerCase() === "https://")) {
+            let first7 = url.slice(0, 7).toLowerCase();
+            let first8 = url.slice(0, 8).toLowerCase();
+            if (!(first7 === "http://" || first7 === "file://" || first8 === "https://")) {
                 url = "https://" + url;
             }
         } else {
