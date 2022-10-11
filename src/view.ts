@@ -134,6 +134,7 @@ export class WebBrowserView extends ItemView {
         if (updateWebView) {
             this.frame.setAttribute("src", url);
         }
+        app.workspace.requestSaveLayout();
     }
 }
 
