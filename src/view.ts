@@ -1,104 +1,140 @@
-import { ItemView, setIcon, WorkspaceLeaf } from "obsidian";
+import { ItemView, ViewStateResult } from "obsidian";
 
 export const WEB_BROWSER_VIEW_ID = "web-browser-view";
 
 export class WebBrowserView extends ItemView {
-    private frame: HTMLIFrameElement;
+    private currentUrl: string;
+    private currentTitle: string = "Web Browser";
+
     private searchBar: HTMLInputElement;
     private favicon: HTMLImageElement;
-    private currentUrl: string = "https://duckduckgo.com"; // TODO: Allow customizing home page.
-    private backHistory: Array<string> = [];
-    private forwardHistory: Array<string> = [];
+    private frame: HTMLIFrameElement;
 
-    constructor(leaf: WorkspaceLeaf) {
-        super(leaf);
+    static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
+        app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+    }
+
+    getDisplayText(): string {
+        return this.currentTitle;
     }
 
     getViewType(): string {
         return WEB_BROWSER_VIEW_ID;
     }
 
-    getDisplayText(): string {
-        return "Web Browser";
-    }
-
     async onOpen() {
-        this.contentEl.empty();
-        this.contentEl.addClass("web-browser-view-content");
+        // Allow views to replace this views.
+        this.navigation = true;
 
-        // Create main web view frame that displays the website.
-        this.frame = document.createElement("webview") as HTMLIFrameElement;
-        this.contentEl.appendChild(this.frame);
-        this.frame.setAttribute("src", "https://duckduckgo.com"); // TODO: Allow customizing home page.
-        this.frame.setAttribute("allowpopups", "");
-        this.frame.addClass("web-browser-frame"); // Used to make the frame fill the entire tab's content space.
+        this.contentEl.empty();
 
         // Create search bar in the header bar.
         this.searchBar = document.createElement("input") as HTMLInputElement;
-        // @ts-ignore
-        this.headerEl.children[2].appendChild(this.searchBar);
         this.searchBar.type = "text";
-        this.searchBar.value = "https://duckduckgo.com"; // TODO: Automatically fill this value based on what homepage is loaded.
         this.searchBar.addClass("web-browser-search-bar");
-        // @ts-ignore
-        this.headerEl.children[2].addClass("web-browser-header-bar"); // Used to remove gradient at left of header bar.
-        // @ts-ignore
-        this.headerEl.children[2].removeChild(this.headerEl.children[2].children[1]); // Remove default title from header bar.
+        this.headerEl.children[2].appendChild(this.searchBar);
+        // CSS class removes the gradient at the right of the header bar.
+        this.headerEl.children[2].addClass("web-browser-header-bar");
+        // Remove default title from header bar.
+        this.headerEl.children[2].removeChild(this.headerEl.children[2].children[1]);
 
-        // Create favicon image element
+        // Create favicon image element.
         this.favicon = document.createElement("img") as HTMLImageElement;
         this.favicon.width = 16;
         this.favicon.height = 16;
 
-        // @ts-ignore Back button
-        this.headerEl.children[1].children[0].addEventListener("click", (event: any) => {
-            this.forwardHistory.push(this.currentUrl);
-            this.frame.setAttribute("src", this.backHistory.pop() || "https://duckduckgo.com");
-        });
+        // Create main web view frame that displays the website.
+        this.frame = document.createElement("webview") as HTMLIFrameElement;
+        this.frame.setAttribute("allowpopups", "");
+        // CSS classes makes frame fill the entire tab's content space.
+        this.frame.addClass("web-browser-frame");
+        this.contentEl.addClass("web-browser-view-content");
+        this.contentEl.appendChild(this.frame);
 
-        // @ts-ignore Forward button
-        this.headerEl.children[1].children[1].addEventListener("click", (event: any) => {
-            this.backHistory.push(this.currentUrl);
-            this.frame.setAttribute("src", this.forwardHistory.pop() || "https://duckduckgo.com");
-        });
+        this.searchBar.addEventListener("keydown", (event: KeyboardEvent) => {
+            if (!event) { var event = window.event as KeyboardEvent; }
+            if (event.key === "Enter") {
+                this.navigate(this.searchBar.value);
+            }
+        }, false);
 
-        // Event to change the view's title to the web page's title.
-        this.frame.addEventListener("page-title-updated", (event: any) => {
+        this.frame.addEventListener("dom-ready", (event: any) => {
+            const { remote } = require('electron')
             // @ts-ignore
-            this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
-            // TODO: Change title on popup when hovering over the title.
+            remote.webContents.fromId(this.frame.getWebContentsId()).setWindowOpenHandler((event: any) => {
+                WebBrowserView.spawnWebBrowserView(true, { url: event.url });
+            });
         });
 
-        // Event to set tab's icon to the web page's favicon
         this.frame.addEventListener("page-favicon-updated", (event: any) => {
-            // @ts-ignore
             this.favicon.src = event.favicons[0];
-            // @ts-ignore
             this.leaf.tabHeaderInnerIconEl.empty();
-            // @ts-ignore
             this.leaf.tabHeaderInnerIconEl.appendChild(this.favicon);
         });
 
-        // Event to change the search bar's url when the user navigates to another page.
-        this.frame.addEventListener("will-navigate", (event: any) => {
-            this.searchBar.value = event.url;
-            this.backHistory.push(this.currentUrl);
-            this.currentUrl = event.url;
-            this.forwardHistory = [];
+        this.frame.addEventListener("page-title-updated", (event: any) => {
+            this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
+            this.currentTitle = event.title;
         });
 
-        // Event to change the frame's webpage when the enter key is pressed within the search bar.
-        this.searchBar.addEventListener("keydown", (event: any) => {
-            if (!event) { var event: any = window.event; }
-            if (event.keyCode == 13) {
-                this.frame.setAttribute("src", this.searchBar.value);
-                this.backHistory.push(this.currentUrl);
-                this.currentUrl = this.searchBar.value;
-                this.forwardHistory = [];
-            }
-        }, false);
+        this.frame.addEventListener("will-navigate", (event: any) => {
+            this.navigate(event.url, true, false);
+        });
+
+        this.frame.addEventListener("did-navigate-in-page", (event: any) => {
+            this.navigate(event.url, true, false);
+        });
+
+        this.frame.addEventListener("new-window", (event: any) => {
+            console.log("Trying to open new window at url: " + event.url);
+            event.preventDefault();
+        });
     }
 
-    async onClose() {
+    async setState(state: WebBrowserViewState, result: ViewStateResult) {
+        this.navigate(state.url, false);
     }
+    
+    getState(): WebBrowserViewState {
+        return { url: this.currentUrl };
+    }
+
+    navigate(url: string, addToHistory: boolean = true, updateWebView: boolean = true) {
+        if (url === "") { return; }
+
+        if (addToHistory) {
+            if (this.leaf.history.backHistory.last()?.state?.state?.url !== this.currentUrl) {
+                this.leaf.history.backHistory.push({ 
+                    state: {
+                        type: WEB_BROWSER_VIEW_ID,
+                        state: this.getState()
+                    },
+                    title: this.currentTitle,
+                    icon: "search"
+                });
+                // Enable the arrow highlight on the back arrow because there's now back history.
+                this.headerEl.children[1].children[0].setAttribute("aria-disabled", "false");
+            }
+        }
+
+        var urlRegEx = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
+        if (urlRegEx.test(url)) {
+            if (!(url.slice(0, 7).toLowerCase() === "http://" || url.slice(0, 8).toLowerCase() === "https://")) {
+                url = "https://" + url;
+            }
+        } else {
+            // TODO: Support other search engines.
+            url = "https://duckduckgo.com/?q=" + url;
+        }
+
+        this.currentUrl = url;
+        this.searchBar.value = url;
+        if (updateWebView) {
+            this.frame.setAttribute("src", url);
+        }
+    }
+}
+
+class WebBrowserViewState {
+    url: string;
 }

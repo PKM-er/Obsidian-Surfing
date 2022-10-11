@@ -1,6 +1,7 @@
 # Obsidian Web Browser
 
 ## To-Do
+- [x] Automatically parse urls or use search engine
 - [ ] Be able to open new tabs on navigating to another site
 - [ ] Duplicate tabs
 - [ ] Working back and forward buttons with history
@@ -8,7 +9,6 @@
 - [ ] Refresh button
 - [ ] Save the page that was last opened on a tab
 - [ ] Setting for home page
-- [ ] Automatically parse urls or use search engine
 - [ ] Setting for search engine
 - [ ] Autocomplete seach bar
 - [ ] Bookmarks
