@@ -1,5 +1,5 @@
 # Obsidian Web Browser
-An [Obsidian](https://obsidian.md/) plugin that allows you to browse the web within Obsidian using v0.16.+ tabs.
+An [Obsidian](https://obsidian.md/) plugin that allows you to browse the web within Obsidian using v1.0 tabs.
 
 The core functionality of the plugin, rendering a web view, is greatly influenced by [Ellpeck's Obsidian Custom Frames](https://github.com/Ellpeck/ObsidianCustomFrames) plugin and this plugin wouldn't have be possible without it.
 
