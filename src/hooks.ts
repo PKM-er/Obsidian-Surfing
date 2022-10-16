@@ -16,6 +16,11 @@ export class FunctionHooks {
                 urlString = url.toString();
             }
 
+            // If Obsidian wants to open a popup window, let it.
+            if (urlString === "about:blank" && features) {
+                return FunctionHooks.ogWindow$Open.call(window, url, target, features);
+            }
+
             // TODO: Open external link in current leaf when meta key isn't being held down.
             WebBrowserView.spawnWebBrowserView(true, { url: urlString });
             return null;
