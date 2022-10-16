@@ -1,8 +1,11 @@
-import { Plugin } from "obsidian";
+import { EventRef, ItemView, Plugin } from "obsidian";
+import { HeaderBar } from "./header_bar";
 import { FunctionHooks } from "./hooks";
 import { WebBrowserView, WEB_BROWSER_VIEW_ID } from "./web_browser_view";
 
 export default class MyPlugin extends Plugin {
+	private onLayoutChangeEventRef: EventRef;
+
 	async onload() {
 		await this.loadSettings();
 
@@ -19,11 +22,34 @@ export default class MyPlugin extends Plugin {
 				}
 			);
 		});
+
+		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
+			var activeView = this.app.workspace.getActiveViewOfType(ItemView);
+			if (activeView) {
+				// Check if the view is a "New tab" view. I don't think this class is used elsewhere. I sure hope not.
+				if (activeView.contentEl.children[0].hasClass("empty-state")) {
+					// Check if the "New tab" view has already been processed and has a header bar already.
+					if (!activeView.headerEl.children[2].hasClass("web-browser-header-bar")) {
+						var headerBar = new HeaderBar(activeView.headerEl.children[2]);
+						headerBar.addOnSearchBarEnterListener((url: string) => {
+							WebBrowserView.spawnWebBrowserView(false, { url });
+						});
+					}
+				}
+			}
+		});
 	}
 
 	onunload() {
 		this.app.workspace.detachLeavesOfType(WEB_BROWSER_VIEW_ID);
 		FunctionHooks.onunload();
+		this.app.workspace.offref(this.onLayoutChangeEventRef);
+
+		// Clean up header bar added to "New tab" views when plugin is disabled.
+		var searchBars = document.getElementsByClassName("web-browser-search-bar");
+		while (searchBars.length > 0) {
+			searchBars[0].parentElement?.removeChild(searchBars[0]);
+		}
 	}
 
 	async loadSettings() {

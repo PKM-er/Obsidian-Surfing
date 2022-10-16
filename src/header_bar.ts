@@ -11,6 +11,7 @@ export class HeaderBar {
         // Create search bar in header bar.
         this.searchBar = document.createElement("input");
         this.searchBar.type = "text";
+        this.searchBar.placeholder = "Search with DuckDuckGo or enter address"
         this.searchBar.addClass("web-browser-search-bar");
         parent.appendChild(this.searchBar);
 
