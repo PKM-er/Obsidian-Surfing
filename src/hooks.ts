@@ -1,4 +1,4 @@
-import { WebBrowserView } from "./view";
+import { WebBrowserView } from "./web_browser_view";
 
 export class FunctionHooks {
     private static ogWindow$Open: (url?: string | URL, target?: string, features?: string) => WindowProxy | null;

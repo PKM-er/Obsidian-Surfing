@@ -1,4 +1,5 @@
 import { ItemView, ViewStateResult } from "obsidian";
+import { HeaderBar } from "./header_bar";
 
 export const WEB_BROWSER_VIEW_ID = "web-browser-view";
 
@@ -6,7 +7,7 @@ export class WebBrowserView extends ItemView {
     private currentUrl: string;
     private currentTitle: string = "New tab";
 
-    private searchBar: HTMLInputElement;
+    private headerBar: HeaderBar;
     private favicon: HTMLImageElement;
     private frame: HTMLIFrameElement;
 
@@ -29,14 +30,7 @@ export class WebBrowserView extends ItemView {
         this.contentEl.empty();
 
         // Create search bar in the header bar.
-        this.searchBar = document.createElement("input") as HTMLInputElement;
-        this.searchBar.type = "text";
-        this.searchBar.addClass("web-browser-search-bar");
-        this.headerEl.children[2].appendChild(this.searchBar);
-        // CSS class removes the gradient at the right of the header bar.
-        this.headerEl.children[2].addClass("web-browser-header-bar");
-        // Remove default title from header bar.
-        this.headerEl.children[2].removeChild(this.headerEl.children[2].children[1]);
+        this.headerBar = new HeaderBar(this.headerEl.children[2]);
 
         // Create favicon image element.
         this.favicon = document.createElement("img") as HTMLImageElement;
@@ -51,12 +45,9 @@ export class WebBrowserView extends ItemView {
         this.contentEl.addClass("web-browser-view-content");
         this.contentEl.appendChild(this.frame);
 
-        this.searchBar.addEventListener("keydown", (event: KeyboardEvent) => {
-            if (!event) { var event = window.event as KeyboardEvent; }
-            if (event.key === "Enter") {
-                this.navigate(this.searchBar.value);
-            }
-        }, false);
+        this.headerBar.addOnSearchBarEnterListener((url: string) => {
+            this.navigate(url);
+        });
 
         this.frame.addEventListener("dom-ready", (event: any) => {
             const { remote } = require('electron')
@@ -130,7 +121,7 @@ export class WebBrowserView extends ItemView {
         }
 
         this.currentUrl = url;
-        this.searchBar.value = url;
+        this.headerBar.setSearchBarUrl(url);
         if (updateWebView) {
             this.frame.setAttribute("src", url);
         }

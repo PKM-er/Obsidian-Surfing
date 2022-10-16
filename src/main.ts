@@ -1,6 +1,6 @@
 import { Plugin } from "obsidian";
 import { FunctionHooks } from "./hooks";
-import { WebBrowserView, WEB_BROWSER_VIEW_ID } from "./view";
+import { WebBrowserView, WEB_BROWSER_VIEW_ID } from "./web_browser_view";
 
 export default class MyPlugin extends Plugin {
 	async onload() {
