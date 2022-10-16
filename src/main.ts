@@ -13,16 +13,7 @@ export default class MyPlugin extends Plugin {
 
 		FunctionHooks.onload();
 
-		// TODO: Replace ribbon icon with better way to open web browser tab.
-		this.addRibbonIcon("search", "Web Browser", (event: PointerEvent) => {
-			WebBrowserView.spawnWebBrowserView(
-				process.platform === "darwin" ? event.metaKey : event.ctrlKey,
-				{
-					url: "https://duckduckgo.com"
-				}
-			);
-		});
-
+		// Add header bar to "New tab" view.
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
 			var activeView = this.app.workspace.getActiveViewOfType(ItemView);
 			if (activeView) {
