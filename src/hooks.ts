@@ -17,7 +17,10 @@ export class FunctionHooks {
             }
 
             // If Obsidian wants to open a popup window, let it.
-            if (urlString === "about:blank" && features) {
+			// Check if url is http or https
+			// Should do nothing because it's not a http or https link
+			// Now default behavior will catch other link types like obsidian:// or booknote:// etc.
+            if ((urlString === "about:blank" && features) || (!urlString.startsWith("http://") && !urlString.startsWith("https://"))) {
                 return FunctionHooks.ogWindow$Open.call(window, url, target, features);
             }
 
