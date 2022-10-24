@@ -57,6 +57,11 @@ export class WebBrowserView extends ItemView {
             });
         });
 
+		// When focus set current leaf active;
+		this.frame.addEventListener("focus", (event: any) => {
+			app.workspace.setActiveLeaf(this.leaf);
+		});
+
         this.frame.addEventListener("page-favicon-updated", (event: any) => {
             this.favicon.src = event.favicons[0];
             this.leaf.tabHeaderInnerIconEl.empty();
@@ -85,7 +90,7 @@ export class WebBrowserView extends ItemView {
     async setState(state: WebBrowserViewState, result: ViewStateResult) {
         this.navigate(state.url, false);
     }
-    
+
     getState(): WebBrowserViewState {
         return { url: this.currentUrl };
     }
@@ -95,7 +100,7 @@ export class WebBrowserView extends ItemView {
 
         if (addToHistory) {
             if (this.leaf.history.backHistory.last()?.state?.state?.url !== this.currentUrl) {
-                this.leaf.history.backHistory.push({ 
+                this.leaf.history.backHistory.push({
                     state: {
                         type: WEB_BROWSER_VIEW_ID,
                         state: this.getState()
