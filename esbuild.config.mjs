@@ -31,7 +31,6 @@ esbuild.build({
 		'@lezer/common',
 		'@lezer/highlight',
 		'@lezer/lr',
-		"@cliqz/adblocker-electron-preload",
 		...builtins],
 	format: 'cjs',
 	watch: !prod,
