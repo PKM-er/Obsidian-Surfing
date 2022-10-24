@@ -1,5 +1,6 @@
 import { ItemView, ViewStateResult } from "obsidian";
 import { HeaderBar } from "./header_bar";
+import { remote } from "electron";
 
 export const WEB_BROWSER_VIEW_ID = "web-browser-view";
 
@@ -55,6 +56,30 @@ export class WebBrowserView extends ItemView {
             remote.webContents.fromId(this.frame.getWebContentsId()).setWindowOpenHandler((event: any) => {
                 WebBrowserView.spawnWebBrowserView(true, { url: event.url });
             });
+
+			// For getting keyboard event from webview
+            // @ts-ignore
+			remote.webContents.fromId(this.frame.getWebContentsId()).on('before-input-event', (event, input) => {
+				if (input.type !== 'keyDown') {
+					return;
+				}
+
+				// Create a fake KeyboardEvent from the data provided
+				const emulatedKeyboardEvent = new KeyboardEvent('keydown', {
+					code: input.code,
+					key: input.key,
+					shiftKey: input.shift,
+					altKey: input.alt,
+					ctrlKey: input.control,
+					metaKey: input.meta,
+					repeat: input.isAutoRepeat
+				});
+
+				// TODO Detect pressed hotkeys if exists in default hotkeys list
+				// If so, prevent default and execute the hotkey
+				// If not, send the event to the webview
+				activeDocument.body.dispatchEvent(emulatedKeyboardEvent)
+			});
         });
 
         this.frame.addEventListener("page-favicon-updated", (event: any) => {
@@ -85,7 +110,7 @@ export class WebBrowserView extends ItemView {
     async setState(state: WebBrowserViewState, result: ViewStateResult) {
         this.navigate(state.url, false);
     }
-    
+
     getState(): WebBrowserViewState {
         return { url: this.currentUrl };
     }
@@ -95,7 +120,7 @@ export class WebBrowserView extends ItemView {
 
         if (addToHistory) {
             if (this.leaf.history.backHistory.last()?.state?.state?.url !== this.currentUrl) {
-                this.leaf.history.backHistory.push({ 
+                this.leaf.history.backHistory.push({
                     state: {
                         type: WEB_BROWSER_VIEW_ID,
                         state: this.getState()
