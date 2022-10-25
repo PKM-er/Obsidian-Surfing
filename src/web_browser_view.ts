@@ -75,6 +75,11 @@ export class WebBrowserView extends ItemView {
 					repeat: input.isAutoRepeat
 				});
 
+				// If the keyboard event is F5, reload the page
+				if (input.key === 'F5') {
+					remote.webContents.fromId(this.frame.getWebContentsId()).reload();
+				}
+
 				// TODO Detect pressed hotkeys if exists in default hotkeys list
 				// If so, prevent default and execute the hotkey
 				// If not, send the event to the webview
