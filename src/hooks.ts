@@ -1,5 +1,6 @@
 import { WebBrowserView } from "./web_browser_view";
 
+// TODO: Change this whole thing to use https://github.com/pjeby/monkey-around instead.
 export class FunctionHooks {
     private static ogWindow$Open: (url?: string | URL, target?: string, features?: string) => WindowProxy | null;
 
@@ -16,10 +17,10 @@ export class FunctionHooks {
                 urlString = url.toString();
             }
 
-            // If Obsidian wants to open a popup window, let it.
-			// Check if url is http or https
-			// Should do nothing because it's not a http or https link
-			// Now default behavior will catch other link types like obsidian:// or booknote:// etc.
+            // 1. Allows Obsidian to open a popup window if url is "about:blank" and features is not null
+            // TODO: There might be a better way to detect if it's a popup window.
+            // 2. Perform default behavior if the url isn't "http://" or "https://"
+            // TODO: Change to `isWebUri()` when I change to use the valid-url library.
             if ((urlString === "about:blank" && features) || (!urlString.startsWith("http://") && !urlString.startsWith("https://"))) {
                 return FunctionHooks.ogWindow$Open.call(window, url, target, features);
             }
