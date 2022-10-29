@@ -83,6 +83,11 @@ export class WebBrowserView extends ItemView {
 			});
         });
 
+		// When focus set current leaf active;
+		this.frame.addEventListener("focus", (event: any) => {
+			app.workspace.setActiveLeaf(this.leaf);
+		});
+
         this.frame.addEventListener("page-favicon-updated", (event: any) => {
             this.favicon.src = event.favicons[0];
             this.leaf.tabHeaderInnerIconEl.empty();
