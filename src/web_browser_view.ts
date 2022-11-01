@@ -139,7 +139,11 @@ export class WebBrowserView extends ItemView {
             }
         }
 
-        var urlRegEx = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
+		// Support both http:// and https://
+		// TODO: ?Should we support Localhost?
+		// And the before one is : /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi; which will only match `blabla.blabla`
+		// Support 192.168.0.1 for some local software server, and localhost
+        var urlRegEx = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
         if (urlRegEx.test(url)) {
             let first7 = url.slice(0, 7).toLowerCase();
             let first8 = url.slice(0, 8).toLowerCase();
