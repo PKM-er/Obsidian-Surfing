@@ -22,6 +22,8 @@ export default class MyPlugin extends Plugin {
 					// Check if the "New tab" view has already been processed and has a header bar already.
 					if (!activeView.headerEl.children[2].hasClass("web-browser-header-bar")) {
 						var headerBar = new HeaderBar(activeView.headerEl.children[2]);
+						// Focus on current inputEl
+						headerBar.focus();
 						headerBar.addOnSearchBarEnterListener((url: string) => {
 							WebBrowserView.spawnWebBrowserView(false, { url });
 						});

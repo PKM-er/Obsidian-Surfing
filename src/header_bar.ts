@@ -32,4 +32,8 @@ export class HeaderBar {
     setSearchBarUrl(url: string) {
         this.searchBar.value = url;
     }
+
+	focus() {
+		this.searchBar.focus();
+	}
 }
