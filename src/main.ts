@@ -1,7 +1,8 @@
-import { EventRef, ItemView, Plugin } from "obsidian";
+import { EventRef, ItemView, Notice, Plugin } from "obsidian";
 import { HeaderBar } from "./header_bar";
 import { FunctionHooks } from "./hooks";
 import { WebBrowserView, WEB_BROWSER_VIEW_ID } from "./web_browser_view";
+import { HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID, WebBrowserFileView } from "./web_browser_file_view";
 
 export default class MyPlugin extends Plugin {
 	private onLayoutChangeEventRef: EventRef;
@@ -10,6 +11,15 @@ export default class MyPlugin extends Plugin {
 		await this.loadSettings();
 
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new WebBrowserView(leaf));
+
+		// Feature to support html/htm files.
+		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new WebBrowserFileView(leaf));
+
+		try {
+			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
+		} catch (error) {
+			new Notice(`File extensions ${HTML_FILE_EXTENSIONS} had been registered by other plugin!`);
+		}
 
 		FunctionHooks.onload();
 

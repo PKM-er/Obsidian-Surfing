@@ -1,4 +1,4 @@
-import { ItemView, ViewStateResult } from "obsidian";
+import { FileView, ItemView, TFile, ViewStateResult } from "obsidian";
 import { HeaderBar } from "./header_bar";
 import { remote } from "electron";
 
@@ -53,7 +53,7 @@ export class WebBrowserView extends ItemView {
         this.frame.addEventListener("dom-ready", (event: any) => {
             // @ts-ignore
             let webContents = remote.webContents.fromId(this.frame.getWebContentsId());
-            
+
             // Open new browser tab if the web view requests it.
             webContents.setWindowOpenHandler((event: any) => {
                 WebBrowserView.spawnWebBrowserView(true, { url: event.url });
@@ -146,10 +146,11 @@ export class WebBrowserView extends ItemView {
             if (!(first7 === "http://" || first7 === "file://" || first8 === "https://")) {
                 url = "https://" + url;
             }
-        } else {
-            // TODO: Support other search engines.
-            url = "https://duckduckgo.com/?q=" + url;
-        }
+        } else if(!(url.slice(0, 7) === "file://") || !(/\.htm(l)?$/g.test(url))) {
+			// If url is not a valid FILE url, search it with search engine.
+			// TODO: Support other search engines.
+			url = "https://duckduckgo.com/?q=" + url;
+		}
 
         this.currentUrl = url;
         this.headerBar.setSearchBarUrl(url);
