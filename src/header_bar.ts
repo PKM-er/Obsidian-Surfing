@@ -6,14 +6,15 @@ export class HeaderBar {
         // CSS class removes the gradient at the right of the header bar.
         parent.addClass("web-browser-header-bar");
         // Remove default title from header bar.
-        parent.removeChild(parent.children[1]);
+		// Use Obsidian API to remove the title.
+		parent.empty();
 
         // Create search bar in header bar.
-        this.searchBar = document.createElement("input");
-        this.searchBar.type = "text";
-        this.searchBar.placeholder = "Search with DuckDuckGo or enter address"
-        this.searchBar.addClass("web-browser-search-bar");
-        parent.appendChild(this.searchBar);
+		// Use Obsidian CreateEL method.
+		this.searchBar = parent.createEl("input", {
+			type: "text",
+			placeholder: "Search with DuckDuckGo or enter address",
+			cls: "web-browser-search-bar"});
 
         this.searchBar.addEventListener("keydown", (event: KeyboardEvent) => {
             if (!event) { var event = window.event as KeyboardEvent; }
