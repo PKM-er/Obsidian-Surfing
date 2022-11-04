@@ -16,10 +16,6 @@ export class WebBrowserView extends ItemView {
         app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
     }
 
-	static spawnWebBrowserViewInNewWindow(state: WebBrowserViewState) {
-		app.workspace.getLeaf("window").setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
-	}
-
     getDisplayText(): string {
         return this.currentTitle;
     }
