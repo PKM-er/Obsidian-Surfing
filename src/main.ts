@@ -41,6 +41,27 @@ export default class MyPlugin extends Plugin {
 				}
 			}
 		});
+
+		// Use checkCallback method to check if the view is WebBrowserView;
+		// And change the default private to public.
+		this.addCommand({
+		    id: 'open-current-url-with-external-browser',
+		    name: 'Open Current Url With External Browser',
+		    checkCallback: (checking: boolean) => {
+		        // Conditions to check
+		        const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
+		        if (webbrowserView) {
+		            // If checking is true, we're simply "checking" if the command can be run.
+		            // If checking is false, then we want to actually perform the operation.
+		            if (!checking) {
+						FunctionHooks.ogWindow$Open.call(window, webbrowserView.getState()?.url, "_blank");
+		            }
+
+		            // This command will only show up in Command Palette when the check function returns true
+		            return true;
+		        }
+		    }
+		});
 	}
 
 	onunload() {

@@ -2,7 +2,7 @@ import { WebBrowserView } from "./web_browser_view";
 
 // TODO: Change this whole thing to use https://github.com/pjeby/monkey-around instead.
 export class FunctionHooks {
-    private static ogWindow$Open: (url?: string | URL, target?: string, features?: string) => WindowProxy | null;
+    public static ogWindow$Open: (url?: string | URL, target?: string, features?: string) => WindowProxy | null;
 
     static onload() {
         FunctionHooks.ogWindow$Open = window.open;
