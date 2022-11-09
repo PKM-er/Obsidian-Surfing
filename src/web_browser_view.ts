@@ -1,6 +1,7 @@
-import { FileView, ItemView, TFile, ViewStateResult } from "obsidian";
+import { ItemView, TFile, ViewStateResult } from "obsidian";
 import { HeaderBar } from "./header_bar";
-import { remote } from "electron";
+import { remote, clipboard } from "electron";
+import { FunctionHooks } from "./hooks";
 
 export const WEB_BROWSER_VIEW_ID = "web-browser-view";
 
@@ -11,6 +12,8 @@ export class WebBrowserView extends ItemView {
     private headerBar: HeaderBar;
     private favicon: HTMLImageElement;
     private frame: HTMLIFrameElement;
+
+	onDom: any;
 
     static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
         app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
@@ -58,6 +61,65 @@ export class WebBrowserView extends ItemView {
             webContents.setWindowOpenHandler((event: any) => {
                 WebBrowserView.spawnWebBrowserView(true, { url: event.url });
             });
+
+			const { Menu, MenuItem } = remote;
+			webContents.on("context-menu", (event: any, params: any) => {
+				    // Should add whitelist for some websites that have their own context menu.
+				    // Maybe notion? word?
+					event.preventDefault();
+
+					const menu = new Menu();
+					// Basic Menu For Webview
+					// TODO: Support adding different commands to the menu.
+				    // Possible to use Obsidian Default API?
+					menu.append(
+						new MenuItem(
+							{
+								label: 'Open Current URL In External Browser',
+								click: function() {
+									FunctionHooks.ogWindow$Open.call(window, params.pageURL, "_blank");
+								}
+							}
+						)
+					);
+
+				    // TODO: Support customize menu items.
+				    // TODO: Support cut, paste, select All.
+				    // Only works when something is selected.
+					if(params.selectionText) {
+						menu.append(new MenuItem({ type: 'separator' }));
+						menu.append(new MenuItem({ label: 'Copy Blank Text', click: function() {
+							try {
+								webContents.copy();
+								console.log('Page URL copied to clipboard');
+							} catch (err) {
+								console.error('Failed to copy: ', err);
+							}
+						}}));
+						menu.append(new MenuItem({ label: 'Copy Highlight Link', click: function() {
+							try {
+								const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
+								const selectionText = params.selectionText;
+								const markdownlink = `[${selectionText}](${linkToHighlight})`;
+								clipboard.writeText(markdownlink);
+								console.log('Link URL copied to clipboard');
+							} catch (err) {
+								console.error('Failed to copy: ', err);
+							}
+						}}));
+
+						menu.popup(webContents);
+					}
+
+				    // Should use this method to prevent default copy+c
+				    // The default context menu is related to the shadow root that in the webview tag
+				    // So it is not possible to preventDefault because it cannot be accessed.
+				    // I tried to use this.frame.shadowRoot.childNodes to locate the iframe HTML element
+					// It doesn't work.
+					setTimeout(()=>{
+						menu.popup(webContents);
+					}, 0)
+			}, false);
 
 			// For getting keyboard event from webview
 			webContents.on('before-input-event', (event: any, input: any) => {
@@ -144,13 +206,15 @@ export class WebBrowserView extends ItemView {
 		// And the before one is : /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi; which will only match `blabla.blabla`
 		// Support 192.168.0.1 for some local software server, and localhost
         var urlRegEx = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
+		var urlRegEx2 = /((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+(:[0-9]+)?|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g;
+		// console.log(urlRegEx.test(url));
         if (urlRegEx.test(url)) {
             let first7 = url.slice(0, 7).toLowerCase();
             let first8 = url.slice(0, 8).toLowerCase();
             if (!(first7 === "http://" || first7 === "file://" || first8 === "https://")) {
                 url = "https://" + url;
             }
-        } else if(!(url.slice(0, 7) === "file://") || !(/\.htm(l)?$/g.test(url))) {
+        } else if(!(url.slice(0, 7) === "file://") || !(/\.htm(l)?/g.test(url)) && !urlRegEx2.test(url)) {
 			// If url is not a valid FILE url, search it with search engine.
 			// TODO: Support other search engines.
 			url = "https://duckduckgo.com/?q=" + url;
