@@ -13,8 +13,6 @@ export class WebBrowserView extends ItemView {
     private favicon: HTMLImageElement;
     private frame: HTMLIFrameElement;
 
-	onDom: any;
-
     static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
         app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
     }
@@ -64,8 +62,6 @@ export class WebBrowserView extends ItemView {
 
 			const { Menu, MenuItem } = remote;
 			webContents.on("context-menu", (event: any, params: any) => {
-				    // Should add whitelist for some websites that have their own context menu.
-				    // Maybe notion? word?
 					event.preventDefault();
 
 					const menu = new Menu();
