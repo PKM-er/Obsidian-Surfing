@@ -179,7 +179,7 @@ export class WebBrowserView extends ItemView {
         return { url: this.currentUrl };
     }
 
-    navigate(url: string, addToHistory: boolean = true, updateWebView: boolean = true) {
+	navigate(url: string, addToHistory: boolean = true, updateWebView: boolean = true) {
         if (url === "") { return; }
 
         if (addToHistory) {
