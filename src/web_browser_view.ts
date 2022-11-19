@@ -82,16 +82,24 @@ export class WebBrowserView extends ItemView {
 							click: function() {
 								FunctionHooks.ogWindow$Open.call(window, params.pageURL, "_blank");
 							}
-						}
-					)
-				);
+						)
+					);
 
-				// TODO: Support customize menu items.
-				// TODO: Support cut, paste, select All.
-				// Only works when something is selected.
-				if(params.selectionText) {
-					menu.append(new MenuItem({ type: 'separator' }));
-					menu.append(new MenuItem({ label: 'Copy Blank Text', click: function() {
+				    // TODO: Support customize menu items.
+				    // TODO: Support cut, paste, select All.
+				    // Only works when something is selected.
+					if(params.selectionText) {
+						menu.append(new MenuItem({ type: 'separator' }));
+						menu.append(new MenuItem({ label: 'Search Text', click: function() {
+								try {
+									WebBrowserView.spawnWebBrowserView(true, { url: "https://www.google.com/search?q=" + params.selectionText });
+									console.log('Page URL copied to clipboard');
+								} catch (err) {
+									console.error('Failed to copy: ', err);
+								}
+							}}));
+						menu.append(new MenuItem({ type: 'separator' }));
+						menu.append(new MenuItem({ label: 'Copy Blank Text', click: function() {
 							try {
 								webContents.copy();
 								console.log('Page URL copied to clipboard');
@@ -208,16 +216,15 @@ export class WebBrowserView extends ItemView {
 		// TODO: ?Should we support Localhost?
 		// And the before one is : /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi; which will only match `blabla.blabla`
 		// Support 192.168.0.1 for some local software server, and localhost
-		var urlRegEx = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
-		var urlRegEx2 = /((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+(:[0-9]+)?|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g;
-		// console.log(urlRegEx.test(url));
-		if (urlRegEx.test(url)) {
-			let first7 = url.slice(0, 7).toLowerCase();
-			let first8 = url.slice(0, 8).toLowerCase();
-			if (!(first7 === "http://" || first7 === "file://" || first8 === "https://")) {
-				url = "https://" + url;
-			}
-		} else if(!(url.slice(0, 7) === "file://") || !(/\.htm(l)?/g.test(url)) && !urlRegEx2.test(url)) {
+        var urlRegEx = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
+		var urlRegEx2 = /((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+(:[0-9]+)?|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g;
+        if (urlRegEx.test(url)) {
+            let first7 = url.slice(0, 7).toLowerCase();
+            let first8 = url.slice(0, 8).toLowerCase();
+            if (!(first7 === "http://" || first7 === "file://" || first8 === "https://")) {
+                url = "https://" + url;
+            }
+        } else if((!(url.slice(0, 7) === "file://") || !(/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url))) {
 			// If url is not a valid FILE url, search it with search engine.
 			// TODO: Support other search engines.
 			url = (this.plugin.settings.defaultSearchEngine != 'custom' ? SEARCH_ENGINES[this.plugin.settings.defaultSearchEngine] : this.plugin.settings.customSearchUrl) + url;
