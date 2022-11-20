@@ -79,9 +79,10 @@ export class WebBrowserView extends ItemView {
 					new MenuItem(
 						{
 							label: 'Open Current URL In External Browser',
-							click: function() {
+							click: function () {
 								FunctionHooks.ogWindow$Open.call(window, params.pageURL, "_blank");
 							}
+						}
 						)
 					);
 

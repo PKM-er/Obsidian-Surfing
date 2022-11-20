@@ -21,7 +21,7 @@ export class FunctionHooks {
             // TODO: There might be a better way to detect if it's a popup window.
             // 2. Perform default behavior if the url isn't "http://" or "https://"
             // TODO: Change to `isWebUri()` when I change to use the valid-url library.
-            if ((urlString === "about:blank" && features) || (!urlString.startsWith("http://") && !urlString.startsWith("https://") && !urlString.startsWith("file://"))) {
+            if ((urlString === "about:blank" && features) || (!urlString.startsWith("http://") && !urlString.startsWith("https://") && !(urlString.startsWith("file://") && /\.htm(l)?/g.test(urlString)))) {
                 return FunctionHooks.ogWindow$Open.call(window, url, target, features);
             }
 
