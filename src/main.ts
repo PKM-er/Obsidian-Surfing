@@ -43,24 +43,13 @@ export default class MyPlugin extends Plugin {
 		}
 
 		FunctionHooks.onload();
+		// Update all leaf contains empty view when restart Obsidian
+		this.updateEmptyLeaf(false);
 
 		// Add header bar to "New tab" view.
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
 			const activeView = this.app.workspace.getActiveViewOfType(ItemView);
-			if (activeView) {
-				// Check if the view is a "New tab" view. I don't think this class is used elsewhere. I sure hope not.
-				if (activeView.contentEl.children[0].hasClass("empty-state")) {
-					// Check if the "New tab" view has already been processed and has a header bar already.
-					if (!activeView.headerEl.children[2].hasClass("web-browser-header-bar")) {
-						const headerBar = new HeaderBar(activeView.headerEl.children[2]);
-						// Focus on current inputEl
-						headerBar.focus();
-						headerBar.addOnSearchBarEnterListener((url: string) => {
-							WebBrowserView.spawnWebBrowserView(false, { url });
-						});
-					}
-				}
-			}
+			if (activeView) this.addHeader(activeView);
 		});
 
 		// Use checkCallback method to check if the view is WebBrowserView;
@@ -91,10 +80,45 @@ export default class MyPlugin extends Plugin {
 		this.app.workspace.offref(this.onLayoutChangeEventRef);
 
 		// Clean up header bar added to "New tab" views when plugin is disabled.
-		const searchBars = document.getElementsByClassName("web-browser-search-bar");
-		while (searchBars.length > 0) {
-			searchBars[0].parentElement?.removeChild(searchBars[0]);
+		// Using Obsidian getViewType
+		this.updateEmptyLeaf(true);
+	}
+
+	addHeader(currentView: ItemView) {
+		if (!currentView) return;
+		// Check if new leaf's view is empty, else return.
+		if (currentView.getViewType() != "empty") return;
+		// Check if the "New tab" view has already been processed and has a header bar already.
+		if (!currentView.headerEl.children[2].hasClass("web-browser-header-bar")) {
+			const headerBar = new HeaderBar(currentView.headerEl.children[2]);
+			// Focus on current inputEl
+			headerBar.focus();
+			headerBar.addOnSearchBarEnterListener((url: string) => {
+				WebBrowserView.spawnWebBrowserView(false, { url });
+			});
 		}
+	}
+
+	removeHeader(currentView: ItemView) {
+		console.log(currentView.headerEl.children[2]);
+		if (!currentView) return;
+		// Check if new leaf's view is empty, else return.
+		if (currentView.getViewType() != "empty") return;
+		// Check if the "New tab" view has already been processed and has a header bar already.
+		if (currentView.headerEl.children[2].hasClass("web-browser-header-bar")) {
+			currentView.headerEl.children[2].empty();
+			currentView.headerEl.children[2].removeClass("web-browser-header-bar");
+		}
+	}
+
+	updateEmptyLeaf(remove?: boolean) {
+		const emptyLeaves = this.app.workspace.getLeavesOfType("empty");
+		emptyLeaves.forEach((leaf) => {
+			if (leaf.view instanceof ItemView) {
+				if (!remove) this.addHeader(leaf.view);
+				if (remove) this.removeHeader(leaf.view);
+			}
+		});
 	}
 
 	async loadSettings() {
