@@ -94,7 +94,7 @@ export class WebBrowserView extends ItemView {
 					menu.append(new MenuItem({
 						label: 'Search Text', click: function () {
 							try {
-								WebBrowserView.spawnWebBrowserView(true, { url: "https://www.google.com/search?q=" + params.selectionText });
+								WebBrowserView.spawnWebBrowserView(true, { url: params.selectionText });
 								console.log('Page URL copied to clipboard');
 							} catch (err) {
 								console.error('Failed to copy: ', err);
