@@ -1,6 +1,6 @@
-import { ItemView, TFile, ViewStateResult, WorkspaceLeaf } from "obsidian";
+import { ItemView, ViewStateResult, WorkspaceLeaf } from "obsidian";
 import { HeaderBar } from "./header_bar";
-import { remote, clipboard } from "electron";
+import { clipboard, remote } from "electron";
 import { FunctionHooks } from "./hooks";
 import MyPlugin, { SEARCH_ENGINES } from "./main";
 
@@ -9,7 +9,7 @@ export const WEB_BROWSER_VIEW_ID = "web-browser-view";
 export class WebBrowserView extends ItemView {
 	plugin: MyPlugin;
 	private currentUrl: string;
-	private currentTitle: string = "New tab";
+	private currentTitle = "New tab";
 
 	private headerBar: HeaderBar;
 	private favicon: HTMLImageElement;
@@ -60,7 +60,7 @@ export class WebBrowserView extends ItemView {
 
 		this.frame.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
-			let webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+			const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
@@ -83,42 +83,49 @@ export class WebBrowserView extends ItemView {
 								FunctionHooks.ogWindow$Open.call(window, params.pageURL, "_blank");
 							}
 						}
-						)
-					);
+					)
+				);
 
-				    // TODO: Support customize menu items.
-				    // TODO: Support cut, paste, select All.
-				    // Only works when something is selected.
-					if(params.selectionText) {
-						menu.append(new MenuItem({ type: 'separator' }));
-						menu.append(new MenuItem({ label: 'Search Text', click: function() {
-								try {
-									WebBrowserView.spawnWebBrowserView(true, { url: "https://www.google.com/search?q=" + params.selectionText });
-									console.log('Page URL copied to clipboard');
-								} catch (err) {
-									console.error('Failed to copy: ', err);
-								}
-							}}));
-						menu.append(new MenuItem({ type: 'separator' }));
-						menu.append(new MenuItem({ label: 'Copy Blank Text', click: function() {
+				// TODO: Support customize menu items.
+				// TODO: Support cut, paste, select All.
+				// Only works when something is selected.
+				if (params.selectionText) {
+					menu.append(new MenuItem({ type: 'separator' }));
+					menu.append(new MenuItem({
+						label: 'Search Text', click: function () {
+							try {
+								WebBrowserView.spawnWebBrowserView(true, { url: "https://www.google.com/search?q=" + params.selectionText });
+								console.log('Page URL copied to clipboard');
+							} catch (err) {
+								console.error('Failed to copy: ', err);
+							}
+						}
+					}));
+					menu.append(new MenuItem({ type: 'separator' }));
+					menu.append(new MenuItem({
+						label: 'Copy Blank Text', click: function () {
 							try {
 								webContents.copy();
 								console.log('Page URL copied to clipboard');
 							} catch (err) {
 								console.error('Failed to copy: ', err);
 							}
-						}}));
-					menu.append(new MenuItem({ label: 'Copy Highlight Link', click: function() {
+						}
+					}));
+					menu.append(new MenuItem({
+						label: 'Copy Highlight Link', click: function () {
 							try {
+								// eslint-disable-next-line no-useless-escape
 								const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
 								const selectionText = params.selectionText;
-								const markdownlink = `[${selectionText}](${linkToHighlight})`;
+								const markdownlink = `[${ selectionText }](${ linkToHighlight })`;
 								clipboard.writeText(markdownlink);
 								console.log('Link URL copied to clipboard');
 							} catch (err) {
 								console.error('Failed to copy: ', err);
 							}
-						}}));
+						}
+					}));
 
 					menu.popup(webContents);
 				}
@@ -128,7 +135,7 @@ export class WebBrowserView extends ItemView {
 				// So it is not possible to preventDefault because it cannot be accessed.
 				// I tried to use this.frame.shadowRoot.childNodes to locate the iframe HTML element
 				// It doesn't work.
-				setTimeout(()=>{
+				setTimeout(() => {
 					menu.popup(webContents);
 				}, 0)
 			}, false);
@@ -195,8 +202,10 @@ export class WebBrowserView extends ItemView {
 		return { url: this.currentUrl };
 	}
 
-	navigate(url: string, addToHistory: boolean = true, updateWebView: boolean = true) {
-		if (url === "") { return; }
+	navigate(url: string, addToHistory = true, updateWebView = true) {
+		if (url === "") {
+			return;
+		}
 
 		if (addToHistory) {
 			if (this.leaf.history.backHistory.last()?.state?.state?.url !== this.currentUrl) {
@@ -217,15 +226,17 @@ export class WebBrowserView extends ItemView {
 		// TODO: ?Should we support Localhost?
 		// And the before one is : /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi; which will only match `blabla.blabla`
 		// Support 192.168.0.1 for some local software server, and localhost
-        var urlRegEx = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
-		var urlRegEx2 = /((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+(:[0-9]+)?|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g;
-        if (urlRegEx.test(url)) {
-            let first7 = url.slice(0, 7).toLowerCase();
-            let first8 = url.slice(0, 8).toLowerCase();
-            if (!(first7 === "http://" || first7 === "file://" || first8 === "https://")) {
-                url = "https://" + url;
-            }
-        } else if((!(url.slice(0, 7) === "file://") || !(/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url))) {
+		// eslint-disable-next-line no-useless-escape
+		const urlRegEx = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
+		// eslint-disable-next-line no-useless-escape
+		const urlRegEx2 = /((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+(:[0-9]+)?|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g;
+		if (urlRegEx.test(url)) {
+			const first7 = url.slice(0, 7).toLowerCase();
+			const first8 = url.slice(0, 8).toLowerCase();
+			if (!(first7 === "http://" || first7 === "file://" || first8 === "https://")) {
+				url = "https://" + url;
+			}
+		} else if ((!(url.slice(0, 7) === "file://") || !(/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url))) {
 			// If url is not a valid FILE url, search it with search engine.
 			// TODO: Support other search engines.
 			url = (this.plugin.settings.defaultSearchEngine != 'custom' ? SEARCH_ENGINES[this.plugin.settings.defaultSearchEngine] : this.plugin.settings.customSearchUrl) + url;

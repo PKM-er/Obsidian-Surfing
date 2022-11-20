@@ -4,9 +4,11 @@
 	"description": "Lets you browse the web within Obsidian.",
 	"main": "main.js",
 	"scripts": {
-		"dev": "node esbuild.config.mjs",
+		"dev": "npm run lint && node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json"
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"lint": "eslint . --ext .ts",
+		"lint:fix": "npm run lint -- -- -- fix"
 	},
 	"keywords": [],
 	"author": "Dion Tryban (Trikzon)",
@@ -18,6 +20,8 @@
 		"builtin-modules": "3.3.0",
 		"electron": "^21.0.1",
 		"esbuild": "0.14.47",
+		"eslint": "^8.28.0",
+		"eslint-plugin-import": "^2.26.0",
 		"obsidian": "latest",
 		"tslib": "2.4.0",
 		"typescript": "4.7.4"
