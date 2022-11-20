@@ -23,3 +23,8 @@ data.json
 
 # Exclude pnpm lock file
 pnpm-lock.yaml
+
+# Exclude rar/zip/7z file
+*.rar
+*.zip
+*.7z
