@@ -1,7 +1,7 @@
 import { App, DropdownComponent, EventRef, ItemView, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { HeaderBar } from "./header_bar";
 import { FunctionHooks } from "./hooks";
-import { WebBrowserView, WEB_BROWSER_VIEW_ID } from "./web_browser_view";
+import { WEB_BROWSER_VIEW_ID, WebBrowserView } from "./web_browser_view";
 import { HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID, WebBrowserFileView } from "./web_browser_file_view";
 
 interface WebBrowserPluginSettings {
@@ -39,20 +39,20 @@ export default class MyPlugin extends Plugin {
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
 		} catch (error) {
-			new Notice(`File extensions ${HTML_FILE_EXTENSIONS} had been registered by other plugin!`);
+			new Notice(`File extensions ${ HTML_FILE_EXTENSIONS } had been registered by other plugin!`);
 		}
 
 		FunctionHooks.onload();
 
 		// Add header bar to "New tab" view.
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
-			var activeView = this.app.workspace.getActiveViewOfType(ItemView);
+			const activeView = this.app.workspace.getActiveViewOfType(ItemView);
 			if (activeView) {
 				// Check if the view is a "New tab" view. I don't think this class is used elsewhere. I sure hope not.
 				if (activeView.contentEl.children[0].hasClass("empty-state")) {
 					// Check if the "New tab" view has already been processed and has a header bar already.
 					if (!activeView.headerEl.children[2].hasClass("web-browser-header-bar")) {
-						var headerBar = new HeaderBar(activeView.headerEl.children[2]);
+						const headerBar = new HeaderBar(activeView.headerEl.children[2]);
 						// Focus on current inputEl
 						headerBar.focus();
 						headerBar.addOnSearchBarEnterListener((url: string) => {
@@ -91,7 +91,7 @@ export default class MyPlugin extends Plugin {
 		this.app.workspace.offref(this.onLayoutChangeEventRef);
 
 		// Clean up header bar added to "New tab" views when plugin is disabled.
-		var searchBars = document.getElementsByClassName("web-browser-search-bar");
+		const searchBars = document.getElementsByClassName("web-browser-search-bar");
 		while (searchBars.length > 0) {
 			searchBars[0].parentElement?.removeChild(searchBars[0]);
 		}
@@ -109,7 +109,7 @@ export default class MyPlugin extends Plugin {
 
 class WebBrowserSettingTab extends PluginSettingTab {
 	plugin: MyPlugin;
-	private applyDebounceTimer: number = 0;
+	private applyDebounceTimer = 0;
 
 	constructor(app: App, plugin: MyPlugin) {
 		super(app, plugin);
@@ -154,7 +154,7 @@ class WebBrowserSettingTab extends PluginSettingTab {
 				});
 			});
 
-		if(!(this.plugin.settings.defaultSearchEngine === 'custom')) {
+		if (!(this.plugin.settings.defaultSearchEngine === 'custom')) {
 			return;
 		}
 

@@ -18,9 +18,10 @@ export class HeaderBar {
 
 		// TODO: Would this be ok to use Obsidian add domlistener instead?
         this.searchBar.addEventListener("keydown", (event: KeyboardEvent) => {
-            if (!event) { var event = window.event as KeyboardEvent; }
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+            if (!event) { const event = window.event as KeyboardEvent; }
             if (event.key === "Enter") {
-                for (var listener of this.onSearchBarEnterListener) {
+                for (const listener of this.onSearchBarEnterListener) {
                     listener(this.searchBar.value);
                 }
             }
