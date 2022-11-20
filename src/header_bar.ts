@@ -21,6 +21,7 @@ export class HeaderBar {
 		this.searchBar.addEventListener("keydown", (event: KeyboardEvent) => {
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			if (!event) {
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
 				const event = window.event as KeyboardEvent;
 			}
 			if (event.key === "Enter") {
