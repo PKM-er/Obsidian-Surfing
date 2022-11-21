@@ -32,6 +32,8 @@ export class WebBrowserView extends ItemView {
 				const leaf = app.workspace.createLeafBySplit(activeView) as WorkspaceLeaf
 				localStorage.setItem("web-browser-leaf-id", leaf.id)
 				leaf.setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state })
+				leaf.setPinned(true);
+				leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass("same-tab");
 			} else {
 				app.workspace.getLeafById(leafId).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
 			}
