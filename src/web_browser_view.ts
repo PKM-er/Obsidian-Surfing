@@ -126,8 +126,10 @@ export class WebBrowserView extends ItemView {
 								const selectionText = params.selectionText;
 								let link = "";
 								if (highlightFormat.contains("{TIME")) {
+									// eslint-disable-next-line no-useless-escape
 									const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
 									if (timeString) {
+										// eslint-disable-next-line no-useless-escape
 										const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
 										link = highlightFormat.replace(timeString, momentTime);
 									}
@@ -250,14 +252,16 @@ export class WebBrowserView extends ItemView {
 			if (!(first7 === "http://" || first7 === "file://" || first8 === "https://")) {
 				url = "https://" + url;
 			}
-		} else if ((!(url.slice(0, 7) === "file://") || !(/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url))) {
+		} else if ((!(url.startsWith("file://") || !(/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url)))) {
 			// If url is not a valid FILE url, search it with search engine.
 			// TODO: Support other search engines.
 			// @ts-ignore
 			url = (this.plugin.settings.defaultSearchEngine != 'custom' ? SEARCH_ENGINES[this.plugin.settings.defaultSearchEngine] : this.plugin.settings.customSearchUrl) + url;
 		}
 
+
 		this.currentUrl = url;
+
 		this.headerBar.setSearchBarUrl(url);
 		if (updateWebView) {
 			this.frame.setAttribute("src", url);

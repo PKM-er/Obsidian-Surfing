@@ -3,7 +3,6 @@ import { HeaderBar } from "./header_bar";
 import { FunctionHooks } from "./hooks";
 import { WEB_BROWSER_VIEW_ID, WebBrowserView } from "./web_browser_view";
 import { HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID, WebBrowserFileView } from "./web_browser_file_view";
-import { EditorView } from "@codemirror/view";
 
 interface WebBrowserPluginSettings {
 	defaultSearchEngine: string;

@@ -17,6 +17,7 @@ export class FunctionHooks {
 				urlString = url.toString();
 			}
 
+			if (decodeURI(urlString) !== urlString) urlString = decodeURI(urlString).toString().replace(/\s/g, "%20");
 			// 1. Allows Obsidian to open a popup window if url is "about:blank" and features is not null
 			// TODO: There might be a better way to detect if it's a popup window.
 			// 2. Perform default behavior if the url isn't "http://" or "https://"
