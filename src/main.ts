@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS: WebBrowserPluginSettings = {
 	customSearchUrl: 'https://duckduckgo.com/?q=',
 }
 
+// Add search engines here for the future used.
 export const SEARCH_ENGINES = {
 	'google': 'https://www.google.com/search?q=',
 	'bing': 'https://www.bing.com/search?q=',
@@ -85,6 +86,7 @@ export default class MyPlugin extends Plugin {
 		this.updateEmptyLeaf(true);
 	}
 
+	// Add header bar to empty view.
 	addHeader(currentView: ItemView) {
 		if (!currentView) return;
 		// Check if new leaf's view is empty, else return.
@@ -100,6 +102,7 @@ export default class MyPlugin extends Plugin {
 		}
 	}
 
+	// Clean up header bar added to empty views when plugin is disabled.
 	removeHeader(currentView: ItemView) {
 		console.log(currentView.headerEl.children[2]);
 		if (!currentView) return;
@@ -112,6 +115,7 @@ export default class MyPlugin extends Plugin {
 		}
 	}
 
+	// Update all leaf contains empty view when restart Obsidian
 	updateEmptyLeaf(remove?: boolean) {
 		const emptyLeaves = this.app.workspace.getLeavesOfType("empty");
 		emptyLeaves.forEach((leaf) => {
