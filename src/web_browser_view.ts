@@ -4,6 +4,7 @@ import { HeaderBar } from "./header_bar";
 import { clipboard, remote } from "electron";
 import { FunctionHooks } from "./hooks";
 import MyPlugin, { SEARCH_ENGINES } from "./main";
+import { moment } from "obsidian";
 
 export const WEB_BROWSER_VIEW_ID = "web-browser-view";
 
@@ -116,14 +117,23 @@ export class WebBrowserView extends ItemView {
 							}
 						}
 					}));
+					const highlightFormat = this.plugin.settings.highlightFormat;
 					menu.append(new MenuItem({
-						label: 'Copy Highlight Link', click: function () {
+						label: 'Copy Highlight Link', click: function (this: any) {
 							try {
 								// eslint-disable-next-line no-useless-escape
 								const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
 								const selectionText = params.selectionText;
-								const markdownlink = `[${ selectionText }](${ linkToHighlight })`;
-								clipboard.writeText(markdownlink);
+								let link = "";
+								if (highlightFormat.contains("{TIME")) {
+									const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+									if (timeString) {
+										const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
+										link = highlightFormat.replace(timeString, momentTime);
+									}
+								}
+								link = (link != "" ? link : highlightFormat).replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText);
+								clipboard.writeText(link);
 								console.log('Link URL copied to clipboard');
 							} catch (err) {
 								console.error('Failed to copy: ', err);

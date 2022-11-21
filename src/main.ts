@@ -8,11 +8,15 @@ import { EditorView } from "@codemirror/view";
 interface WebBrowserPluginSettings {
 	defaultSearchEngine: string;
 	customSearchUrl: string;
+	customHighlightFormat: boolean;
+	highlightFormat: string;
 }
 
 const DEFAULT_SETTINGS: WebBrowserPluginSettings = {
 	defaultSearchEngine: 'duckduckgo',
 	customSearchUrl: 'https://duckduckgo.com/?q=',
+	customHighlightFormat: false,
+	highlightFormat: '[{CONTENT}]({URL})'
 }
 
 // Add search engines here for the future used.
@@ -104,7 +108,6 @@ export default class MyPlugin extends Plugin {
 
 	// Clean up header bar added to empty views when plugin is disabled.
 	removeHeader(currentView: ItemView) {
-		console.log(currentView.headerEl.children[2]);
 		if (!currentView) return;
 		// Check if new leaf's view is empty, else return.
 		if (currentView.getViewType() != "empty") return;
@@ -161,6 +164,7 @@ class WebBrowserSettingTab extends PluginSettingTab {
 		containerEl.createEl('h2', { text: 'Web Browser' });
 
 		this.addSearchEngine();
+		this.addHighlightFormat();
 	}
 
 	addSearchEngine() {
@@ -196,6 +200,39 @@ class WebBrowserSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.customSearchUrl)
 					.onChange(async (value) => {
 						this.plugin.settings.customSearchUrl = value;
+						this.applySettingsUpdate();
+					}),
+			);
+	}
+
+	addHighlightFormat() {
+		new Setting(this.containerEl)
+			.setName('Custom Highlight Format')
+			.setDesc("Set custom highlight format for yourself. [{CONTENT}]({URL}) By default")
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.customHighlightFormat)
+					.onChange(async (value) => {
+						this.plugin.settings.customHighlightFormat = value;
+						this.applySettingsUpdate();
+						// Force refresh
+						this.display();
+					});
+			})
+
+		if (!this.plugin.settings.customHighlightFormat) {
+			return;
+		}
+
+		new Setting(this.containerEl)
+			.setName('Highlight Link Format')
+			.setDesc("Set highlight link format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD} to get the current date.}")
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.highlightFormat)
+					.setValue(this.plugin.settings.highlightFormat)
+					.onChange(async (value) => {
+						this.plugin.settings.highlightFormat = value;
 						this.applySettingsUpdate();
 					}),
 			);
