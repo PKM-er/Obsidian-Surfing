@@ -2,7 +2,7 @@ import { FileSystemAdapter, FileView, TFile, WorkspaceLeaf } from "obsidian";
 import { WebBrowserView } from "./web_browser_view";
 
 export const HTML_FILE_EXTENSIONS = ["html", "htm"];
-export const WEB_BROWSER_FILE_VIEW_ID = "web-browser-file-view";
+export const WEB_BROWSER_FILE_VIEW_ID = "another-web-browser-file-view";
 
 export class WebBrowserFileView extends FileView {
 	allowNoFile: false;

@@ -87,6 +87,27 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 				}
 			}
 		});
+
+		// Use checkCallback method to check if the view is WebBrowserView;
+		// And change the default private to public.
+		this.addCommand({
+			id: 'clear-current-page-history',
+			name: 'Clear Current Page History',
+			checkCallback: (checking: boolean) => {
+				// Conditions to check
+				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
+				if (webbrowserView) {
+					// If checking is true, we're simply "checking" if the command can be run.
+					// If checking is false, then we want to actually perform the operation.
+					if (!checking) {
+						webbrowserView.clearHistory();
+					}
+
+					// This command will only show up in Command Palette when the check function returns true
+					return true;
+				}
+			}
+		});
 	}
 
 	onunload() {
@@ -106,7 +127,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 		if (currentView.getViewType() != "empty") return;
 		// Check if the "New tab" view has already been processed and has a header bar already.
 		if (!currentView.headerEl.children[2].hasClass("web-browser-header-bar")) {
-			const headerBar = new HeaderBar(currentView.headerEl.children[2]);
+			const headerBar = new HeaderBar(currentView.headerEl.children[2], this);
 			// Focus on current inputEl
 			headerBar.focus();
 			headerBar.addOnSearchBarEnterListener((url: string) => {

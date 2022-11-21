@@ -1,8 +1,12 @@
+import AnotherWebBrowserPlugin from "./anotherWebBrowserIndex";
+
 export class HeaderBar {
+	plugin: AnotherWebBrowserPlugin;
 	private searchBar: HTMLInputElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>;
 
-	constructor(parent: Element) {
+	constructor(parent: Element, plugin: AnotherWebBrowserPlugin) {
+		this.plugin = plugin;
 		// CSS class removes the gradient at the right of the header bar.
 		parent.addClass("web-browser-header-bar");
 		// Remove default title from header bar.
@@ -13,7 +17,7 @@ export class HeaderBar {
 		// Use Obsidian CreateEL method.
 		this.searchBar = parent.createEl("input", {
 			type: "text",
-			placeholder: "Search with DuckDuckGo or enter address",
+			placeholder: "Search with " + this.plugin.settings.defaultSearchEngine + " or enter address",
 			cls: "web-browser-search-bar"
 		});
 
