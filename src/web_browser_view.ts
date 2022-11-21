@@ -1,5 +1,6 @@
 import { ItemView, ViewStateResult, WorkspaceLeaf } from "obsidian";
 import { HeaderBar } from "./header_bar";
+// @ts-ignore
 import { clipboard, remote } from "electron";
 import { FunctionHooks } from "./hooks";
 import MyPlugin, { SEARCH_ENGINES } from "./main";
@@ -47,7 +48,7 @@ export class WebBrowserView extends ItemView {
 		this.favicon.height = 16;
 
 		// Create main web view frame that displays the website.
-		this.frame = document.createElement("webview") as HTMLIFrameElement;
+		this.frame = document.createElement("webview") as unknown as HTMLIFrameElement;
 		this.frame.setAttribute("allowpopups", "");
 		// CSS classes makes frame fill the entire tab's content space.
 		this.frame.addClass("web-browser-frame");
@@ -65,6 +66,9 @@ export class WebBrowserView extends ItemView {
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
 				WebBrowserView.spawnWebBrowserView(true, { url: event.url });
+				return {
+					action: "allow",
+				}
 			});
 
 			const { Menu, MenuItem } = remote;
@@ -239,6 +243,7 @@ export class WebBrowserView extends ItemView {
 		} else if ((!(url.slice(0, 7) === "file://") || !(/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url))) {
 			// If url is not a valid FILE url, search it with search engine.
 			// TODO: Support other search engines.
+			// @ts-ignore
 			url = (this.plugin.settings.defaultSearchEngine != 'custom' ? SEARCH_ENGINES[this.plugin.settings.defaultSearchEngine] : this.plugin.settings.customSearchUrl) + url;
 		}
 

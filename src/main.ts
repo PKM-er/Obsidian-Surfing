@@ -47,7 +47,6 @@ export default class MyPlugin extends Plugin {
 		// Update all leaf contains empty view when restart Obsidian
 		this.updateEmptyLeaf(false);
 		// Patch link hover behavior
-		this.patchLinkHover();
 		// Add header bar to "New tab" view.
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
 			const activeView = this.app.workspace.getActiveViewOfType(ItemView);
@@ -74,32 +73,6 @@ export default class MyPlugin extends Plugin {
 				}
 			}
 		});
-
-		// Used for mouseover event for external-link;
-		this.registerEditorExtension(
-			EditorView.domEventHandlers({
-				mouseover: (e: MouseEvent, editorView: EditorView) => {
-					if (!editorView) return;
-					if (!(e.target as HTMLElement)?.classList.contains("cm-link") && !(e.target as HTMLElement)?.parentElement?.classList.contains("cm-link")) return;
-
-					console.log("mouseover");
-
-					if (!e.ctrlKey && !e.metaKey) return;
-					if (!((e.target as HTMLElement)?.parentElement)) return;
-
-					const parent = (e.target as HTMLElement)?.parentElement;
-
-					app.workspace.trigger('hover-link', {
-						event: e,
-						source: 'markdown',
-						hoverParent: (e.target as HTMLElement)?.parentElement,
-						parent,
-						linktext: item.name,
-						sourcePath: item.path,
-					});
-				}
-			})
-		);
 	}
 
 	onunload() {

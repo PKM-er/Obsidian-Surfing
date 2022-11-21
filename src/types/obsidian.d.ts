@@ -1,9 +1,11 @@
+import * as obsidian from 'obsidian';
+
 declare module "obsidian" {
-	interface ItemView {
+	export interface ItemView {
 		headerEl: HTMLDivElement
 	}
 
-	interface WorkspaceLeaf {
+	export interface WorkspaceLeaf {
 		history: {
 			backHistory: Array<any>,
 			forwardHistory: Array<any>
@@ -12,3 +14,4 @@ declare module "obsidian" {
 		tabHeaderInnerTitleEl: HTMLDivElement
 	}
 }
+
