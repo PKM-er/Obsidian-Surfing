@@ -8,12 +8,14 @@ import { EditorView } from "@codemirror/view";
 interface WebBrowserPluginSettings {
 	defaultSearchEngine: string;
 	customSearchUrl: string;
+	customHighlightFormat: boolean;
 	highlightFormat: string;
 }
 
 const DEFAULT_SETTINGS: WebBrowserPluginSettings = {
 	defaultSearchEngine: 'duckduckgo',
 	customSearchUrl: 'https://duckduckgo.com/?q=',
+	customHighlightFormat: false,
 	highlightFormat: '[{CONTENT}]({URL})'
 }
 
@@ -204,6 +206,24 @@ class WebBrowserSettingTab extends PluginSettingTab {
 	}
 
 	addHighlightFormat() {
+		new Setting(this.containerEl)
+			.setName('Custom Highlight Format')
+			.setDesc("Set custom highlight format for yourself. [{CONTENT}]({URL}) By default")
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.customHighlightFormat)
+					.onChange(async (value) => {
+						this.plugin.settings.customHighlightFormat = value;
+						this.applySettingsUpdate();
+						// Force refresh
+						this.display();
+					});
+			})
+
+		if (!this.plugin.settings.customHighlightFormat) {
+			return;
+		}
+
 		new Setting(this.containerEl)
 			.setName('Highlight Link Format')
 			.setDesc("Set highlight link format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD} to get the current date.}")
