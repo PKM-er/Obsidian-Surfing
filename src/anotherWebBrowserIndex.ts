@@ -1,12 +1,12 @@
 import {
 	App,
-	DropdownComponent,
+	DropdownComponent, Editor,
 	EventRef,
-	ItemView,
+	ItemView, MarkdownView, Menu,
 	Notice,
 	Plugin,
 	PluginSettingTab,
-	Setting
+	Setting, TFile
 } from "obsidian";
 import { HeaderBar } from "./header_bar";
 import { FunctionHooks } from "./hooks";
@@ -60,7 +60,8 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 		FunctionHooks.onload();
 		// Update all leaf contains empty view when restart Obsidian
 		this.updateEmptyLeaf(false);
-		// Patch link hover behavior
+		// Add search to contextmenu
+		this.registerContextMenu();
 		// Add header bar to "New tab" view.
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
 			const activeView = this.app.workspace.getActiveViewOfType(ItemView);
@@ -157,6 +158,40 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 				if (remove) this.removeHeader(leaf.view);
 			}
 		});
+	}
+
+	// Register right click menu on editor
+	registerContextMenu() {
+		this.registerEvent(
+			this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor, view: MarkdownView) => {
+				if (!editor) {
+					return;
+				}
+				if (editor.getSelection().length === 0) return;
+				const selection = editor.getSelection();
+				let subMenu;
+				menu.addItem((item) => {
+					subMenu = item.setTitle(`Search In WebBrowser`).setIcon('search').setSubmenu()
+				})
+				for (let key in SEARCH_ENGINES) {
+					subMenu.addItem((item) => {
+						item.setIcon('search')
+							.setTitle(key)
+							.onClick(() => {
+								WebBrowserView.spawnWebBrowserView(true, { url: SEARCH_ENGINES[key] + selection });
+							})
+					})
+				}
+				if (this.settings.defaultSearchEngine === 'custom') {
+					subMenu.addItem((item) => {
+						item.setIcon('search')
+							.setTitle("custom")
+							.onClick(() => {
+								WebBrowserView.spawnWebBrowserView(true, { url: this.settings.customSearchUrl + selection });
+							})
+					})
+				}
+			}))
 	}
 
 	async loadSettings() {
