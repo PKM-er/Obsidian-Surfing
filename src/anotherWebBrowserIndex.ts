@@ -132,28 +132,31 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 				}
 				if (editor.getSelection().length === 0) return;
 				const selection = editor.getSelection();
-				let subMenu;
+
 				menu.addItem((item) => {
-					subMenu = item.setTitle(`Search In WebBrowser`).setIcon('search').setSubmenu()
+					// Add sub menu
+					const subMenu = item.setTitle(`Search In WebBrowser`).setIcon('search').setSubmenu();
+					for (let key in SEARCH_ENGINES) {
+						subMenu.addItem((item) => {
+							item.setIcon('search')
+								.setTitle(key)
+								.onClick(() => {
+									// @ts-ignore
+									WebBrowserView.spawnWebBrowserView(true, { url: SEARCH_ENGINES[key] + selection });
+								})
+						})
+					}
+					if (this.settings.defaultSearchEngine === 'custom') {
+						subMenu.addItem((item) => {
+							item.setIcon('search')
+								.setTitle("custom")
+								.onClick(() => {
+									WebBrowserView.spawnWebBrowserView(true, { url: this.settings.customSearchUrl + selection });
+								})
+						})
+					}
+
 				})
-				for (let key in SEARCH_ENGINES) {
-					subMenu.addItem((item) => {
-						item.setIcon('search')
-							.setTitle(key)
-							.onClick(() => {
-								WebBrowserView.spawnWebBrowserView(true, { url: SEARCH_ENGINES[key] + selection });
-							})
-					})
-				}
-				if (this.settings.defaultSearchEngine === 'custom') {
-					subMenu.addItem((item) => {
-						item.setIcon('search')
-							.setTitle("custom")
-							.onClick(() => {
-								WebBrowserView.spawnWebBrowserView(true, { url: this.settings.customSearchUrl + selection });
-							})
-					})
-				}
 			}))
 	}
 
