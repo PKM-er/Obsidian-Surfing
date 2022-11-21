@@ -1,6 +1,6 @@
 {
 	"name": "another-web-browser",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Lets you browse the web within Obsidian with some neat features.",
 	"main": "main.js",
 	"scripts": {

@@ -1,7 +1,7 @@
 {
 	"id": "another-web-browser",
 	"name": "Another Web Browser",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"minAppVersion": "1.0.0",
 	"description": "Lets you browse the web within Obsidian with some neat features.",
 	"author": "Dion Tryban (Trikzon) && Boninall",
