@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-web-browser",
-	"version": "0.1.1",
-	"description": "Lets you browse the web within Obsidian.",
+	"name": "another-web-browser",
+	"version": "0.1.2",
+	"description": "Lets you browse the web within Obsidian with some neat features.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "npm run lint && node esbuild.config.mjs",
@@ -11,7 +11,7 @@
 		"lint:fix": "npm run lint -- -- -- fix"
 	},
 	"keywords": [],
-	"author": "Dion Tryban (Trikzon)",
+	"author": "Dion Tryban (Trikzon) && Boninall",
 	"license": "MIT",
 	"devDependencies": {
 		"@codemirror/language": "^6.2.1",
