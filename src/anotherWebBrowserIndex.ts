@@ -159,6 +159,9 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 		});
 	}
 
+	// Register right click menu on editor
+	
+
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
