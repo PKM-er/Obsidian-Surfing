@@ -9,13 +9,15 @@ interface WebBrowserPluginSettings {
 	customSearchUrl: string;
 	customHighlightFormat: boolean;
 	highlightFormat: string;
+	openInSameTab: boolean
 }
 
 const DEFAULT_SETTINGS: WebBrowserPluginSettings = {
 	defaultSearchEngine: 'duckduckgo',
 	customSearchUrl: 'https://duckduckgo.com/?q=',
 	customHighlightFormat: false,
-	highlightFormat: '[{CONTENT}]({URL})'
+	highlightFormat: '[{CONTENT}]({URL})',
+	openInSameTab: false
 }
 
 // Add search engines here for the future used.
@@ -44,7 +46,7 @@ export default class MyPlugin extends Plugin {
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
 		} catch (error) {
-			new Notice(`File extensions ${ HTML_FILE_EXTENSIONS } had been registered by other plugin!`);
+			new Notice(`File extensions ${HTML_FILE_EXTENSIONS} had been registered by other plugin!`);
 		}
 
 		FunctionHooks.onload();
@@ -164,6 +166,7 @@ class WebBrowserSettingTab extends PluginSettingTab {
 
 		this.addSearchEngine();
 		this.addHighlightFormat();
+		this.addOpenInSameTab();
 	}
 
 	addSearchEngine() {
@@ -179,11 +182,11 @@ class WebBrowserSettingTab extends PluginSettingTab {
 					.addOption('baidu', 'Baidu')
 					.addOption('custom', 'Custom')
 					.setValue(this.plugin.settings.defaultSearchEngine).onChange(async (value) => {
-					this.plugin.settings.defaultSearchEngine = value;
-					this.applySettingsUpdate();
-					// Force refresh
-					this.display();
-				});
+						this.plugin.settings.defaultSearchEngine = value;
+						this.applySettingsUpdate();
+						// Force refresh
+						this.display();
+					});
 			});
 
 		if (!(this.plugin.settings.defaultSearchEngine === 'custom')) {
@@ -235,5 +238,19 @@ class WebBrowserSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					}),
 			);
+	}
+
+	addOpenInSameTab() {
+		new Setting(this.containerEl)
+			.setName('Open In Same Tab')
+			.setDesc('Open url in same tab')
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.openInSameTab)
+					.onChange(async (value) => {
+						this.plugin.settings.openInSameTab = value
+						this.applySettingsUpdate()
+						this.display()
+					})
+			})
 	}
 }

@@ -7,6 +7,7 @@ declare module "obsidian" {
 	}
 
 	export interface WorkspaceLeaf {
+		id: string
 		history: {
 			backHistory: Array<any>,
 			forwardHistory: Array<any>
