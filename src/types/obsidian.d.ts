@@ -15,4 +15,3 @@ declare module "obsidian" {
 		tabHeaderInnerTitleEl: HTMLDivElement
 	}
 }
-

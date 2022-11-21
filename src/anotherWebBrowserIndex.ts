@@ -1,17 +1,27 @@
-import { App, DropdownComponent, EventRef, ItemView, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
+import {
+	App,
+	DropdownComponent,
+	EventRef,
+	ItemView,
+	Notice,
+	Plugin,
+	PluginSettingTab,
+	Setting
+} from "obsidian";
 import { HeaderBar } from "./header_bar";
 import { FunctionHooks } from "./hooks";
 import { WEB_BROWSER_VIEW_ID, WebBrowserView } from "./web_browser_view";
 import { HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID, WebBrowserFileView } from "./web_browser_file_view";
+import { around } from "monkey-around";
 
-interface WebBrowserPluginSettings {
+interface AnotherWebBrowserPluginSettings {
 	defaultSearchEngine: string;
 	customSearchUrl: string;
 	customHighlightFormat: boolean;
 	highlightFormat: string;
 }
 
-const DEFAULT_SETTINGS: WebBrowserPluginSettings = {
+const DEFAULT_SETTINGS: AnotherWebBrowserPluginSettings = {
 	defaultSearchEngine: 'duckduckgo',
 	customSearchUrl: 'https://duckduckgo.com/?q=',
 	customHighlightFormat: false,
@@ -28,8 +38,8 @@ export const SEARCH_ENGINES = {
 	'wikipedia': 'https://en.wikipedia.org/w/index.php?search=',
 };
 
-export default class MyPlugin extends Plugin {
-	settings: WebBrowserPluginSettings;
+export default class AnotherWebBrowserPlugin extends Plugin {
+	settings: AnotherWebBrowserPluginSettings;
 	private onLayoutChangeEventRef: EventRef;
 
 	async onload() {
@@ -90,7 +100,7 @@ export default class MyPlugin extends Plugin {
 	}
 
 	// Add header bar to empty view.
-	addHeader(currentView: ItemView) {
+	private addHeader(currentView: ItemView) {
 		if (!currentView) return;
 		// Check if new leaf's view is empty, else return.
 		if (currentView.getViewType() != "empty") return;
@@ -106,7 +116,7 @@ export default class MyPlugin extends Plugin {
 	}
 
 	// Clean up header bar added to empty views when plugin is disabled.
-	removeHeader(currentView: ItemView) {
+	private removeHeader(currentView: ItemView) {
 		if (!currentView) return;
 		// Check if new leaf's view is empty, else return.
 		if (currentView.getViewType() != "empty") return;
@@ -118,7 +128,7 @@ export default class MyPlugin extends Plugin {
 	}
 
 	// Update all leaf contains empty view when restart Obsidian
-	updateEmptyLeaf(remove?: boolean) {
+	private updateEmptyLeaf(remove?: boolean) {
 		const emptyLeaves = this.app.workspace.getLeavesOfType("empty");
 		emptyLeaves.forEach((leaf) => {
 			if (leaf.view instanceof ItemView) {
@@ -139,10 +149,10 @@ export default class MyPlugin extends Plugin {
 
 
 class WebBrowserSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+	plugin: AnotherWebBrowserPlugin;
 	private applyDebounceTimer = 0;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: AnotherWebBrowserPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
