@@ -56,7 +56,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
 		} catch (error) {
-			new Notice(`File extensions ${HTML_FILE_EXTENSIONS} had been registered by other plugin!`);
+			new Notice(`File extensions ${ HTML_FILE_EXTENSIONS } had been registered by other plugin!`);
 		}
 
 		FunctionHooks.onload();
@@ -70,47 +70,8 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			if (activeView) this.addHeader(activeView);
 		});
 
-		// Use checkCallback method to check if the view is WebBrowserView;
-		// And change the default private to public.
-		this.addCommand({
-			id: 'open-current-url-with-external-browser',
-			name: 'Open Current Url With External Browser',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
-				if (webbrowserView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						FunctionHooks.ogWindow$Open.call(window, webbrowserView.getState()?.url, "_blank");
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
-
-		// Use checkCallback method to check if the view is WebBrowserView;
-		// And change the default private to public.
-		this.addCommand({
-			id: 'clear-current-page-history',
-			name: 'Clear Current Page History',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
-				if (webbrowserView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						webbrowserView.clearHistory();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
+		// Add commands
+		this.registerCommands()
 	}
 
 	onunload() {
@@ -196,6 +157,59 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			}))
 	}
 
+	registerCommands() {
+		// Use checkCallback method to check if the view is WebBrowserView;
+		// And change the default private to public.
+		this.addCommand({
+			id: 'open-current-url-with-external-browser',
+			name: 'Open Current Url With External Browser',
+			checkCallback: (checking: boolean) => {
+				// Conditions to check
+				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
+				if (webbrowserView) {
+					// If checking is true, we're simply "checking" if the command can be run.
+					// If checking is false, then we want to actually perform the operation.
+					if (!checking) {
+						FunctionHooks.ogWindow$Open.call(window, webbrowserView.getState()?.url, "_blank");
+					}
+
+					// This command will only show up in Command Palette when the check function returns true
+					return true;
+				}
+			}
+		});
+
+		// Use checkCallback method to check if the view is WebBrowserView;
+		// And change the default private to public.
+		this.addCommand({
+			id: 'clear-current-page-history',
+			name: 'Clear Current Page History',
+			checkCallback: (checking: boolean) => {
+				// Conditions to check
+				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
+				if (webbrowserView) {
+					// If checking is true, we're simply "checking" if the command can be run.
+					// If checking is false, then we want to actually perform the operation.
+					if (!checking) {
+						webbrowserView.clearHistory();
+					}
+
+					// This command will only show up in Command Palette when the check function returns true
+					return true;
+				}
+			}
+		});
+
+		this.addCommand({
+			id: 'toggle-same-tab-globally',
+			name: 'Toggle Same Tab In Web Browser',
+			callback: async () => {
+				this.settings.openInSameTab = !this.settings.openInSameTab;
+				await this.saveSettings()
+			}
+		});
+	}
+
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
@@ -248,11 +262,11 @@ class WebBrowserSettingTab extends PluginSettingTab {
 					.addOption('baidu', 'Baidu')
 					.addOption('custom', 'Custom')
 					.setValue(this.plugin.settings.defaultSearchEngine).onChange(async (value) => {
-						this.plugin.settings.defaultSearchEngine = value;
-						this.applySettingsUpdate();
-						// Force refresh
-						this.display();
-					});
+					this.plugin.settings.defaultSearchEngine = value;
+					this.applySettingsUpdate();
+					// Force refresh
+					this.display();
+				});
 			});
 
 		if (!(this.plugin.settings.defaultSearchEngine === 'custom')) {

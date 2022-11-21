@@ -6,6 +6,12 @@ declare module "obsidian" {
 		headerEl: HTMLDivElement
 	}
 
+	interface App {
+		plugins: {
+			getPlugin(name: string): any;
+		};
+	}
+
 	export interface WorkspaceLeaf {
 		id: string
 		history: {

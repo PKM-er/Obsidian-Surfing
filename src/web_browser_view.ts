@@ -23,7 +23,6 @@ export class WebBrowserView extends ItemView {
 	}
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
-		//@ts-ignore
 		const isOpenInSameTab = app.plugins.getPlugin("another-web-browser").settings.openInSameTab
 		if (isOpenInSameTab) {
 			const leafId = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length ? localStorage.getItem("web-browser-leaf-id") : app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id
