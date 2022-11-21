@@ -223,6 +223,9 @@ export class WebBrowserView extends ItemView {
 
 		webContents.clearHistory();
 		webContents.executeJavaScript("history.pushState({}, '', location.href)");
+
+		this.leaf.history.backHistory.splice(0);
+		this.leaf.history.forwardHistory.splice(0);
 	}
 
 	getState(): WebBrowserViewState {
