@@ -1,4 +1,4 @@
-import { ItemView, ViewStateResult, WorkspaceLeaf } from "obsidian";
+import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView } from "obsidian";
 import { HeaderBar } from "./header_bar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
@@ -23,7 +23,23 @@ export class WebBrowserView extends ItemView {
 	}
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
-		app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+		const isOpenInSameTab = app.plugins.getPlugin("another-web-browser").settings.openInSameTab
+		if (isOpenInSameTab) {
+			const leafId = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length ? localStorage.getItem("web-browser-leaf-id") : app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id
+			if (!leafId) {
+				const activeView = app.workspace.getActiveViewOfType(MarkdownView)?.leaf
+				if (!activeView) return;
+				const leaf = app.workspace.createLeafBySplit(activeView) as WorkspaceLeaf
+				localStorage.setItem("web-browser-leaf-id", leaf.id)
+				leaf.setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state })
+				leaf.setPinned(true);
+				leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass("same-tab");
+			} else {
+				app.workspace.getLeafById(leafId).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+			}
+		} else {
+			app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+		}
 	}
 
 	getDisplayText(): string {
