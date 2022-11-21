@@ -6,7 +6,7 @@ import { FunctionHooks } from "./hooks";
 import AnotherWebBrowserPlugin, { SEARCH_ENGINES } from "./anotherWebBrowserIndex";
 import { moment } from "obsidian";
 
-export const WEB_BROWSER_VIEW_ID = "web-browser-view";
+export const WEB_BROWSER_VIEW_ID = "another-web-browser-view";
 
 export class WebBrowserView extends ItemView {
 	plugin: AnotherWebBrowserPlugin;
@@ -41,7 +41,7 @@ export class WebBrowserView extends ItemView {
 		this.contentEl.empty();
 
 		// Create search bar in the header bar.
-		this.headerBar = new HeaderBar(this.headerEl.children[2]);
+		this.headerBar = new HeaderBar(this.headerEl.children[2], this.plugin);
 
 		// Create favicon image element.
 		this.favicon = document.createElement("img") as HTMLImageElement;
@@ -208,10 +208,21 @@ export class WebBrowserView extends ItemView {
 			console.log("Trying to open new window at url: " + event.url);
 			event.preventDefault();
 		});
+
+
 	}
 
 	async setState(state: WebBrowserViewState, result: ViewStateResult) {
 		this.navigate(state.url, false);
+	}
+
+	clearHistory(): void {
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		if (!webContents) return;
+
+		webContents.clearHistory();
+		webContents.executeJavaScript("history.pushState({}, '', location.href)");
 	}
 
 	getState(): WebBrowserViewState {
@@ -246,8 +257,7 @@ export class WebBrowserView extends ItemView {
 		const urlRegEx = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
 		// eslint-disable-next-line no-useless-escape
 		const urlRegEx2 = /((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+(:[0-9]+)?|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g;
-		console.log(!(url.startsWith("file://") || (/\.htm(l)?/g.test(url))));
-		console.log(/file:\/\/(.*)\.htm(l)?/g.test(url));
+
 		if (urlRegEx.test(url)) {
 			const first7 = url.slice(0, 7).toLowerCase();
 			const first8 = url.slice(0, 8).toLowerCase();
