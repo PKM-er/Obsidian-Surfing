@@ -3,6 +3,7 @@ import { HeaderBar } from "./header_bar";
 import { FunctionHooks } from "./hooks";
 import { WEB_BROWSER_VIEW_ID, WebBrowserView } from "./web_browser_view";
 import { HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID, WebBrowserFileView } from "./web_browser_file_view";
+import { EditorView } from "@codemirror/view";
 
 interface WebBrowserPluginSettings {
 	defaultSearchEngine: string;
@@ -45,7 +46,7 @@ export default class MyPlugin extends Plugin {
 		FunctionHooks.onload();
 		// Update all leaf contains empty view when restart Obsidian
 		this.updateEmptyLeaf(false);
-
+		// Patch link hover behavior
 		// Add header bar to "New tab" view.
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
 			const activeView = this.app.workspace.getActiveViewOfType(ItemView);
