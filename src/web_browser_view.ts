@@ -3,13 +3,13 @@ import { HeaderBar } from "./header_bar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
 import { FunctionHooks } from "./hooks";
-import MyPlugin, { SEARCH_ENGINES } from "./main";
+import AnotherWebBrowserPlugin, { SEARCH_ENGINES } from "./anotherWebBrowserIndex";
 import { moment } from "obsidian";
 
 export const WEB_BROWSER_VIEW_ID = "web-browser-view";
 
 export class WebBrowserView extends ItemView {
-	plugin: MyPlugin;
+	plugin: AnotherWebBrowserPlugin;
 	private currentUrl: string;
 	private currentTitle = "New tab";
 
@@ -17,7 +17,7 @@ export class WebBrowserView extends ItemView {
 	private favicon: HTMLImageElement;
 	private frame: HTMLIFrameElement;
 
-	constructor(leaf: WorkspaceLeaf, plugin: MyPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: AnotherWebBrowserPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 	}
@@ -246,15 +246,16 @@ export class WebBrowserView extends ItemView {
 		const urlRegEx = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
 		// eslint-disable-next-line no-useless-escape
 		const urlRegEx2 = /((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+(:[0-9]+)?|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g;
+		console.log(!(url.startsWith("file://") || (/\.htm(l)?/g.test(url))));
+		console.log(/file:\/\/(.*)\.htm(l)?/g.test(url));
 		if (urlRegEx.test(url)) {
 			const first7 = url.slice(0, 7).toLowerCase();
 			const first8 = url.slice(0, 8).toLowerCase();
 			if (!(first7 === "http://" || first7 === "file://" || first8 === "https://")) {
 				url = "https://" + url;
 			}
-		} else if ((!(url.startsWith("file://") || !(/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url)))) {
+		} else if ((!(url.startsWith("file://") || (/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url)))) {
 			// If url is not a valid FILE url, search it with search engine.
-			// TODO: Support other search engines.
 			// @ts-ignore
 			url = (this.plugin.settings.defaultSearchEngine != 'custom' ? SEARCH_ENGINES[this.plugin.settings.defaultSearchEngine] : this.plugin.settings.customSearchUrl) + url;
 		}
