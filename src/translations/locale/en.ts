@@ -24,4 +24,6 @@ export default {
 	'Copy Plain Text': 'Copy Plain Text',
 	'Copy Link to Highlight': 'Copy Link to Highlight',
 	'Copy Video Timestamp': 'Copy Video Time',
+	'Open URL In Obsidian Web': 'Open URL In Obsidian Web',
+	"Copy BookmarkLets Success": "Copy BookmarkLets Success"
 };

@@ -23,6 +23,7 @@ have be possible without it.
   - Editor web search: You can select keywords in the editor and then right-click to open them in web-browser and search using the default search engine.
   - In-page web search: Again, you can right-click within a web page to use the default search engine search.
   - Copy links pointing to highlights: As with the browser, you can select text and copy the links pointing to it.
+  - Use BookmarkLets in your browser to open the URL directly in Obsidian.
   - Copy video timestamp (experimental feature: currently only bilibili is supported): right click on the text to pop up the menu to copy the timestamp, currently there are some bugs, it is known that sometimes the menu does not pop up.
 - Auxiliary Feature
   - Open current URL with external browser: right-click menu
@@ -32,6 +33,16 @@ have be possible without it.
   - Clear browsing history: command panel
   - All links are opened in the same panel on the right: Settings
   - Toggle whether to open in the same panel on the right: command panel
+
+## Usage
+ 
+### Use BookmarkLets Open URL
+
+The plugin registers an Obsidain uri protocol that allows you to open  eb-broswer in Obsidian using the URL `obsidian://web-open?url=<url>`. Where `<url>` refers to the web address link. Match [bookmarklets](https://en.wikipedia.org/wiki/Bookmarklet#:~:text=A%20bookmarklet%20is%20a%20bookmark%20stored%20in%20a,of%20 20JavaScript%20executed%20when%20user%20clicks%20on%20them.) will be able to click a bookmark in the browser to open the current browser URL within Obsidain. 
+
+1. Open the `Open URL In Obsidian Web` option in the plugin settings. 
+2. Under this option there is a link of bookmarklets, drag this link into your browser's bookmark bar.
+3. Now you can click on the bookmark to open the current page of your browser in Obsidian.
 
 ## Installation
 

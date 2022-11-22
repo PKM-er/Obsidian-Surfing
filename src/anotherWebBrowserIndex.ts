@@ -1,8 +1,12 @@
+import { clipboard } from 'electron';
 import {
 	App,
-	DropdownComponent, Editor,
+	DropdownComponent,
+	Editor,
 	EventRef,
-	ItemView, MarkdownView, Menu,
+	ItemView,
+	MarkdownView,
+	Menu,
 	Notice,
 	Plugin,
 	PluginSettingTab,
@@ -21,7 +25,8 @@ interface AnotherWebBrowserPluginSettings {
 	customSearchUrl: string;
 	customHighlightFormat: boolean;
 	highlightFormat: string;
-	openInSameTab: boolean
+	openInSameTab: boolean;
+	openInObsidianWeb: boolean;
 }
 
 const DEFAULT_SETTINGS: AnotherWebBrowserPluginSettings = {
@@ -29,7 +34,8 @@ const DEFAULT_SETTINGS: AnotherWebBrowserPluginSettings = {
 	customSearchUrl: 'https://duckduckgo.com/?q=',
 	customHighlightFormat: false,
 	highlightFormat: '[{CONTENT}]({URL})',
-	openInSameTab: false
+	openInSameTab: false,
+	openInObsidianWeb: false,
 }
 
 // Add search engines here for the future used.
@@ -62,18 +68,18 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 		}
 
 		FunctionHooks.onload();
-		// Update all leaf contains empty view when restart Obsidian
+
+
 		this.updateEmptyLeaf(false);
-		// Add search to contextmenu
 		this.registerContextMenu();
-		// Add header bar to "New tab" view.
+		this.registerCustomURI();
+
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
 			const activeView = this.app.workspace.getActiveViewOfType(ItemView);
 			if (activeView) this.addHeader(activeView);
 		});
 
-		// Add commands
-		this.registerCommands()
+		this.registerCommands();
 	}
 
 	onunload() {
@@ -122,6 +128,18 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 				if (!remove) this.addHeader(leaf.view);
 				if (remove) this.removeHeader(leaf.view);
 			}
+		});
+	}
+
+	// Support basic open web in Obsidian.
+	registerCustomURI() {
+		if (!this.settings.openInObsidianWeb) return;
+		this.registerObsidianProtocolHandler("web-open", async (e) => {
+			let url = e.url;
+			if (!url) return;
+			if (decodeURI(url) !== url) url = decodeURI(url).toString().replace(/\s/g, "%20");
+
+			WebBrowserView.spawnWebBrowserView(true, { url: url });
 		});
 	}
 
@@ -252,6 +270,7 @@ class WebBrowserSettingTab extends PluginSettingTab {
 		this.addSearchEngine();
 		this.addHighlightFormat();
 		this.addOpenInSameTab();
+		this.addOpenInObsidianWeb();
 	}
 
 	addSearchEngine() {
@@ -341,5 +360,36 @@ class WebBrowserSettingTab extends PluginSettingTab {
 						this.display()
 					})
 			})
+	}
+
+	addOpenInObsidianWeb() {
+		new Setting(this.containerEl)
+			.setName(t('Open URL In Obsidian Web'))
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.openInObsidianWeb)
+					.onChange(async (value) => {
+						this.plugin.settings.openInObsidianWeb = value;
+						this.applySettingsUpdate();
+						this.display();
+					})
+			})
+
+		if (!this.plugin.settings.openInObsidianWeb) {
+			return;
+		}
+
+
+		const bookmarkLetsEl = createEl("a", {
+			text: `Obsidian BookmarkLets Code`,
+			cls: 'cm-url',
+			href: 'javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();'
+		})
+		bookmarkLetsEl.addEventListener("click", () => {
+			clipboard.writeText(`javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();`)
+			new Notice(t("Copy BookmarkLets Success"))
+		})
+		this.containerEl.appendChild(bookmarkLetsEl
+		);
+
 	}
 }
