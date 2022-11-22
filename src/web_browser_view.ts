@@ -1,4 +1,4 @@
-import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView, Editor } from "obsidian";
+import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView, Editor, debounce } from "obsidian";
 import { HeaderBar } from "./header_bar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
@@ -36,25 +36,37 @@ export class WebBrowserView extends ItemView {
 
 				const leaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? activeViewLeaf : app.workspace.createLeafBySplit(activeViewLeaf) as WorkspaceLeaf;
 				localStorage.setItem("web-browser-leaf-id", leaf.id)
-				leaf.setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state })
+
+				if (leaf.view.getViewType() === "empty") {
+					leaf.setViewState({
+						type: WEB_BROWSER_VIEW_ID,
+						active: true,
+						state
+					})
+				} else {
+					(leaf.view as unknown as WebBrowserView).navigate(state.url, false);
+					leaf.rebuildView();
+				}
+
 				leaf.setPinned(true);
 				leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass("same-tab");
 			} else {
-				app.workspace.getLeafById(leafId).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+				if (app.workspace.getLeafById(leafId).view.getViewType() === WEB_BROWSER_VIEW_ID) {
+					// @ts-ignore
+					app.workspace.getLeafById(leafId).view.navigate(state.url, false, true);
+					app.workspace.getLeafById(leafId).rebuildView();
+				}
 			}
 		} else {
 			if (state.url.contains("bilibili")) {
 				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
 					if (app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].getViewState().state.url.split('?t=')[0] === state.url.split('?t=')[0]) {
-						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].setViewState({
-							type: WEB_BROWSER_VIEW_ID,
-							active: true,
-							state
-						});
+						// @ts-ignore
+						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].view.navigate(state.url, false, true);
+						(app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]).rebuildView();
 						return;
 					}
 				}
-				console.log("hellpow")
 			}
 			app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
 		}
@@ -85,6 +97,11 @@ export class WebBrowserView extends ItemView {
 		// Create main web view frame that displays the website.
 		this.frame = document.createElement("webview") as unknown as HTMLIFrameElement;
 		this.frame.setAttribute("allowpopups", "");
+
+		// TODO: Support preloadjs
+		// const pluginDir = app.vault.adapter.basePath + "\\" + app.plugins.getPluginFolder() + "\\" + "obsidian-web-browser";
+		// console.log(`file://${ pluginDir }\\webview-preload.js`);
+		// this.frame.setAttribute("preload", `file://${ pluginDir }\\webview-preload.js`);
 		// CSS classes makes frame fill the entire tab's content space.
 		this.frame.addClass("web-browser-frame");
 		this.contentEl.addClass("web-browser-view-content");
@@ -106,10 +123,44 @@ export class WebBrowserView extends ItemView {
 				}
 			});
 
-			const { Menu, MenuItem } = remote;
+			// TODO: Try to fix this.
+			// try {
+			// 	webContents.executeJavaScript(`
+			// 								let script = document.createElement('script');
+			// 								script.src = 'https://unpkg.com/darkreader@4.9.58/darkreader.js'
+			// 								script.async = false;
+			// 								script.type = 'text/javascript';
+			// 								script.crossOrigin = 'anonymous';
+			// 								document.head.append(script);
+			// 							`, true).then((result: any) => {
+			// 		console.log(result);
+			// 	});
+			// 	webContents.executeJavaScript(`
+			// 	            let error;
+			// 				try {
+			// 					DarkReader.enable({
+			// 						brightness: 100,
+			// 						contrast: 90,
+			// 						sepia: 10
+			// 					});
+			// 				} catch (err) {
+			// 				    error = err;
+			// 				}
+			// 	`, true).then((result: any) => {
+			// 		console.log(result);
+			// 	});
+			// } catch (err) {
+			// 	console.error('Failed to copy: ', err);
+			// }
+
 			webContents.on("context-menu", (event: any, params: any) => {
 				event.preventDefault();
 
+				run(params);
+			}, false);
+
+			const run = debounce((params: any) => {
+				const { Menu, MenuItem } = remote;
 				const menu = new Menu();
 				// Basic Menu For Webview
 				// TODO: Support adding different commands to the menu.
@@ -204,8 +255,6 @@ export class WebBrowserView extends ItemView {
 							}
 						}
 					}));
-
-					menu.popup(webContents);
 				}
 
 				// Should use this method to prevent default copy+c
@@ -216,7 +265,7 @@ export class WebBrowserView extends ItemView {
 				setTimeout(() => {
 					menu.popup(webContents);
 				}, 0)
-			}, false);
+			}, 10, true)
 
 			// For getting keyboard event from webview
 			webContents.on('before-input-event', (event: any, input: any) => {
@@ -240,6 +289,12 @@ export class WebBrowserView extends ItemView {
 				// If not, send the event to the webview
 				activeDocument.body.dispatchEvent(emulatedKeyboardEvent);
 			});
+
+			// TODO: Do we need to show a link that cursor hovering?
+			// webContents.on("update-target-url", (event: Event, url: string) => {
+			// 	console.log("update-target-url", url);
+			// })
+
 		});
 
 		// When focus set current leaf active;
@@ -271,6 +326,9 @@ export class WebBrowserView extends ItemView {
 			event.preventDefault();
 		});
 
+		this.frame.addEventListener("did-attach-webview", (event: any) => {
+			console.log("Webview attached");
+		})
 
 	}
 
@@ -366,6 +424,13 @@ export class WebBrowserView extends ItemView {
 			editor?.replaceRange(timestamp, editor?.getCursor());
 			if (originalCursor) editor?.setCursor(editor?.offsetToPos(originalCursor + timestamp.length));
 		});
+	}
+
+	// TODO: Refresh the page.
+	refresh() {
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		webContents.reload();
 	}
 }
 
