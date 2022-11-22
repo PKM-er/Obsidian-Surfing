@@ -38,9 +38,8 @@
 插件注册了一个 Obsidain uri 协议，该协议允许你使用`obsidian://web-open?url=<url>`的网址在 Obsidian 中打开 Web-broswer 。其中`<url>`指网页地址链接。配合 [bookmarklets](https://en.wikipedia.org/wiki/Bookmarklet#:~:text=A%20bookmarklet%20is%20a%20bookmark%20stored%20in%20a,of%20JavaScript%20executed%20when%20user%20clicks%20on%20them.) 便能实现点击浏览器的一个书签，在ob内打开当前浏览器网址。
 
 1. 在插件设置里打开`Open URL In Obsidian Web`选项
-2. 该选项下有一行代码，复制这行代码到剪贴板
-3. 在浏览器里新建书签，书签内容粘贴该行代码
-4. 现在可以点击书签，将浏览器当前页面在 Obsidian 打开了
+2. 该选项下有一个链接，拖拽这个链接到你外部浏览器的书签栏处，会生成一个书签
+3. 现在可以点击书签，将浏览器当前页面在 Obsidian 打开了
 
 ## 安装
 

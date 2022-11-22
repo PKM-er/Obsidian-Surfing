@@ -41,9 +41,8 @@ have be possible without it.
 The plugin registers an Obsidain uri protocol that allows you to open  eb-broswer in Obsidian using the URL `obsidian://web-open?url=<url>`. Where `<url>` refers to the web address link. Match [bookmarklets](https://en.wikipedia.org/wiki/Bookmarklet#:~:text=A%20bookmarklet%20is%20a%20bookmark%20stored%20in%20a,of%20 20JavaScript%20executed%20when%20user%20clicks%20on%20them.) will be able to click a bookmark in the browser to open the current browser URL within Obsidain. 
 
 1. Open the `Open URL In Obsidian Web` option in the plugin settings. 
-2. Under this option there is a line of code, copy this line of code to the clipboard.
-3. Create a new bookmark in your browser and paste the line of code in the bookmark content. 
-4. Now you can click on the bookmark to open the current page of your browser in Obsidian.
+2. Under this option there is a link of bookmarklets, drag this link into your browser's bookmark bar.
+3. Now you can click on the bookmark to open the current page of your browser in Obsidian.
 
 ## Installation
 
