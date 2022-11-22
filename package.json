@@ -8,7 +8,8 @@
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "eslint . --ext .ts",
-		"lint:fix": "npm run lint -- -- -- fix"
+		"lint:fix": "eslint --fix",
+		"prepare": "husky install"
 	},
 	"keywords": [],
 	"author": "Dion Tryban (Trikzon) && Boninall",
@@ -28,6 +29,7 @@
 		"monkey-around": "^2.3.0",
 		"obsidian": "^0.16.3",
 		"tslib": "2.4.0",
-		"typescript": "4.7.4"
+		"typescript": "4.7.4",
+		"husky": "^8.0.0"
 	}
 }
