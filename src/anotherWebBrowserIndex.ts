@@ -379,7 +379,7 @@ class WebBrowserSettingTab extends PluginSettingTab {
 
 		this.containerEl.appendChild(
 			createEl("div", {
-				text: "You can drag or copy the link below to your browser bookmark bar. This bookmarklet will allow you to jump from external web browser to Obsidian",
+				text: t("You can drag or copy the link below to your browser bookmark bar. This bookmarklet will allow you to jump from external web browser to Obsidian"),
 			})
 		);
 

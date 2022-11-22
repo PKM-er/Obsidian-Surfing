@@ -23,4 +23,5 @@ export default {
 	'Copy Link to Highlight': '复制指向突出显示的链接',
 	'Copy Video Timestamp': '复制视频时间戳',
 	'Open URL In Obsidian Web': '在 Obsidian Web 中打开网址',
+	"You can drag or copy the link below to your browser bookmark bar. This bookmarklet will allow you to jump from external web browser to Obsidian": "你可以拖动或复制下面的链接到浏览器书签栏。这个书签将允许你从外部浏览器跳转到 Obsidian",
 };
