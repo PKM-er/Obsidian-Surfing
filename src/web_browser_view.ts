@@ -5,6 +5,7 @@ import { clipboard, remote } from "electron";
 import { FunctionHooks } from "./hooks";
 import AnotherWebBrowserPlugin, { SEARCH_ENGINES } from "./anotherWebBrowserIndex";
 import { moment } from "obsidian";
+import { t } from "./translations/helper";
 
 export const WEB_BROWSER_VIEW_ID = "another-web-browser-view";
 
@@ -115,7 +116,7 @@ export class WebBrowserView extends ItemView {
 				menu.append(
 					new MenuItem(
 						{
-							label: 'Open Current URL In External Browser',
+							label: t('Open Current URL In External Browser'),
 							click: function () {
 								FunctionHooks.ogWindow$Open.call(window, params.pageURL, "_blank");
 							}
@@ -129,7 +130,7 @@ export class WebBrowserView extends ItemView {
 				if (params.selectionText) {
 					menu.append(new MenuItem({ type: 'separator' }));
 					menu.append(new MenuItem({
-						label: 'Search Text', click: function () {
+						label: t('Search Text'), click: function () {
 							try {
 								WebBrowserView.spawnWebBrowserView(true, { url: params.selectionText });
 								console.log('Page URL copied to clipboard');
@@ -140,7 +141,7 @@ export class WebBrowserView extends ItemView {
 					}));
 					menu.append(new MenuItem({ type: 'separator' }));
 					menu.append(new MenuItem({
-						label: 'Copy Blank Text', click: function () {
+						label: t('Copy Plain Text'), click: function () {
 							try {
 								webContents.copy();
 								console.log('Page URL copied to clipboard');
@@ -151,7 +152,7 @@ export class WebBrowserView extends ItemView {
 					}));
 					const highlightFormat = this.plugin.settings.highlightFormat;
 					menu.append(new MenuItem({
-						label: 'Copy Link to Text Fragment ', click: function () {
+						label: t('Copy Link to Highlight'), click: function () {
 							try {
 								// eslint-disable-next-line no-useless-escape
 								const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
@@ -180,7 +181,7 @@ export class WebBrowserView extends ItemView {
 
 				if (params.pageURL?.contains("bilibili")) {
 					menu.append(new MenuItem({
-						label: 'Copy Video Time', click: function () {
+						label: t('Copy Video Timestamp'), click: function () {
 							try {
 								webContents.executeJavaScript(`
 											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;

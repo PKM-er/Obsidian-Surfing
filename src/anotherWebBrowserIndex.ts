@@ -12,6 +12,8 @@ import { HeaderBar } from "./header_bar";
 import { FunctionHooks } from "./hooks";
 import { WEB_BROWSER_VIEW_ID, WebBrowserView } from "./web_browser_view";
 import { HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID, WebBrowserFileView } from "./web_browser_file_view";
+import { t } from "./translations/helper";
+
 // import { around } from "monkey-around";
 
 interface AnotherWebBrowserPluginSettings {
@@ -165,7 +167,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 		// And change the default private to public.
 		this.addCommand({
 			id: 'open-current-url-with-external-browser',
-			name: 'Open Current Url With External Browser',
+			name: t('Open Current URL In External Browser'),
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
 				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
@@ -186,7 +188,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 		// And change the default private to public.
 		this.addCommand({
 			id: 'clear-current-page-history',
-			name: 'Clear Current Page History',
+			name: t('Clear Current Page History'),
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
 				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
@@ -205,7 +207,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'toggle-same-tab-globally',
-			name: 'Toggle Same Tab In Web Browser',
+			name: t('Toggle Same Tab In Web Browser'),
 			callback: async () => {
 				this.settings.openInSameTab = !this.settings.openInSameTab;
 				await this.saveSettings()
@@ -254,16 +256,16 @@ class WebBrowserSettingTab extends PluginSettingTab {
 
 	addSearchEngine() {
 		new Setting(this.containerEl)
-			.setName('Default Search Engine')
+			.setName(t('Default Search Engine'))
 			.setDesc("")
 			.addDropdown(async (drowdown: DropdownComponent) => {
 				drowdown
-					.addOption('duckduckgo', 'DuckDuckGo')
-					.addOption('google', 'Google')
-					.addOption('bing', 'Bing')
-					.addOption('yahoo', 'Yahoo')
-					.addOption('baidu', 'Baidu')
-					.addOption('custom', 'Custom')
+					.addOption('duckduckgo', t('DuckDuckGo'))
+					.addOption('google', t('Google'))
+					.addOption('bing', t('Bing'))
+					.addOption('yahoo', t('Yahoo'))
+					.addOption('baidu', t('Baidu'))
+					.addOption('custom', t('Custom'))
 					.setValue(this.plugin.settings.defaultSearchEngine).onChange(async (value) => {
 					this.plugin.settings.defaultSearchEngine = value;
 					this.applySettingsUpdate();
@@ -277,8 +279,8 @@ class WebBrowserSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(this.containerEl)
-			.setName('Set Custom Search Engine Url')
-			.setDesc("Set custom search engine url for yourself. 'Duckduckgo' By default")
+			.setName(t('Set Custom Search Engine Url'))
+			.setDesc(t("Set custom search engine url for yourself. 'Duckduckgo' By default"))
 			.addText((text) =>
 				text
 					.setPlaceholder(DEFAULT_SETTINGS.customSearchUrl)
@@ -292,8 +294,7 @@ class WebBrowserSettingTab extends PluginSettingTab {
 
 	addHighlightFormat() {
 		new Setting(this.containerEl)
-			.setName('Custom Highlight Format')
-			.setDesc("Set custom highlight format for yourself. [{CONTENT}]({URL}) By default")
+			.setName(t('Custom Link to Highlight Format'))
 			.addToggle((toggle) => {
 				toggle
 					.setValue(this.plugin.settings.customHighlightFormat)
@@ -310,8 +311,8 @@ class WebBrowserSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(this.containerEl)
-			.setName('Copy Link to Text Fragment Format')
-			.setDesc("Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date.}")
+			.setName(t('Copy Link to Highlight Format'))
+			.setDesc(t("Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date."))
 			.addText((text) =>
 				text
 					.setPlaceholder(DEFAULT_SETTINGS.highlightFormat)
@@ -331,8 +332,7 @@ class WebBrowserSettingTab extends PluginSettingTab {
 
 	addOpenInSameTab() {
 		new Setting(this.containerEl)
-			.setName('Open In Same Tab')
-			.setDesc('Open url in same tab')
+			.setName(t('Open URL In Same Tab'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.openInSameTab)
 					.onChange(async (value) => {

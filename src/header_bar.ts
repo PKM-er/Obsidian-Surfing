@@ -1,4 +1,5 @@
 import AnotherWebBrowserPlugin from "./anotherWebBrowserIndex";
+import { t } from "./translations/helper";
 
 export class HeaderBar {
 	plugin: AnotherWebBrowserPlugin;
@@ -17,7 +18,7 @@ export class HeaderBar {
 		// Use Obsidian CreateEL method.
 		this.searchBar = parent.createEl("input", {
 			type: "text",
-			placeholder: "Search with " + this.plugin.settings.defaultSearchEngine + " or enter address",
+			placeholder: t("Search with") + this.plugin.settings.defaultSearchEngine + t("or enter address"),
 			cls: "web-browser-search-bar"
 		});
 
