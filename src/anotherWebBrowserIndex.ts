@@ -317,6 +317,12 @@ class WebBrowserSettingTab extends PluginSettingTab {
 					.setPlaceholder(DEFAULT_SETTINGS.highlightFormat)
 					.setValue(this.plugin.settings.highlightFormat)
 					.onChange(async (value) => {
+						if (value === "") {
+							this.plugin.settings.highlightFormat = DEFAULT_SETTINGS.highlightFormat;
+							this.applySettingsUpdate();
+							// Force refresh
+							this.display();
+						}
 						this.plugin.settings.highlightFormat = value;
 						this.applySettingsUpdate();
 					}),
