@@ -25,39 +25,7 @@ export class WebBrowserView extends ItemView {
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
 		const isOpenInSameTab = app.plugins.getPlugin("another-web-browser").settings.openInSameTab
-		if (isOpenInSameTab) {
-			const leafId = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length ? localStorage.getItem("web-browser-leaf-id") : app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
-			if (!leafId) {
-				// Check if current leaf is empty view or markdown view.
-				let activeViewLeaf: WorkspaceLeaf | undefined;
-				activeViewLeaf = app.workspace.getActiveViewOfType(MarkdownView)?.leaf
-				if (!activeViewLeaf) activeViewLeaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? app.workspace.getActiveViewOfType(ItemView)?.leaf : undefined
-				if (!activeViewLeaf) return;
-
-				const leaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? activeViewLeaf : app.workspace.createLeafBySplit(activeViewLeaf) as WorkspaceLeaf;
-				localStorage.setItem("web-browser-leaf-id", leaf.id)
-
-				if (leaf.view.getViewType() === "empty") {
-					leaf.setViewState({
-						type: WEB_BROWSER_VIEW_ID,
-						active: true,
-						state
-					})
-				} else {
-					(leaf.view as unknown as WebBrowserView).navigate(state.url, false);
-					leaf.rebuildView();
-				}
-
-				leaf.setPinned(true);
-				leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass("same-tab");
-			} else {
-				if (app.workspace.getLeafById(leafId).view.getViewType() === WEB_BROWSER_VIEW_ID) {
-					// @ts-ignore
-					app.workspace.getLeafById(leafId).view.navigate(state.url, false, true);
-					app.workspace.getLeafById(leafId).rebuildView();
-				}
-			}
-		} else {
+		if (!isOpenInSameTab) {
 			if (state.url.contains("bilibili")) {
 				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
 					if (app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].getViewState().state.url.split('?t=')[0] === state.url.split('?t=')[0]) {
@@ -69,7 +37,48 @@ export class WebBrowserView extends ItemView {
 				}
 			}
 			app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+			return;
 		}
+
+		const leafId = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length ? localStorage.getItem("web-browser-leaf-id") : app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
+		if (!leafId) {
+			// Check if current leaf is empty view or markdown view.
+			let activeViewLeaf: WorkspaceLeaf | undefined;
+			activeViewLeaf = app.workspace.getActiveViewOfType(MarkdownView)?.leaf
+			if (!activeViewLeaf) activeViewLeaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? app.workspace.getActiveViewOfType(ItemView)?.leaf : undefined
+			if (!activeViewLeaf) return;
+
+			const leaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? activeViewLeaf : app.workspace.createLeafBySplit(activeViewLeaf) as WorkspaceLeaf;
+			localStorage.setItem("web-browser-leaf-id", leaf.id);
+
+			leaf.setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+
+			if (!(leaf.view.getViewType() === "empty")) {
+				leaf.rebuildView();
+			}
+
+			leaf.setPinned(true);
+			leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass("same-tab");
+			return;
+		} else {
+			if (!app.workspace.getLeafById(leafId)) {
+				const newLeafID = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
+				if (newLeafID) {
+					localStorage.setItem("web-browser-leaf-id", newLeafID);
+					(app.workspace.getLeafById(newLeafID)?.view as WebBrowserView).navigate(state.url, true);
+					app.workspace.getLeafById(newLeafID)?.rebuildView();
+					return;
+				}
+			}
+
+			if (app.workspace.getLeafById(leafId)?.view.getViewType() === WEB_BROWSER_VIEW_ID) {
+				// @ts-ignore
+				(app.workspace.getLeafById(leafId)?.view as WebBrowserView).navigate(state.url, true);
+				app.workspace.getLeafById(leafId).rebuildView();
+				return;
+			}
+		}
+
 	}
 
 	getDisplayText(): string {
