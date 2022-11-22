@@ -1,4 +1,4 @@
-import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView } from "obsidian";
+import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView, Editor } from "obsidian";
 import { HeaderBar } from "./header_bar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
@@ -54,6 +54,7 @@ export class WebBrowserView extends ItemView {
 						return;
 					}
 				}
+				console.log("hellpow")
 			}
 			app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
 		}
@@ -342,6 +343,29 @@ export class WebBrowserView extends ItemView {
 			this.frame.setAttribute("src", url);
 		}
 		app.workspace.requestSaveLayout();
+	}
+
+	// TODO: Combine this with context menu method.
+	getCurrentTimestamp(editor?: Editor) {
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		webContents.executeJavaScript(`
+					var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
+					var timeYMSArr=time.split(':');
+					var joinTimeStr='00h00m00s';
+					if(timeYMSArr.length===3){
+						 joinTimeStr=timeYMSArr[0]+'h'+timeYMSArr[1]+'m'+timeYMSArr[2]+'s';
+					}else if(timeYMSArr.length===2){
+						 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
+					}
+					var timeStr= "";
+					timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr;
+				`, true).then((result: any) => {
+			const timestamp = "[" + result.split('?t=')[1] + "](" + result + ") ";
+			const originalCursor = editor?.posToOffset(editor?.getCursor());
+			editor?.replaceRange(timestamp, editor?.getCursor());
+			if (originalCursor) editor?.setCursor(editor?.offsetToPos(originalCursor + timestamp.length));
+		});
 	}
 }
 

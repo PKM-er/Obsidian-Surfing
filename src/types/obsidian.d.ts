@@ -21,6 +21,7 @@ declare module "obsidian" {
 		},
 		tabHeaderInnerIconEl: HTMLDivElement,
 		tabHeaderInnerTitleEl: HTMLDivElement
+		activeTime: number
 	}
 
 	export interface MenuItem {

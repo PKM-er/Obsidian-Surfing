@@ -230,6 +230,23 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 				await this.saveSettings()
 			}
 		});
+
+		this.addCommand({
+			id: 'get-current-timestamp',
+			name: 'Get Current Timestamp from Web Browser',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				const lastActiveLeaves = this.app.workspace.getLeavesOfType("another-web-browser-view");
+				if (lastActiveLeaves.length === 0) return;
+
+				const lastActiveLeaf = lastActiveLeaves.sort((a, b) => b.activeTime - a.activeTime)[0];
+
+				const webbrowserView = lastActiveLeaf.view as WebBrowserView;
+				const url = webbrowserView.getState()?.url;
+				if (!url?.contains("bilibili")) return;
+
+				webbrowserView.getCurrentTimestamp(editor);
+			}
+		});
 	}
 
 	async loadSettings() {
