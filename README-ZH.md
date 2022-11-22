@@ -20,6 +20,7 @@
   - 编辑器网页搜索：你可以在编辑器选中关键字后，右键在 web-browser 中打开，使用默认的搜索引擎搜索。
   - 网页内网页搜索：同样的，你可以在网页内右键使用默认的搜索引擎搜索。
   - 复制指向高亮的链接：同浏览器一样，你可以选中文字，复制指向该处的链接。
+  - 在浏览器中使用书签直接在 Obsidian 中打开网址。
   - 复制视频时间戳(实验性功能：目前仅支持bilibili)：右键文字弹出复制时间戳的菜单，目前有些bug，已知有时弹不出菜单。
 - 辅助功能
   - 用外部浏览器打开当前URL：右键菜单
@@ -29,7 +30,18 @@
   - 清除浏览历史记录：命令面板
   - 所有链接都在右侧同一个面板中打开：设置项
   - 切换是否在右侧同一面板中打开：命令面板
-  
+
+## 使用方法
+
+### 利用浏览器书签在obsidain中打开网站
+
+插件注册了一个 Obsidain uri 协议，该协议允许你使用`obsidian://web-open?url=<url>`的网址在 Obsidian 中打开 Web-broswer 。其中`<url>`指网页地址链接。配合 [bookmarklets](https://en.wikipedia.org/wiki/Bookmarklet#:~:text=A%20bookmarklet%20is%20a%20bookmark%20stored%20in%20a,of%20JavaScript%20executed%20when%20user%20clicks%20on%20them.) 便能实现点击浏览器的一个书签，在ob内打开当前浏览器网址。
+
+1. 在插件设置里打开`Open URL In Obsidian Web`选项
+2. 该选项下有一行代码，复制这行代码到剪贴板
+3. 在浏览器里新建书签，书签内容粘贴该行代码
+4. 现在可以点击书签，将浏览器当前页面在 Obsidian 打开了
+
 ## 安装
 
 - 目前尚未准备好上架市场
