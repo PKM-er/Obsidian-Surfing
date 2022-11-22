@@ -25,11 +25,15 @@ export class WebBrowserView extends ItemView {
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
 		const isOpenInSameTab = app.plugins.getPlugin("another-web-browser").settings.openInSameTab
 		if (isOpenInSameTab) {
-			const leafId = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length ? localStorage.getItem("web-browser-leaf-id") : app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id
+			const leafId = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length ? localStorage.getItem("web-browser-leaf-id") : app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
 			if (!leafId) {
-				const activeView = app.workspace.getActiveViewOfType(MarkdownView)?.leaf
-				if (!activeView) return;
-				const leaf = app.workspace.createLeafBySplit(activeView) as WorkspaceLeaf
+				// Check if current leaf is empty view or markdown view.
+				let activeViewLeaf: WorkspaceLeaf | undefined;
+				activeViewLeaf = app.workspace.getActiveViewOfType(MarkdownView)?.leaf
+				if (!activeViewLeaf) activeViewLeaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? app.workspace.getActiveViewOfType(ItemView)?.leaf : undefined
+				if (!activeViewLeaf) return;
+
+				const leaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? activeViewLeaf : app.workspace.createLeafBySplit(activeViewLeaf) as WorkspaceLeaf;
 				localStorage.setItem("web-browser-leaf-id", leaf.id)
 				leaf.setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state })
 				leaf.setPinned(true);
@@ -38,6 +42,18 @@ export class WebBrowserView extends ItemView {
 				app.workspace.getLeafById(leafId).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
 			}
 		} else {
+			if (state.url.contains("bilibili")) {
+				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
+					if (app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].getViewState().state.url.split('?t=')[0] === state.url.split('?t=')[0]) {
+						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].setViewState({
+							type: WEB_BROWSER_VIEW_ID,
+							active: true,
+							state
+						});
+						return;
+					}
+				}
+			}
 			app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
 		}
 	}
@@ -135,7 +151,7 @@ export class WebBrowserView extends ItemView {
 					}));
 					const highlightFormat = this.plugin.settings.highlightFormat;
 					menu.append(new MenuItem({
-						label: 'Copy Highlight Link', click: function (this: any) {
+						label: 'Copy Highlight Link', click: function () {
 							try {
 								// eslint-disable-next-line no-useless-escape
 								const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
@@ -153,6 +169,34 @@ export class WebBrowserView extends ItemView {
 								link = (link != "" ? link : highlightFormat).replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText);
 								clipboard.writeText(link);
 								console.log('Link URL copied to clipboard');
+							} catch (err) {
+								console.error('Failed to copy: ', err);
+							}
+						}
+					}));
+
+					menu.popup(webContents);
+				}
+
+				if (params.pageURL?.contains("bilibili")) {
+					menu.append(new MenuItem({
+						label: 'Copy Video Time', click: function () {
+							try {
+								webContents.executeJavaScript(`
+											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
+											var timeYMSArr=time.split(':');
+											var joinTimeStr='00h00m00s';
+											if(timeYMSArr.length===3){
+												 joinTimeStr=timeYMSArr[0]+'h'+timeYMSArr[1]+'m'+timeYMSArr[2]+'s';
+											}else if(timeYMSArr.length===2){
+												 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
+											}
+											var timeStr= "";
+											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr;
+										`, true).then((result: any) => {
+									clipboard.writeText("[" + result.split('?t=')[1] + "](" + result + ")"); // Will be the JSON object from the fetch call
+								});
+								console.log('Page URL copied to clipboard');
 							} catch (err) {
 								console.error('Failed to copy: ', err);
 							}

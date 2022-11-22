@@ -13,8 +13,9 @@ Original fork is [here](https://github.com/Trikzon/obsidian-web-browser).
 
 ## Road Map
 
-The [Road Map](https://github.com/users/Trikzon/projects/3/) (upcoming and planned features or enhancements) can be
-found on the Projects tab.
+Not yet, you can reference the [Road Map](https://github.com/users/Trikzon/projects/3/) (upcoming and planned features
+or enhancements) can be
+found on the Projects tab. But I will do what I want first rather than feature request.
 
 ## Installation
 
@@ -22,5 +23,7 @@ found on the Projects tab.
 - Use the [Brat](https://github.com/TfTHacker/obsidian42-brat) plugin.
 
 ## Support
+
+You can support original author `Trikzon` :
 
 [<img src="https://user-images.githubusercontent.com/14358394/115450238-f39e8100-a21b-11eb-89d0-fa4b82cdbce8.png" width="200">](https://ko-fi.com/trikzon)
