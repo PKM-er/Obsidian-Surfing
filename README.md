@@ -1,4 +1,4 @@
-# Obsidian Web Browser
+# Another Web Browser
 
 > This fork is maintained by Boninall, it is for personal use only. If you want to use it,
 > add `quorafind/obsidian-web-browser` rather than original one;
@@ -8,6 +8,8 @@ An [Obsidian](https://obsidian.md/) plugin that allows you to browse the web wit
 The core functionality of the plugin, rendering a web view, is greatly influenced
 by [Ellpeck's Obsidian Custom Frames](https://github.com/Ellpeck/ObsidianCustomFrames) plugin and this plugin wouldn't
 have be possible without it.
+
+Original fork is [here](https://github.com/Trikzon/obsidian-web-browser).
 
 ## Road Map
 
