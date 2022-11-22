@@ -6,13 +6,13 @@ import {
 	Notice,
 	Plugin,
 	PluginSettingTab,
-	Setting, TFile
+	Setting
 } from "obsidian";
 import { HeaderBar } from "./header_bar";
 import { FunctionHooks } from "./hooks";
 import { WEB_BROWSER_VIEW_ID, WebBrowserView } from "./web_browser_view";
 import { HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID, WebBrowserFileView } from "./web_browser_file_view";
-import { around } from "monkey-around";
+// import { around } from "monkey-around";
 
 interface AnotherWebBrowserPluginSettings {
 	defaultSearchEngine: string;
