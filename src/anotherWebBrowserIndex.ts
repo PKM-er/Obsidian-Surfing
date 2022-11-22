@@ -223,12 +223,51 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			}
 		});
 
+		// Use checkCallback method to check if the view is WebBrowserView;
+		// And change the default private to public.
+		this.addCommand({
+			id: 'refresh-page',
+			name: t('Refresh Current Page'),
+			checkCallback: (checking: boolean) => {
+				// Conditions to check
+				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
+				if (webbrowserView) {
+					// If checking is true, we're simply "checking" if the command can be run.
+					// If checking is false, then we want to actually perform the operation.
+					if (!checking) {
+						webbrowserView.refresh();
+					}
+
+					// This command will only show up in Command Palette when the check function returns true
+					return true;
+				}
+			}
+		});
+
 		this.addCommand({
 			id: 'toggle-same-tab-globally',
 			name: t('Toggle Same Tab In Web Browser'),
 			callback: async () => {
 				this.settings.openInSameTab = !this.settings.openInSameTab;
 				await this.saveSettings()
+			}
+		});
+
+
+		this.addCommand({
+			id: 'get-current-timestamp',
+			name: 'Get Current Timestamp from Web Browser',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				const lastActiveLeaves = this.app.workspace.getLeavesOfType("another-web-browser-view");
+				if (lastActiveLeaves.length === 0) return;
+
+				const lastActiveLeaf = lastActiveLeaves.sort((a, b) => b.activeTime - a.activeTime)[0];
+
+				const webbrowserView = lastActiveLeaf.view as WebBrowserView;
+				const url = webbrowserView.getState()?.url;
+				if (!url?.contains("bilibili")) return;
+
+				webbrowserView.getCurrentTimestamp(editor);
 			}
 		});
 	}

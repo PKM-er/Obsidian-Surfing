@@ -1,4 +1,4 @@
-import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView } from "obsidian";
+import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView, Editor, debounce } from "obsidian";
 import { HeaderBar } from "./header_bar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
@@ -25,38 +25,60 @@ export class WebBrowserView extends ItemView {
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
 		const isOpenInSameTab = app.plugins.getPlugin("another-web-browser").settings.openInSameTab
-		if (isOpenInSameTab) {
-			const leafId = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length ? localStorage.getItem("web-browser-leaf-id") : app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
-			if (!leafId) {
-				// Check if current leaf is empty view or markdown view.
-				let activeViewLeaf: WorkspaceLeaf | undefined;
-				activeViewLeaf = app.workspace.getActiveViewOfType(MarkdownView)?.leaf
-				if (!activeViewLeaf) activeViewLeaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? app.workspace.getActiveViewOfType(ItemView)?.leaf : undefined
-				if (!activeViewLeaf) return;
-
-				const leaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? activeViewLeaf : app.workspace.createLeafBySplit(activeViewLeaf) as WorkspaceLeaf;
-				localStorage.setItem("web-browser-leaf-id", leaf.id)
-				leaf.setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state })
-				leaf.setPinned(true);
-				leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass("same-tab");
-			} else {
-				app.workspace.getLeafById(leafId).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
-			}
-		} else {
+		if (!isOpenInSameTab) {
 			if (state.url.contains("bilibili")) {
 				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
 					if (app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].getViewState().state.url.split('?t=')[0] === state.url.split('?t=')[0]) {
-						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].setViewState({
-							type: WEB_BROWSER_VIEW_ID,
-							active: true,
-							state
-						});
+						// @ts-ignore
+						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].view.navigate(state.url, false, true);
+						(app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]).rebuildView();
 						return;
 					}
 				}
 			}
 			app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+			return;
 		}
+
+		const leafId = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length ? localStorage.getItem("web-browser-leaf-id") : app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
+		if (!leafId) {
+			// Check if current leaf is empty view or markdown view.
+			let activeViewLeaf: WorkspaceLeaf | undefined;
+			activeViewLeaf = app.workspace.getActiveViewOfType(MarkdownView)?.leaf
+			if (!activeViewLeaf) activeViewLeaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? app.workspace.getActiveViewOfType(ItemView)?.leaf : undefined
+			if (!activeViewLeaf) return;
+
+			const leaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? activeViewLeaf : app.workspace.createLeafBySplit(activeViewLeaf) as WorkspaceLeaf;
+			localStorage.setItem("web-browser-leaf-id", leaf.id);
+
+			leaf.setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+
+			if (!(leaf.view.getViewType() === "empty")) {
+				leaf.rebuildView();
+			}
+
+			leaf.setPinned(true);
+			leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass("same-tab");
+			return;
+		} else {
+			if (!app.workspace.getLeafById(leafId)) {
+				const newLeafID = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
+				if (newLeafID) {
+					localStorage.setItem("web-browser-leaf-id", newLeafID);
+					(app.workspace.getLeafById(newLeafID)?.view as WebBrowserView).navigate(state.url, true);
+					app.workspace.getLeafById(newLeafID)?.rebuildView();
+					return;
+				}
+			}
+
+			if (app.workspace.getLeafById(leafId)?.view.getViewType() === WEB_BROWSER_VIEW_ID) {
+				// @ts-ignore
+				(app.workspace.getLeafById(leafId)?.view as WebBrowserView).navigate(state.url, true);
+				app.workspace.getLeafById(leafId).rebuildView();
+				return;
+			}
+		}
+
 	}
 
 	getDisplayText(): string {
@@ -84,6 +106,11 @@ export class WebBrowserView extends ItemView {
 		// Create main web view frame that displays the website.
 		this.frame = document.createElement("webview") as unknown as HTMLIFrameElement;
 		this.frame.setAttribute("allowpopups", "");
+
+		// TODO: Support preloadjs
+		// const pluginDir = app.vault.adapter.basePath + "\\" + app.plugins.getPluginFolder() + "\\" + "obsidian-web-browser";
+		// console.log(`file://${ pluginDir }\\webview-preload.js`);
+		// this.frame.setAttribute("preload", `file://${ pluginDir }\\webview-preload.js`);
 		// CSS classes makes frame fill the entire tab's content space.
 		this.frame.addClass("web-browser-frame");
 		this.contentEl.addClass("web-browser-view-content");
@@ -105,10 +132,44 @@ export class WebBrowserView extends ItemView {
 				}
 			});
 
-			const { Menu, MenuItem } = remote;
+			// TODO: Try to fix this.
+			// try {
+			// 	webContents.executeJavaScript(`
+			// 								let script = document.createElement('script');
+			// 								script.src = 'https://unpkg.com/darkreader@4.9.58/darkreader.js'
+			// 								script.async = false;
+			// 								script.type = 'text/javascript';
+			// 								script.crossOrigin = 'anonymous';
+			// 								document.head.append(script);
+			// 							`, true).then((result: any) => {
+			// 		console.log(result);
+			// 	});
+			// 	webContents.executeJavaScript(`
+			// 	            let error;
+			// 				try {
+			// 					DarkReader.enable({
+			// 						brightness: 100,
+			// 						contrast: 90,
+			// 						sepia: 10
+			// 					});
+			// 				} catch (err) {
+			// 				    error = err;
+			// 				}
+			// 	`, true).then((result: any) => {
+			// 		console.log(result);
+			// 	});
+			// } catch (err) {
+			// 	console.error('Failed to copy: ', err);
+			// }
+
 			webContents.on("context-menu", (event: any, params: any) => {
 				event.preventDefault();
 
+				run(params);
+			}, false);
+
+			const run = debounce((params: any) => {
+				const { Menu, MenuItem } = remote;
 				const menu = new Menu();
 				// Basic Menu For Webview
 				// TODO: Support adding different commands to the menu.
@@ -203,8 +264,6 @@ export class WebBrowserView extends ItemView {
 							}
 						}
 					}));
-
-					menu.popup(webContents);
 				}
 
 				// Should use this method to prevent default copy+c
@@ -215,7 +274,7 @@ export class WebBrowserView extends ItemView {
 				setTimeout(() => {
 					menu.popup(webContents);
 				}, 0)
-			}, false);
+			}, 10, true)
 
 			// For getting keyboard event from webview
 			webContents.on('before-input-event', (event: any, input: any) => {
@@ -239,6 +298,12 @@ export class WebBrowserView extends ItemView {
 				// If not, send the event to the webview
 				activeDocument.body.dispatchEvent(emulatedKeyboardEvent);
 			});
+
+			// TODO: Do we need to show a link that cursor hovering?
+			// webContents.on("update-target-url", (event: Event, url: string) => {
+			// 	console.log("update-target-url", url);
+			// })
+
 		});
 
 		// When focus set current leaf active;
@@ -270,6 +335,9 @@ export class WebBrowserView extends ItemView {
 			event.preventDefault();
 		});
 
+		this.frame.addEventListener("did-attach-webview", (event: any) => {
+			console.log("Webview attached");
+		})
 
 	}
 
@@ -342,6 +410,36 @@ export class WebBrowserView extends ItemView {
 			this.frame.setAttribute("src", url);
 		}
 		app.workspace.requestSaveLayout();
+	}
+
+	// TODO: Combine this with context menu method.
+	getCurrentTimestamp(editor?: Editor) {
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		webContents.executeJavaScript(`
+					var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
+					var timeYMSArr=time.split(':');
+					var joinTimeStr='00h00m00s';
+					if(timeYMSArr.length===3){
+						 joinTimeStr=timeYMSArr[0]+'h'+timeYMSArr[1]+'m'+timeYMSArr[2]+'s';
+					}else if(timeYMSArr.length===2){
+						 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
+					}
+					var timeStr= "";
+					timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr;
+				`, true).then((result: any) => {
+			const timestamp = "[" + result.split('?t=')[1] + "](" + result + ") ";
+			const originalCursor = editor?.posToOffset(editor?.getCursor());
+			editor?.replaceRange(timestamp, editor?.getCursor());
+			if (originalCursor) editor?.setCursor(editor?.offsetToPos(originalCursor + timestamp.length));
+		});
+	}
+
+	// TODO: Refresh the page.
+	refresh() {
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		webContents.reload();
 	}
 }
 
