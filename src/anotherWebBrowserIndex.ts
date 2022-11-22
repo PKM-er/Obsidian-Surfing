@@ -136,7 +136,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 				menu.addItem((item) => {
 					// Add sub menu
 					const subMenu = item.setTitle(`Search In WebBrowser`).setIcon('search').setSubmenu();
-					for (let key in SEARCH_ENGINES) {
+					for (const key in SEARCH_ENGINES) {
 						subMenu.addItem((item) => {
 							item.setIcon('search')
 								.setTitle(key)
