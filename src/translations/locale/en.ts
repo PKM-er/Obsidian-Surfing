@@ -25,5 +25,5 @@ export default {
 	'Copy Link to Highlight': 'Copy Link to Highlight',
 	'Copy Video Timestamp': 'Copy Video Time',
 	'Open URL In Obsidian Web': 'Open URL In Obsidian Web',
-	"You can drag or copy the link below to your browser bookmark bar. This bookmarklet will allow you to jump from external web browser to Obsidian": "You can drag or copy the link below to your browser bookmark bar. This bookmarklet will allow you to jump from external web browser to Obsidian",
+	"Copy BookmarkLets Success": "Copy BookmarkLets Success"
 };

@@ -1,3 +1,4 @@
+import { clipboard } from 'electron';
 import {
 	App,
 	DropdownComponent,
@@ -394,17 +395,17 @@ class WebBrowserSettingTab extends PluginSettingTab {
 			return;
 		}
 
-		this.containerEl.appendChild(
-			createEl("div", {
-				text: t("You can drag or copy the link below to your browser bookmark bar. This bookmarklet will allow you to jump from external web browser to Obsidian"),
-			})
-		);
 
-		this.containerEl.appendChild(
-			createEl("a", {
-				text: `Obsidian Web`,
-				href: `javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();`,
-			})
+		const bookmarkLetsEl = createEl("a", {
+			text: `Obsidian BookmarkLets Code`,
+			cls: 'cm-url',
+			href: 'javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();'
+		})
+		bookmarkLetsEl.addEventListener("click", () => {
+			clipboard.writeText(`javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();`)
+			new Notice(t("Copy BookmarkLets Success"))
+		})
+		this.containerEl.appendChild(bookmarkLetsEl
 		);
 
 	}
