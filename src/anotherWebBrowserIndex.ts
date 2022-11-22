@@ -64,7 +64,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
 		} catch (error) {
-			new Notice(`File extensions ${HTML_FILE_EXTENSIONS} had been registered by other plugin!`);
+			new Notice(`File extensions ${ HTML_FILE_EXTENSIONS } had been registered by other plugin!`);
 		}
 
 		FunctionHooks.onload();
@@ -286,11 +286,11 @@ class WebBrowserSettingTab extends PluginSettingTab {
 					.addOption('baidu', t('Baidu'))
 					.addOption('custom', t('Custom'))
 					.setValue(this.plugin.settings.defaultSearchEngine).onChange(async (value) => {
-						this.plugin.settings.defaultSearchEngine = value;
-						this.applySettingsUpdate();
-						// Force refresh
-						this.display();
-					});
+					this.plugin.settings.defaultSearchEngine = value;
+					this.applySettingsUpdate();
+					// Force refresh
+					this.display();
+				});
 			});
 
 		if (!(this.plugin.settings.defaultSearchEngine === 'custom')) {
@@ -381,7 +381,8 @@ class WebBrowserSettingTab extends PluginSettingTab {
 
 		const bookmarkLetsEl = createEl("a", {
 			text: `Obsidian BookmarkLets Code`,
-			cls: 'cm-url'
+			cls: 'cm-url',
+			href: 'javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();'
 		})
 		bookmarkLetsEl.addEventListener("click", () => {
 			clipboard.writeText(`javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();`)
