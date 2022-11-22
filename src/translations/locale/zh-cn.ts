@@ -22,4 +22,5 @@ export default {
 	'Copy Plain Text': '复制纯文本',
 	'Copy Link to Highlight': '复制指向突出显示的链接',
 	'Copy Video Timestamp': '复制视频时间戳',
+	'Open URL In Obsidian Web': '在 Obsidian Web 中打开网址',
 };
