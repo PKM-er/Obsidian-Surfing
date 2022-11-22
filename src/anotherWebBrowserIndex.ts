@@ -310,13 +310,19 @@ class WebBrowserSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(this.containerEl)
-			.setName('Highlight Link Format')
-			.setDesc("Set highlight link format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD} to get the current date.}")
+			.setName('Copy Link to Text Fragment Format')
+			.setDesc("Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date.}")
 			.addText((text) =>
 				text
 					.setPlaceholder(DEFAULT_SETTINGS.highlightFormat)
 					.setValue(this.plugin.settings.highlightFormat)
 					.onChange(async (value) => {
+						if (value === "") {
+							this.plugin.settings.highlightFormat = DEFAULT_SETTINGS.highlightFormat;
+							this.applySettingsUpdate();
+							// Force refresh
+							this.display();
+						}
 						this.plugin.settings.highlightFormat = value;
 						this.applySettingsUpdate();
 					}),

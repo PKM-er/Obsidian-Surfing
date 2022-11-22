@@ -151,7 +151,7 @@ export class WebBrowserView extends ItemView {
 					}));
 					const highlightFormat = this.plugin.settings.highlightFormat;
 					menu.append(new MenuItem({
-						label: 'Copy Highlight Link', click: function () {
+						label: 'Copy Link to Text Fragment ', click: function () {
 							try {
 								// eslint-disable-next-line no-useless-escape
 								const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
