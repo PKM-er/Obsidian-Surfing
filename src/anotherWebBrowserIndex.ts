@@ -294,7 +294,7 @@ class WebBrowserSettingTab extends PluginSettingTab {
 
 	addHighlightFormat() {
 		new Setting(this.containerEl)
-			.setName(t('Custom Link to Text Fragment Format'))
+			.setName(t('Custom Link to Highlight Format'))
 			.addToggle((toggle) => {
 				toggle
 					.setValue(this.plugin.settings.customHighlightFormat)
@@ -311,7 +311,7 @@ class WebBrowserSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(this.containerEl)
-			.setName(t('Copy Link to Text Fragment Format'))
+			.setName(t('Copy Link to Highlight Format'))
 			.setDesc(t("Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date."))
 			.addText((text) =>
 				text
