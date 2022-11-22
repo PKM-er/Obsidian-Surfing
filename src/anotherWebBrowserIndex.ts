@@ -332,8 +332,7 @@ class WebBrowserSettingTab extends PluginSettingTab {
 
 	addOpenInSameTab() {
 		new Setting(this.containerEl)
-			.setName(t('Open In Same Tab'))
-			.setDesc(t('Open url in same tab'))
+			.setName(t('Open URL In Same Tab'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.openInSameTab)
 					.onChange(async (value) => {
