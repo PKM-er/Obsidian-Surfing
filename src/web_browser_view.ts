@@ -107,10 +107,6 @@ export class WebBrowserView extends ItemView {
 		this.frame = document.createElement("webview") as unknown as HTMLIFrameElement;
 		this.frame.setAttribute("allowpopups", "");
 
-		// TODO: Support preloadjs
-		// const pluginDir = app.vault.adapter.basePath + "\\" + app.plugins.getPluginFolder() + "\\" + "obsidian-web-browser";
-		// console.log(`file://${ pluginDir }\\webview-preload.js`);
-		// this.frame.setAttribute("preload", `file://${ pluginDir }\\webview-preload.js`);
 		// CSS classes makes frame fill the entire tab's content space.
 		this.frame.addClass("web-browser-frame");
 		this.contentEl.addClass("web-browser-view-content");
@@ -119,6 +115,7 @@ export class WebBrowserView extends ItemView {
 		this.headerBar.addOnSearchBarEnterListener((url: string) => {
 			this.navigate(url);
 		});
+
 
 		this.frame.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
@@ -132,35 +129,37 @@ export class WebBrowserView extends ItemView {
 				}
 			});
 
-			// TODO: Try to fix this.
-			// try {
-			// 	webContents.executeJavaScript(`
-			// 								let script = document.createElement('script');
-			// 								script.src = 'https://unpkg.com/darkreader@4.9.58/darkreader.js'
-			// 								script.async = false;
-			// 								script.type = 'text/javascript';
-			// 								script.crossOrigin = 'anonymous';
-			// 								document.head.append(script);
-			// 							`, true).then((result: any) => {
-			// 		console.log(result);
-			// 	});
-			// 	webContents.executeJavaScript(`
-			// 	            let error;
-			// 				try {
-			// 					DarkReader.enable({
-			// 						brightness: 100,
-			// 						contrast: 90,
-			// 						sepia: 10
-			// 					});
-			// 				} catch (err) {
-			// 				    error = err;
-			// 				}
-			// 	`, true).then((result: any) => {
-			// 		console.log(result);
-			// 	});
-			// } catch (err) {
-			// 	console.error('Failed to copy: ', err);
-			// }
+
+			// TODO: Try to improve this dark mode.
+			try {
+				webContents.executeJavaScript(`
+										window.getComputedStyle( document.body ,null).getPropertyValue('background-color');
+				`, true).then((result: any) => {
+					let colorArr = result.slice(
+						result.indexOf("(") + 1,
+						result.indexOf(")")
+					).split(", ");
+
+					const brightness = Math.sqrt(colorArr[0] ** 2 * 0.241 + colorArr[1] ** 2 * 0.691 + colorArr[2] ** 2 * 0.068);
+
+					// If the background color is dark, set the theme to dark.
+					if (brightness > 120 && app.getTheme() === "obsidian") {
+						webContents.insertCSS(`
+							html {
+								filter: invert(90%) hue-rotate(180deg);
+							}
+
+							img, video, svg, div[class*="language-"] {
+								filter: invert(110%) hue-rotate(180deg);
+								opacity: .8;
+							}
+						`)
+					}
+				});
+			} catch (err) {
+				console.error('Failed to get background color: ', err);
+			}
+
 
 			webContents.on("context-menu", (event: any, params: any) => {
 				event.preventDefault();
