@@ -6,11 +6,13 @@ import { FunctionHooks } from "./hooks";
 import AnotherWebBrowserPlugin, { SEARCH_ENGINES } from "./anotherWebBrowserIndex";
 import { moment } from "obsidian";
 import { t } from "./translations/helper";
+import { searchBox } from "./component/searchBox";
 
 export const WEB_BROWSER_VIEW_ID = "another-web-browser-view";
 
 export class WebBrowserView extends ItemView {
 	plugin: AnotherWebBrowserPlugin;
+	searchBox: searchBox;
 	private currentUrl: string;
 	private currentTitle = "New tab";
 
@@ -135,7 +137,7 @@ export class WebBrowserView extends ItemView {
 				webContents.executeJavaScript(`
 										window.getComputedStyle( document.body ,null).getPropertyValue('background-color');
 				`, true).then((result: any) => {
-					let colorArr = result.slice(
+					const colorArr = result.slice(
 						result.indexOf("(") + 1,
 						result.indexOf(")")
 					).split(", ");
@@ -149,7 +151,7 @@ export class WebBrowserView extends ItemView {
 								filter: invert(90%) hue-rotate(180deg);
 							}
 
-							img, video, svg, div[class*="language-"] {
+							img, svg, div[class*="language-"] {
 								filter: invert(110%) hue-rotate(180deg);
 								opacity: .8;
 							}
@@ -159,7 +161,6 @@ export class WebBrowserView extends ItemView {
 			} catch (err) {
 				console.error('Failed to get background color: ', err);
 			}
-
 
 			webContents.on("context-menu", (event: any, params: any) => {
 				event.preventDefault();
@@ -275,6 +276,10 @@ export class WebBrowserView extends ItemView {
 				}, 0)
 			}, 10, true)
 
+			// webContents.on('found-in-page', (event: any, result: any) => {
+			// 	if (result.finalUpdate) webContents.stopFindInPage('clearSelection')
+			// })
+
 			// For getting keyboard event from webview
 			webContents.on('before-input-event', (event: any, input: any) => {
 				if (input.type !== 'keyDown') {
@@ -296,6 +301,10 @@ export class WebBrowserView extends ItemView {
 				// If so, prevent default and execute the hotkey
 				// If not, send the event to the webview
 				activeDocument.body.dispatchEvent(emulatedKeyboardEvent);
+
+				if (emulatedKeyboardEvent.ctrlKey && emulatedKeyboardEvent.key === 'f') {
+					this.searchBox = new searchBox(this.leaf, webContents, this.plugin);
+				}
 			});
 
 			// TODO: Do we need to show a link that cursor hovering?
@@ -408,6 +417,7 @@ export class WebBrowserView extends ItemView {
 		if (updateWebView) {
 			this.frame.setAttribute("src", url);
 		}
+		this.searchBox?.unload();
 		app.workspace.requestSaveLayout();
 	}
 

@@ -25,6 +25,11 @@ declare module "obsidian" {
 		tabHeaderInnerTitleEl: HTMLDivElement
 		activeTime: number
 		rebuildView: () => void;
+
+	}
+
+	export interface View {
+		contentEl: HTMLElement,
 	}
 
 	export interface MenuItem {
