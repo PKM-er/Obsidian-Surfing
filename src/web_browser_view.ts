@@ -149,7 +149,7 @@ export class WebBrowserView extends ItemView {
 								filter: invert(90%) hue-rotate(180deg);
 							}
 
-							img, video, svg, div[class*="language-"] {
+							img, svg, div[class*="language-"] {
 								filter: invert(110%) hue-rotate(180deg);
 								opacity: .8;
 							}
