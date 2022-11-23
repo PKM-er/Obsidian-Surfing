@@ -11,6 +11,8 @@ declare module "obsidian" {
 		plugins: {
 			getPlugin(name: string): any;
 		};
+
+		getTheme: () => string;
 	}
 
 	export interface WorkspaceLeaf {
