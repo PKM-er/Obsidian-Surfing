@@ -135,7 +135,7 @@ export class WebBrowserView extends ItemView {
 				webContents.executeJavaScript(`
 										window.getComputedStyle( document.body ,null).getPropertyValue('background-color');
 				`, true).then((result: any) => {
-					let colorArr = result.slice(
+					const colorArr = result.slice(
 						result.indexOf("(") + 1,
 						result.indexOf(")")
 					).split(", ");
@@ -152,6 +152,11 @@ export class WebBrowserView extends ItemView {
 							img, svg, div[class*="language-"] {
 								filter: invert(110%) hue-rotate(180deg);
 								opacity: .8;
+							}
+							
+							video{
+								filter: invert(110%) hue-rotate(180deg);
+								opacity: 1;
 							}
 						`)
 					}
