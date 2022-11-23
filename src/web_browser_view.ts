@@ -155,6 +155,11 @@ export class WebBrowserView extends ItemView {
 								filter: invert(110%) hue-rotate(180deg);
 								opacity: .8;
 							}
+							
+							video{
+								filter: invert(110%) hue-rotate(180deg);
+								opacity: 1;
+							}
 						`)
 					}
 				});
