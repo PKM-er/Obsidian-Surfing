@@ -4,19 +4,21 @@ import {
 	DropdownComponent,
 	Editor,
 	EventRef,
-	ItemView,
+	ItemView, MarkdownRenderer,
 	MarkdownView,
 	Menu,
 	Notice,
 	Plugin,
 	PluginSettingTab,
-	Setting
+	Setting,
 } from "obsidian";
 import { HeaderBar } from "./header_bar";
 import { FunctionHooks } from "./hooks";
-import { WEB_BROWSER_VIEW_ID, WebBrowserView } from "./web_browser_view";
-import { HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID, WebBrowserFileView } from "./web_browser_file_view";
+import { WEB_BROWSER_VIEW_ID, AnotherWebBrowserView } from "./web_browser_view";
+import { HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID, AnotherWebBrowserFileView } from "./web_browser_file_view";
 import { t } from "./translations/helper";
+import { around } from "monkey-around";
+import { tokenType } from "./types/obsidian";
 
 // import { around } from "monkey-around";
 
@@ -54,12 +56,12 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+		this.checkWebBrowser();
+
 		this.addSettingTab(new WebBrowserSettingTab(this.app, this));
 
-		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new WebBrowserView(leaf, this));
-
-		// Feature to support html/htm files.
-		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new WebBrowserFileView(leaf));
+		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new AnotherWebBrowserView(leaf, this));
+		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new AnotherWebBrowserFileView(leaf));
 
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
@@ -67,12 +69,11 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			new Notice(`File extensions ${ HTML_FILE_EXTENSIONS } had been registered by other plugin!`);
 		}
 
-		FunctionHooks.onload();
-
-
-		this.updateEmptyLeaf(false);
+		// FunctionHooks.onload();
+		this.updateEmptyLeaves(false);
 		this.registerContextMenu();
 		this.registerCustomURI();
+		this.dispatchMarkdownView();
 
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
 			const activeView = this.app.workspace.getActiveViewOfType(ItemView);
@@ -84,12 +85,12 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 
 	onunload() {
 		this.app.workspace.detachLeavesOfType(WEB_BROWSER_VIEW_ID);
-		FunctionHooks.onunload();
+		// FunctionHooks.onunload();
 		this.app.workspace.offref(this.onLayoutChangeEventRef);
 
 		// Clean up header bar added to "New tab" views when plugin is disabled.
 		// Using Obsidian getViewType
-		this.updateEmptyLeaf(true);
+		this.updateEmptyLeaves(true);
 	}
 
 	// Add header bar to empty view.
@@ -103,7 +104,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			// Focus on current inputEl
 			headerBar.focus();
 			headerBar.addOnSearchBarEnterListener((url: string) => {
-				WebBrowserView.spawnWebBrowserView(false, { url });
+				AnotherWebBrowserView.spawnWebBrowserView(false, { url });
 			});
 		}
 	}
@@ -121,30 +122,30 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 	}
 
 	// Update all leaf contains empty view when restart Obsidian
-	private updateEmptyLeaf(remove?: boolean) {
+	private updateEmptyLeaves(removeHeader?: boolean) {
 		const emptyLeaves = this.app.workspace.getLeavesOfType("empty");
 		emptyLeaves.forEach((leaf) => {
 			if (leaf.view instanceof ItemView) {
-				if (!remove) this.addHeader(leaf.view);
-				if (remove) this.removeHeader(leaf.view);
+				if (!removeHeader) this.addHeader(leaf.view);
+				if (removeHeader) this.removeHeader(leaf.view);
 			}
 		});
 	}
 
 	// Support basic open web in Obsidian.
-	registerCustomURI() {
+	private registerCustomURI() {
 		if (!this.settings.openInObsidianWeb) return;
 		this.registerObsidianProtocolHandler("web-open", async (e) => {
 			let url = e.url;
 			if (!url) return;
 			if (decodeURI(url) !== url) url = decodeURI(url).toString().replace(/\s/g, "%20");
 
-			WebBrowserView.spawnWebBrowserView(true, { url: url });
+			AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
 		});
 	}
 
 	// Register right click menu on editor
-	registerContextMenu() {
+	private registerContextMenu() {
 		this.registerEvent(
 			this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor, view: MarkdownView) => {
 				if (!editor) {
@@ -162,7 +163,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 								.setTitle(key)
 								.onClick(() => {
 									// @ts-ignore
-									WebBrowserView.spawnWebBrowserView(true, { url: SEARCH_ENGINES[key] + selection });
+									AnotherWebBrowserView.spawnWebBrowserView(true, { url: SEARCH_ENGINES[key] + selection });
 								})
 						})
 					}
@@ -171,7 +172,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 							item.setIcon('search')
 								.setTitle("custom")
 								.onClick(() => {
-									WebBrowserView.spawnWebBrowserView(true, { url: this.settings.customSearchUrl + selection });
+									AnotherWebBrowserView.spawnWebBrowserView(true, { url: this.settings.customSearchUrl + selection });
 								})
 						})
 					}
@@ -180,7 +181,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			}))
 	}
 
-	registerCommands() {
+	private registerCommands() {
 		// Use checkCallback method to check if the view is WebBrowserView;
 		// And change the default private to public.
 		this.addCommand({
@@ -188,7 +189,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			name: t('Open Current URL In External Browser'),
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
-				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
+				const webbrowserView = this.app.workspace.getActiveViewOfType(AnotherWebBrowserView);
 				if (webbrowserView) {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
@@ -209,7 +210,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			name: t('Clear Current Page History'),
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
-				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
+				const webbrowserView = this.app.workspace.getActiveViewOfType(AnotherWebBrowserView);
 				if (webbrowserView) {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
@@ -230,7 +231,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			name: t('Refresh Current Page'),
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
-				const webbrowserView = this.app.workspace.getActiveViewOfType(WebBrowserView);
+				const webbrowserView = this.app.workspace.getActiveViewOfType(AnotherWebBrowserView);
 				if (webbrowserView) {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
@@ -263,13 +264,84 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 
 				const lastActiveLeaf = lastActiveLeaves.sort((a, b) => b.activeTime - a.activeTime)[0];
 
-				const webbrowserView = lastActiveLeaf.view as WebBrowserView;
+				const webbrowserView = lastActiveLeaf.view as AnotherWebBrowserView;
 				const url = webbrowserView.getState()?.url;
 				if (!url?.contains("bilibili")) return;
 
 				webbrowserView.getCurrentTimestamp(editor);
 			}
 		});
+	}
+
+	private checkWebBrowser() {
+
+	}
+
+	private dispatchMarkdownView() {
+		this.register(
+			around(MarkdownView.prototype, {
+				triggerClickableToken: (next) =>
+					function (token: tokenType, newLeaf: boolean | string, ...args: any) {
+						console.log(token, newLeaf, args);
+						if (token.type === "external-link") {
+							let url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
+							AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
+							return;
+						}
+						return next.call(this, token, newLeaf, ...args);
+					},
+			}),
+		);
+
+		const patchEditView = () => {
+			const view = app.workspace.getLeavesOfType("markdown").first()?.view;
+			if (!view) return false;
+			const editMode = view.editMode ?? view.sourceMode;
+
+			if (!editMode)
+				throw new Error(
+					"Failed to patch external link: no edit view found"
+				);
+
+			const MarkdownEditView = editMode.constructor;
+			this.register(
+				around(MarkdownEditView.prototype, {
+					triggerClickableToken: (next) =>
+						function (token: tokenType, newLeaf: boolean | string, ...args: any) {
+							console.log(token, newLeaf, args);
+							if (token.type === "external-link") {
+								let url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
+								AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
+								return;
+							}
+							return next.call(this, token, newLeaf, ...args);
+						},
+				})
+			);
+			console.log("Another-Web-browser: external link patched");
+			return true;
+		};
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchEditView()) {
+				const evt = app.workspace.on("layout-change", () => {
+					patchEditView() && app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
+
+		// TODO: we should hack markdown preview
+		this.register(
+			around(MarkdownRenderer.prototype, {
+				constructor: (next) =>
+					function (this: any, app: App, html: HTMLElement, ...args: any) {
+						const renderer = next.call(this, app, html, ...args);
+						console.log(args, renderer);
+						return renderer;
+					},
+			})
+		);
+
 	}
 
 	async loadSettings() {

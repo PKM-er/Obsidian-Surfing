@@ -1,9 +1,10 @@
 import { setIcon, WorkspaceLeaf } from "obsidian";
 import AnotherWebBrowserPlugin from "../anotherWebBrowserIndex";
 
-export class searchBox {
+export default class searchBox {
 	plugin: AnotherWebBrowserPlugin;
 	leaf: WorkspaceLeaf;
+
 	webContents: any;
 	closeButtonEl: HTMLElement;
 	backwardButtonEl: HTMLElement;

@@ -1,4 +1,4 @@
-import { WebBrowserView } from "./web_browser_view";
+import { AnotherWebBrowserView } from "./web_browser_view";
 
 // TODO: Change this whole thing to use https://github.com/pjeby/monkey-around instead.
 export class FunctionHooks {
@@ -28,7 +28,7 @@ export class FunctionHooks {
 			}
 
 			// TODO: Open external link in current leaf when meta key isn't being held down.
-			WebBrowserView.spawnWebBrowserView(true, { url: urlString });
+			AnotherWebBrowserView.spawnWebBrowserView(true, { url: urlString });
 			return null;
 		}
 	}
