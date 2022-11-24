@@ -27,4 +27,5 @@ export default {
 	'Open URL In Obsidian Web': 'Open URL In Obsidian Web',
 	"Copy BookmarkLets Success": "Copy BookmarkLets Success",
 	'Refresh Current Page': 'Refresh Current Page',
+	'Show Search Bar In Empty Page': 'Show Search Bar In Empty Page',
 };

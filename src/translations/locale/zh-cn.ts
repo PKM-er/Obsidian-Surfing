@@ -25,4 +25,5 @@ export default {
 	'Open URL In Obsidian Web': '在 Obsidian Web 中打开网址',
 	"Copy BookmarkLets Success": '复制 BookmarkLets 成功',
 	'Refresh Current Page': '刷新当前页面',
+	'Show Search Bar In Empty Page': '在空白页面中显示搜索栏',
 };

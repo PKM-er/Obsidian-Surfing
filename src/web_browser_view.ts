@@ -1,12 +1,12 @@
 import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView, Editor, debounce } from "obsidian";
-import { HeaderBar } from "./header_bar";
+import { HeaderBar } from "./component/headerBar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
-import { FunctionHooks } from "./hooks";
-import AnotherWebBrowserPlugin, { SEARCH_ENGINES } from "./anotherWebBrowserIndex";
+import AnotherWebBrowserPlugin from "./anotherWebBrowserIndex";
 import { moment } from "obsidian";
 import { t } from "./translations/helper";
 import searchBox from "./component/searchBox";
+import { SEARCH_ENGINES } from "./setting";
 
 export const WEB_BROWSER_VIEW_ID = "another-web-browser-view";
 
@@ -185,7 +185,7 @@ export class AnotherWebBrowserView extends ItemView {
 						{
 							label: t('Open Current URL In External Browser'),
 							click: function () {
-								FunctionHooks.ogWindow$Open.call(window, params.pageURL, "_blank");
+								window.open(params.pageURL, "_blank");
 							}
 						}
 					)
