@@ -26,4 +26,6 @@ export default {
 	"Copy BookmarkLets Success": '复制 BookmarkLets 成功',
 	'Refresh Current Page': '刷新当前页面',
 	'Show Search Bar In Empty Page': '在空白页面中显示搜索栏',
+	"You enabled obsidian-web-browser plugin, please disable it/disable another-web-browser to avoid conflict.": "你启用了 obsidian-web-browser 插件，请禁用它或禁用 another web browser 插件以避免冲突。",
+	"You didn't enable show tab title bar in apperance settings, please enable it to use another web browser happily.": "你没有在外观设置中启用显示标签页标题，请启用它以便使用 another web browser。",
 };

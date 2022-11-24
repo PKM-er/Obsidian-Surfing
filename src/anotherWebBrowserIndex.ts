@@ -247,7 +247,10 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 	}
 
 	private checkWebBrowser() {
-
+		const webBrowser = app.plugins.getPlugin("obsidian-web-browser")
+		if (webBrowser) new Notice(t("You enabled obsidian-web-browser plugin, please disable it/disable another-web-browser to avoid conflict."), 4000);
+		const tabHeader = app.vault.getConfig("showViewHeader")
+		if (!tabHeader) new Notice(t("You didn't enable show tab title bar in apperance settings, please enable it to use another web browser happily."), 4000);
 	}
 
 	private dispatchMarkdownView() {

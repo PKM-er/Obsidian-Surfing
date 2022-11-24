@@ -303,6 +303,16 @@ export class AnotherWebBrowserView extends ItemView {
 					repeat: input.isAutoRepeat
 				});
 
+				// TODO: Allow set hotkey in webview;
+				if (emulatedKeyboardEvent.key === '/') {
+					webContents.executeJavaScript(`
+											document.activeElement instanceof HTMLInputElement
+										`, true).then((result: any) => {
+						if (!result) this.headerBar.focus();
+					});
+					return;
+				}
+
 				// TODO Detect pressed hotkeys if exists in default hotkeys list
 				// If so, prevent default and execute the hotkey
 				// If not, send the event to the webview
@@ -311,6 +321,8 @@ export class AnotherWebBrowserView extends ItemView {
 				if (emulatedKeyboardEvent.ctrlKey && emulatedKeyboardEvent.key === 'f') {
 					this.searchBox = new searchBox(this.leaf, webContents, this.plugin);
 				}
+
+
 			});
 
 			// TODO: Do we need to show a link that cursor hovering?

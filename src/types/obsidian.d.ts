@@ -25,7 +25,18 @@ declare module "obsidian" {
 		tabHeaderInnerTitleEl: HTMLDivElement
 		activeTime: number
 		rebuildView: () => void;
+	}
 
+	interface VaultSettings {
+		showViewHeader: boolean;
+	}
+
+	export interface Vault {
+		config: Record<string, unknown>;
+
+		getConfig<T extends keyof VaultSettings>(setting: T): VaultSettings[T];
+
+		setConfig<T extends keyof VaultSettings>(setting: T, value: any): void;
 	}
 
 	export interface View {
