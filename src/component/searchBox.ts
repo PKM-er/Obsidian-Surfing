@@ -110,6 +110,7 @@ export class searchBox {
 
 	unload() {
 		this.webContents.stopFindInPage('clearSelection')
+		this.inputEl.value = "";
 
 		this.closeButtonEl.removeEventListener("click", this.unload);
 		this.backwardButtonEl.removeEventListener("click", this.backward);
