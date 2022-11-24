@@ -46,12 +46,28 @@ export class searchBox {
 		this.closeButtonEl.addEventListener("click", this.unload.bind(this));
 		this.forwardButtonEl.addEventListener("click", this.forward.bind(this));
 		this.backwardButtonEl.addEventListener("click", this.backward.bind(this));
+		this.inputEl.addEventListener("keyup", this.search.bind(this))
+		this.inputEl.addEventListener("keyup", this.exist.bind(this))
 
 		setIcon(this.closeButtonEl, "x", 8);
 		setIcon(this.forwardButtonEl, "arrow-up", 8);
 		setIcon(this.backwardButtonEl, "arrow-down", 8);
 
 		this.inputEl.focus();
+	}
+
+	search(event: KeyboardEvent) {
+		event.preventDefault();
+		if (event.keyCode === 13) {
+			this.forward()
+		}
+	}
+
+	exist(event: KeyboardEvent) {
+		event.preventDefault();
+		if (event.keyCode === 27) {
+			this.unload()
+		}
 	}
 
 	forward() {
@@ -93,6 +109,8 @@ export class searchBox {
 		this.closeButtonEl.removeEventListener("click", this.unload);
 		this.forwardButtonEl.removeEventListener("click", this.forward);
 		this.backwardButtonEl.removeEventListener("click", this.backward);
+		this.inputEl.removeEventListener('keyup', this.search);
+		this.inputEl.removeEventListener('keyup', this.exist);
 
 		this.searchBoxEl.detach();
 	}
