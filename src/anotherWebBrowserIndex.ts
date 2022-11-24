@@ -283,11 +283,11 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 				triggerClickableToken: (next) =>
 					function (token: tokenType, newLeaf: boolean | string, ...args: any) {
 						console.log(token, newLeaf, args);
-						if (token.type === "external-link") {
-							let url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
-							AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
-							return;
-						}
+						// if (token.type === "external-link") {
+						// 	const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
+						// 	AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
+						// 	return;
+						// }
 						return next.call(this, token, newLeaf, ...args);
 					},
 			}),
@@ -309,11 +309,11 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 					triggerClickableToken: (next) =>
 						function (token: tokenType, newLeaf: boolean | string, ...args: any) {
 							console.log(token, newLeaf, args);
-							if (token.type === "external-link") {
-								let url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
-								AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
-								return;
-							}
+							// if (token.type === "external-link") {
+							// 	const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
+							// 	AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
+							// 	return;
+							// }
 							return next.call(this, token, newLeaf, ...args);
 						},
 				})
@@ -341,6 +341,35 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 					},
 			})
 		);
+
+		// Use monkey-around to match current need.
+		// @ts-ignore
+		const uninstaller = around(window, {
+			open: (next) =>
+				function (url?: string | URL | undefined, target?: string | undefined, features?: string | undefined) {
+					let urlString = "";
+					if (typeof url === "string") {
+						urlString = url;
+					} else if (url instanceof URL) {
+						urlString = url.toString();
+					}
+
+					if (decodeURI(urlString) !== urlString) urlString = decodeURI(urlString).toString().replace(/\s/g, "%20");
+
+					// 1. Allows Obsidian to open a popup window if url is "about:blank" and features is not null
+					// TODO: There might be a better way to detect if it's a popup window.
+					// 2. Perform default behavior if the url isn't "http://" or "https://"
+					// TODO: Change to `isWebUri()` when I change to use the valid-url library.
+					if ((urlString === "about:blank" && features) || (!urlString.startsWith("http://") && !urlString.startsWith("https://") && !(urlString.startsWith("file://") && /\.htm(l)?/g.test(urlString)))) {
+						return next(url, target, features)
+					}
+
+					// TODO: Open external link in current leaf when meta key isn't being held down.
+					AnotherWebBrowserView.spawnWebBrowserView(true, { url: urlString });
+					return null;
+				}
+		})
+		this.register(uninstaller);
 
 	}
 

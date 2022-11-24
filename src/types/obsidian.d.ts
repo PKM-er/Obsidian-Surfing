@@ -1,7 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import * as obsidian from 'obsidian';
 import { Menu } from "obsidian";
-import exp = require("constants");
 
 declare module "obsidian" {
 	export interface ItemView {
