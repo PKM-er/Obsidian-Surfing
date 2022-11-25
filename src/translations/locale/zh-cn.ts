@@ -1,5 +1,5 @@
 export default {
-	// setting.ts
+	// anotherWebBrowserSetting.ts
 	"Search with": "使用",
 	"or enter address": "搜索，或输入地址",
 	'Default Search Engine': '默认搜索引擎',
@@ -22,7 +22,7 @@ export default {
 	'Copy Plain Text': '复制纯文本',
 	'Copy Link to Highlight': '复制指向突出显示的链接',
 	'Copy Video Timestamp': '复制视频时间戳',
-	'Open URL In Obsidian Web': '在 Obsidian Web 中打开网址',
+	'Open URL In Obsidian Web From Other Software': '从别的软件在 Obsidian Web 中打开网址',
 	"Copy BookmarkLets Success": '复制 BookmarkLets 成功',
 	'Refresh Current Page': '刷新当前页面',
 	'Show Search Bar In Empty Page': '在空白页面中显示搜索栏',
@@ -30,4 +30,13 @@ export default {
 	"You didn't enable show tab title bar in apperance settings, please enable it to use another web browser happily.": "你没有在外观设置中启用显示标签页标题，请启用它以便使用 another web browser。",
 	'Get Current Timestamp from Web Browser': '从浏览器获取当前时间戳',
 	'Search In Current Page Title Bar': '在当前页面标题栏中搜索',
+	"   <- Drag or click on me": "   <- 拖动或点击",
+	'Name': '名称',
+	'Url': '链接',
+	'Custom Search': '自定义搜索',
+	'Delete Custom Search': '删除自定义',
+	'Add new custom search engine': '添加新的自定义搜索引擎',
+	'Search all settings': '搜索设置',
+	'General': '常规选项',
+	'Search': '搜索选项',
 };

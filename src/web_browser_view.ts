@@ -6,7 +6,7 @@ import AnotherWebBrowserPlugin from "./anotherWebBrowserIndex";
 import { moment } from "obsidian";
 import { t } from "./translations/helper";
 import searchBox from "./component/searchBox";
-import { SEARCH_ENGINES } from "./setting";
+import { SEARCH_ENGINES } from "./anotherWebBrowserSetting";
 
 export const WEB_BROWSER_VIEW_ID = "another-web-browser-view";
 

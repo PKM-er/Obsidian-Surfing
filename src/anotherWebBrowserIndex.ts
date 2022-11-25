@@ -5,7 +5,12 @@ import { AnotherWebBrowserFileView, HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_
 import { t } from "./translations/helper";
 import { around } from "monkey-around";
 import { tokenType } from "./types/obsidian";
-import { AnotherWebBrowserPluginSettings, DEFAULT_SETTINGS, SEARCH_ENGINES, WebBrowserSettingTab } from "./setting";
+import {
+	AnotherWebBrowserPluginSettings,
+	DEFAULT_SETTINGS,
+	SEARCH_ENGINES,
+	WebBrowserSettingTab
+} from "./anotherWebBrowserSetting";
 import { InPageSearchBar } from "./component/inPageSearchBar";
 
 // import { around } from "monkey-around";
@@ -32,7 +37,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 		this.updateEmptyLeaves(false);
 		this.registerContextMenu();
 		this.registerCustomURI();
-		this.dispatchMarkdownView();
+		// this.dispatchMarkdownView();
 		this.dispatchWindowOpen();
 
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
@@ -268,71 +273,73 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 		if (!tabHeader) new Notice(t("You didn't enable show tab title bar in apperance settings, please enable it to use another web browser happily."), 4000);
 	}
 
-	private dispatchMarkdownView() {
-		this.register(
-			around(MarkdownView.prototype, {
-				triggerClickableToken: (next) =>
-					function (token: tokenType, newLeaf: boolean | string, ...args: any) {
-						console.log(token, newLeaf, args);
-						// if (token.type === "external-link") {
-						// 	const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
-						// 	AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
-						// 	return;
-						// }
-						return next.call(this, token, newLeaf, ...args);
-					},
-			}),
-		);
-
-		const patchEditView = () => {
-			const view = app.workspace.getLeavesOfType("markdown").first()?.view;
-			if (!view) return false;
-			const editMode = view.editMode ?? view.sourceMode;
-
-			if (!editMode)
-				throw new Error(
-					"Failed to patch external link: no edit view found"
-				);
-
-			const MarkdownEditView = editMode.constructor;
-			this.register(
-				around(MarkdownEditView.prototype, {
-					triggerClickableToken: (next) =>
-						function (token: tokenType, newLeaf: boolean | string, ...args: any) {
-							console.log(token, newLeaf, args);
-							// if (token.type === "external-link") {
-							// 	const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
-							// 	AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
-							// 	return;
-							// }
-							return next.call(this, token, newLeaf, ...args);
-						},
-				})
-			);
-			console.log("Another-Web-browser: external link patched");
-			return true;
-		};
-		this.app.workspace.onLayoutReady(() => {
-			if (!patchEditView()) {
-				const evt = app.workspace.on("layout-change", () => {
-					patchEditView() && app.workspace.offref(evt);
-				});
-				this.registerEvent(evt);
-			}
-		});
-
-		// TODO: we should hack markdown preview
-		this.register(
-			around(MarkdownRenderer.prototype, {
-				constructor: (next) =>
-					function (this: any, app: App, html: HTMLElement, ...args: any) {
-						const renderer = next.call(this, app, html, ...args);
-						console.log(args, renderer);
-						return renderer;
-					},
-			})
-		);
-	}
+	// TODO: Licat said that this method will be changed in the future.
+	// So we should not dispatch it now
+	// private dispatchMarkdownView() {
+	// 	this.register(
+	// 		around(MarkdownView.prototype, {
+	// 			triggerClickableToken: (next) =>
+	// 				function (token: tokenType, newLeaf: boolean | string, ...args: any) {
+	// 					console.log(token, newLeaf, args);
+	// 					// if (token.type === "external-link") {
+	// 					// 	const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
+	// 					// 	AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
+	// 					// 	return;
+	// 					// }
+	// 					return next.call(this, token, newLeaf, ...args);
+	// 				},
+	// 		}),
+	// 	);
+	//
+	// 	const patchEditView = () => {
+	// 		const view = app.workspace.getLeavesOfType("markdown").first()?.view;
+	// 		if (!view) return false;
+	// 		const editMode = view.editMode ?? view.sourceMode;
+	//
+	// 		if (!editMode)
+	// 			throw new Error(
+	// 				"Failed to patch external link: no edit view found"
+	// 			);
+	//
+	// 		const MarkdownEditView = editMode.constructor;
+	// 		this.register(
+	// 			around(MarkdownEditView.prototype, {
+	// 				triggerClickableToken: (next) =>
+	// 					function (token: tokenType, newLeaf: boolean | string, ...args: any) {
+	// 						console.log(token, newLeaf, args);
+	// 						// if (token.type === "external-link") {
+	// 						// 	const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
+	// 						// 	AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
+	// 						// 	return;
+	// 						// }
+	// 						return next.call(this, token, newLeaf, ...args);
+	// 					},
+	// 			})
+	// 		);
+	// 		console.log("Another-Web-browser: external link patched");
+	// 		return true;
+	// 	};
+	// 	this.app.workspace.onLayoutReady(() => {
+	// 		if (!patchEditView()) {
+	// 			const evt = app.workspace.on("layout-change", () => {
+	// 				patchEditView() && app.workspace.offref(evt);
+	// 			});
+	// 			this.registerEvent(evt);
+	// 		}
+	// 	});
+	//
+	// 	// TODO: we should hack markdown preview
+	// 	this.register(
+	// 		around(MarkdownRenderer.prototype, {
+	// 			constructor: (next) =>
+	// 				function (this: any, app: App, html: HTMLElement, ...args: any) {
+	// 					const renderer = next.call(this, app, html, ...args);
+	// 					console.log(args, renderer);
+	// 					return renderer;
+	// 				},
+	// 		})
+	// 	);
+	// }
 
 	dispatchWindowOpen() {
 		// Use monkey-around to match current need.

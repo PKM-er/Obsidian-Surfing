@@ -1,7 +1,7 @@
 // English
 
 export default {
-	// setting.ts
+	// anotherWebBrowserSetting.ts
 	"Search with": "Search with",
 	"or enter address": "or enter address",
 	'Default Search Engine': 'Default Search Engine',
@@ -24,7 +24,7 @@ export default {
 	'Copy Plain Text': 'Copy Plain Text',
 	'Copy Link to Highlight': 'Copy Link to Highlight',
 	'Copy Video Timestamp': 'Copy Video Time',
-	'Open URL In Obsidian Web': 'Open URL In Obsidian Web',
+	'Open URL In Obsidian Web From Other Software': 'Open URL In Obsidian Web From Other Software',
 	"Copy BookmarkLets Success": "Copy BookmarkLets Success",
 	'Refresh Current Page': 'Refresh Current Page',
 	'Show Search Bar In Empty Page': 'Show Search Bar In Empty Page',
@@ -32,5 +32,13 @@ export default {
 	"You didn't enable show tab title bar in apperance settings, please enable it to use another web browser happily.": "You didn't enable show tab header in apperance settings, please enable it to use another web browser happily.",
 	'Get Current Timestamp from Web Browser': 'Get Current Timestamp from Web Browser',
 	'Search In Current Page Title Bar': 'Search In Current Page Title Bar',
-
+	"   <- Drag or click on me": "   <- Drag or click on me",
+	'Name': 'Name',
+	'Url': 'Url',
+	'Custom Search': 'Custom Search',
+	'Delete Custom Search': 'Delete Custom Search',
+	'Add new custom search engine': 'Add new custom search engine',
+	'Search all settings': 'Search all settings',
+	'General': 'General',
+	'Search': 'Search',
 };
