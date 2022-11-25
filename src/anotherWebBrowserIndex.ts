@@ -423,7 +423,8 @@ class WebBrowserSettingTab extends PluginSettingTab {
 			cls: 'cm-url',
 			href: 'javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();'
 		})
-		bookmarkLetsEl.addEventListener("click", () => {
+		bookmarkLetsEl.addEventListener("click", (event) => {
+			event.preventDefault()
 			clipboard.writeText(`javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();`)
 			new Notice(t("Copy BookmarkLets Success"))
 		})
