@@ -27,7 +27,6 @@ export class AnotherWebBrowserView extends ItemView {
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
 		const isOpenInSameTab = app.plugins.getPlugin("another-web-browser").settings.openInSameTab;
-
 		if (!isOpenInSameTab) {
 			if (state.url.contains("bilibili")) {
 				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
@@ -64,6 +63,7 @@ export class AnotherWebBrowserView extends ItemView {
 			leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass("same-tab");
 			return;
 		} else {
+
 			if (!app.workspace.getLeafById(leafId)) {
 				const newLeafID = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
 				if (newLeafID) {

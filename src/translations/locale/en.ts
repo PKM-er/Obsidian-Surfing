@@ -30,4 +30,7 @@ export default {
 	'Show Search Bar In Empty Page': 'Show Search Bar In Empty Page',
 	"You enabled obsidian-web-browser plugin, please disable it/disable another-web-browser to avoid conflict.": "You enabled obsidian-web-browser plugin, please disable it/disable another-web-browser to avoid conflict.",
 	"You didn't enable show tab title bar in apperance settings, please enable it to use another web browser happily.": "You didn't enable show tab header in apperance settings, please enable it to use another web browser happily.",
+	'Get Current Timestamp from Web Browser': 'Get Current Timestamp from Web Browser',
+	'Search In Current Page Title Bar': 'Search In Current Page Title Bar',
+
 };

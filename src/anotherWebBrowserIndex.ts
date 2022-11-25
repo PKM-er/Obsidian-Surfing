@@ -230,7 +230,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'get-current-timestamp',
-			name: 'Get Current Timestamp from Web Browser',
+			name: t('Get Current Timestamp from Web Browser'),
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				const lastActiveLeaves = this.app.workspace.getLeavesOfType("another-web-browser-view");
 				if (lastActiveLeaves.length === 0) return;
@@ -242,6 +242,21 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 				if (!url?.contains("bilibili")) return;
 
 				webbrowserView.getCurrentTimestamp(editor);
+			}
+		});
+
+		this.addCommand({
+			id: 'search-in-current-page-title-bar',
+			name: t('Search In Current Page Title Bar'),
+			callback: () => {
+				const currentView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!currentView) return;
+				if (currentView.headerEl.childNodes.length > 4) return;
+				const searchBarEl = new HeaderBar(currentView.headerEl, this, false);
+				searchBarEl.addOnSearchBarEnterListener((url: string) => {
+					AnotherWebBrowserView.spawnWebBrowserView(false, { url });
+				});
+				searchBarEl.focus();
 			}
 		});
 	}

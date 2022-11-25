@@ -5,14 +5,16 @@ export class HeaderBar {
 	plugin: AnotherWebBrowserPlugin;
 	private searchBar: HTMLInputElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>;
+	removeChild = true;
 
-	constructor(parent: Element, plugin: AnotherWebBrowserPlugin) {
+	constructor(parent: Element, plugin: AnotherWebBrowserPlugin, removeChild?: boolean) {
 		this.plugin = plugin;
+		if (removeChild !== undefined) this.removeChild = removeChild;
 		// CSS class removes the gradient at the right of the header bar.
 		parent.addClass("web-browser-header-bar");
 		// Remove default title from header bar.
 		// Use Obsidian API to remove the title.
-		parent.empty();
+		if (this.removeChild) parent.empty();
 
 		// Create search bar in header bar.
 		// Use Obsidian CreateEL method.
@@ -30,6 +32,7 @@ export class HeaderBar {
 				const event = window.event as KeyboardEvent;
 			}
 			if (event.key === "Enter") {
+				// When enter is pressed, search for the url.
 				for (const listener of this.onSearchBarEnterListener) {
 					listener(this.searchBar.value);
 				}
@@ -47,6 +50,9 @@ export class HeaderBar {
 		// The expected behavior is that you will select all text when focus back;
 		this.searchBar.addEventListener("focusout", (event: FocusEvent) => {
 			window.getSelection()?.removeAllRanges();
+			if (!this.removeChild) {
+				this.searchBar.detach();
+			}
 		})
 	}
 

@@ -13,7 +13,7 @@ export default class searchBox {
 	searchBoxEl: HTMLElement;
 	clicked: boolean;
 
-	constructor(leaf: WorkspaceLeaf, webContents: any, plugin: AnotherWebBrowserPlugin) {
+	constructor(leaf: WorkspaceLeaf, webContents: any, plugin: AnotherWebBrowserPlugin, removeChild?: boolean) {
 		this.leaf = leaf;
 		this.webContents = webContents;
 		this.plugin = plugin;
