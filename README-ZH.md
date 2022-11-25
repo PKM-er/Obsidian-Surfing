@@ -17,7 +17,7 @@
 
 - 核心功能
   - 浏览任意网页：该插件会劫持Obsidian的 file、http、https 协议，使得链接能直接在Obsidian里打开，而不是外部浏览器。对，本地HTML等资源也支持。
-  - 编辑器网页搜索：你可以在编辑器选中关键字后，右键在 web-browser 中打开，使用默认的搜索引擎搜索。
+  - 编辑器网页搜索你可以在编辑器选中关键字后，右键在 web-browser 中打开，使用默认的搜索引擎搜索。
   - 网页内网页搜索：同样的，你可以在网页内右键使用默认的搜索引擎搜索。
   - 复制指向高亮的链接：同浏览器一样，你可以选中文字，复制指向该处的链接。
   - 在浏览器中使用书签直接在 Obsidian 中打开网址。
@@ -30,15 +30,16 @@
   - 清除浏览历史记录：命令面板
   - 所有链接都在右侧同一个面板中打开：设置项
   - 切换是否在右侧同一面板中打开：命令面板
+  - 简单的夜间模式：主要是为了bilibili的夜间观感，有些瑕疵，问题不大
 
 ## 使用方法
 
 ### 利用浏览器书签在obsidain中打开网站
 
-插件注册了一个 Obsidain uri 协议，该协议允许你使用`obsidian://web-open?url=<url>`的网址在 Obsidian 中打开 Web-broswer 。其中`<url>`指网页地址链接。配合 [bookmarklets](https://en.wikipedia.org/wiki/Bookmarklet#:~:text=A%20bookmarklet%20is%20a%20bookmark%20stored%20in%20a,of%20JavaScript%20executed%20when%20user%20clicks%20on%20them.) 便能实现点击浏览器的一个书签，在ob内打开当前浏览器网址。
+插件注册了一个 Obsidain uri 协议，该协议允许你使用`obsidian://web-open?url=<url>`的网址在 Obsidian 中打开 Web-broswer 。其中`<url>`指网页地址链接。配合 [bookmarklets](https://www.ruanyifeng.com/blog/2011/06/a_guide_for_writing_bookmarklet.html) 便能实现点击浏览器的一个书签，在ob内打开当前浏览器网址。
 
 1. 在插件设置里打开`Open URL In Obsidian Web`选项
-2. 该选项下有一个链接，拖拽这个链接到你外部浏览器的书签栏处，会生成一个书签
+2. 该选项下有一个链接，拖拽这个链接到你外部浏览器的书签栏处，会生成一个书签; 你也可以点击这个链接复制 bookmarklets 代码，自己新建一个书签
 3. 现在可以点击书签，将浏览器当前页面在 Obsidian 打开了
 
 ## 安装
