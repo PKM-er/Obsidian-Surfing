@@ -27,4 +27,6 @@ export default {
 	'Open URL In Obsidian Web': 'Open URL In Obsidian Web',
 	"Copy BookmarkLets Success": "Copy BookmarkLets Success",
 	'Refresh Current Page': 'Refresh Current Page',
+	'Get Current Timestamp from Web Browser': 'Get Current Timestamp from Web Browser',
+	'Search In Current Page Title Bar': 'Search In Current Page Title Bar',
 };

@@ -25,4 +25,6 @@ export default {
 	'Open URL In Obsidian Web': '在 Obsidian Web 中打开网址',
 	"Copy BookmarkLets Success": '复制 BookmarkLets 成功',
 	'Refresh Current Page': '刷新当前页面',
+	'Get Current Timestamp from Web Browser': '从浏览器获取当前时间戳',
+	'Search In Current Page Title Bar': '在当前页面标题栏中搜索',
 };
