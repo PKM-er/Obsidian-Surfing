@@ -103,7 +103,6 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			// Focus on current inputEl
 			headerBar.focus();
 			headerBar.addOnSearchBarEnterListener((url: string) => {
-				console.log("Search bar enter: " + url);
 				WebBrowserView.spawnWebBrowserView(false, { url });
 			});
 		}
@@ -281,7 +280,6 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 				if (currentView.headerEl.childNodes.length > 4) return;
 				const searchBarEl = new HeaderBar(currentView.headerEl, this, false);
 				searchBarEl.addOnSearchBarEnterListener((url: string) => {
-					console.log("Search bar enter: " + url);
 					WebBrowserView.spawnWebBrowserView(false, { url });
 				});
 				searchBarEl.focus();

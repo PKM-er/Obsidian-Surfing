@@ -1,12 +1,11 @@
 import AnotherWebBrowserPlugin from "./anotherWebBrowserIndex";
 import { t } from "./translations/helper";
-import { WebBrowserView } from "./web_browser_view";
 
 export class HeaderBar {
 	plugin: AnotherWebBrowserPlugin;
 	private searchBar: HTMLInputElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>;
-	removeChild: boolean = true;
+	removeChild = true;
 
 	constructor(parent: Element, plugin: AnotherWebBrowserPlugin, removeChild?: boolean) {
 		this.plugin = plugin;
