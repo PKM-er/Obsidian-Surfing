@@ -36,9 +36,9 @@ body:
     -   type: checkboxes
         id: web-browser-only
         attributes:
-            label: Did you install only one web browser plugin?
+            label: web-browser-only
             options:
-                -   label: Yes
+                -   label: Did you install only one web browser plugin?
                     required: true
     -   type: checkboxes
         id: checklist

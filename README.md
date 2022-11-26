@@ -33,15 +33,16 @@ have be possible without it.
   - Clear browsing history: command panel
   - All links are opened in the same panel on the right: Settings
   - Toggle whether to open in the same panel on the right: command panel
+  - Simple dark mode: just simple
 
 ## Usage
  
 ### Use BookmarkLets Open URL
 
-The plugin registers an Obsidain uri protocol that allows you to open  eb-broswer in Obsidian using the URL `obsidian://web-open?url=<url>`. Where `<url>` refers to the web address link. Match [bookmarklets](https://en.wikipedia.org/wiki/Bookmarklet#:~:text=A%20bookmarklet%20is%20a%20bookmark%20stored%20in%20a,of%20 20JavaScript%20executed%20when%20user%20clicks%20on%20them.) will be able to click a bookmark in the browser to open the current browser URL within Obsidain. 
+The plugin registers an Obsidain uri protocol that allows you to open  eb-broswer in Obsidian using the URL `obsidian://web-open?url=<url>`. Where `<url>` refers to the web address link. Match [bookmarklets](https://en.wikipedia.org/wiki/Bookmarklet) will be able to click a bookmark in the browser to open the current browser URL within Obsidain. 
 
 1. Open the `Open URL In Obsidian Web` option in the plugin settings. 
-2. Under this option there is a link of bookmarklets, drag this link into your browser's bookmark bar.
+2. Under this option there is a link of bookmarklets, drag this link into your browser's bookmark bar. You can also click this link(will copy bookmarklets code), then create bookmarklets by yourself.
 3. Now you can click on the bookmark to open the current page of your browser in Obsidian.
 
 ## Installation
