@@ -22,6 +22,7 @@ export interface SurfingSettings {
 	alwaysShowCustomSearch: boolean;
 	showSearchBarInPage: boolean;
 	customHighlightFormat: boolean;
+	markdownPath: string;
 	highlightFormat: string;
 	openInSameTab: boolean;
 	openInObsidianWeb: boolean;
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	}],
 	alwaysShowCustomSearch: false,
 	showSearchBarInPage: false,
+	markdownPath: "/",
 	customHighlightFormat: false,
 	highlightFormat: '[{CONTENT}]({URL})',
 	openInSameTab: false,
@@ -150,7 +152,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		this.search.setPlaceholder(t('Search all settings'));
 
-		this.search.inputEl.onfocus = () => {
+		this.search.inputEl.oninput = () => {
 			for (const tabInfo of this.tabContent) {
 				const tab = tabInfo[1];
 				tab.navButton.removeClass('wb-navigation-item-selected');
@@ -176,9 +178,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 		});
 	}
 
-	createTabAndContent(tabName: string, navEl: HTMLElement, containerEl: HTMLElement, generateTabContent?: (el: HTMLElement, tabName: string) => void) {
+	createTabAndContent(tabName: string, navigateEl: HTMLElement, containerEl: HTMLElement, generateTabContent?: (el: HTMLElement, tabName: string) => void) {
 		const displayTabContent = this.selectedTab === tabName;
-		const tabEl = navEl.createDiv('wb-navigation-item');
+		const tabEl = navigateEl.createDiv('wb-navigation-item');
 
 		const tabClass = 'wb-desktop';
 		tabEl.addClass(tabClass);
@@ -302,13 +304,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 	private generateGeneralSettings(tabName: string, wbContainerEl: HTMLElement) {
 		this.addOpenInSameTab(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
+		this.addMarkdownPath(tabName, wbContainerEl);
 		this.addOpenInObsidianWeb(tabName, wbContainerEl);
 		this.addAboutInfo(tabName, wbContainerEl);
 	}
 
 	private generateSearchSettings(tabName: string, wbContainerEl: HTMLElement): void {
 		this.addInpageSearch(tabName, wbContainerEl);
-
 		this.addSearchEngine(tabName, wbContainerEl);
 	}
 
@@ -457,8 +459,23 @@ export class SurfingSettingTab extends PluginSettingTab {
 				await this.plugin.saveSettings();
 			});
 
-			this.addSettingToMasterSettingsList(tabName, topLevelSetting.settingEl, settingName);
+			this.addSettingToMasterSettingsList(tabName, topLevelSetting.settingEl, settingName + t("Search Engine"));
 		});
+	}
+
+	private addMarkdownPath(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = t('Save As Markdown Path');
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addText((text) => text
+				.setPlaceholder(t('Path like /_Tempcard'))
+				.setValue(this.plugin.settings.markdownPath)
+				.onChange(async (value) => {
+					this.plugin.settings.markdownPath = value;
+					this.applySettingsUpdate();
+				}));
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 	}
 
 	private addHighlightFormat(tabName: string, wbContainerEl: HTMLElement) {

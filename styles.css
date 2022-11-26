@@ -56,12 +56,17 @@
 	margin-left: 4px;
 }
 
-.wb-page-search-bar-input {
+.wb-page-search-bar-input-container, .wb-page-search-bar-input {
 	width: 500px;
 	min-width: 20px;
 	height: 44px !important;
 	border-radius: 15px !important;
 	margin-bottom: 20px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.wb-page-search-bar-container {
 	margin-left: auto;
 	margin-right: auto;
 }

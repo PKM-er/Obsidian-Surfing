@@ -1,4 +1,4 @@
-import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView, Editor, debounce } from "obsidian";
+import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView, Editor, debounce, htmlToMarkdown } from "obsidian";
 import { HeaderBar } from "./component/headerBar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
@@ -186,6 +186,33 @@ export class SurfingView extends ItemView {
 							label: t('Open Current URL In External Browser'),
 							click: function () {
 								window.open(params.pageURL, "_blank");
+							}
+						}
+					)
+				);
+
+				menu.append(
+					new MenuItem(
+						{
+							label: t('Save Current Page As Markdown'),
+							click: async function () {
+								try {
+									webContents.executeJavaScript(`
+											document.body.outerHTML
+										`, true).then(async (result: any) => {
+										const url = params.pageURL.replace(/\?(.*)/g, "");
+										const parseContent = result.replaceAll(/src="([^"]*)"/g, "src=\"" + url + "$1\"");
+										const content = htmlToMarkdown(parseContent);
+										// @ts-ignore
+										const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
+										const file = await app.vault.create((app.plugins.getPlugin("surfing").settings.markdownPath ? app.plugins.getPlugin("surfing").settings.markdownPath + "/" : "/") + currentTitle + ".md", content);
+										await app.workspace.openLinkText(file.path, "", true);
+									});
+									console.log('Page Title copied to clipboard');
+								} catch (err) {
+									console.error('Failed to copy: ', err);
+								}
+
 							}
 						}
 					)
@@ -385,6 +412,10 @@ export class SurfingView extends ItemView {
 
 	getState(): WebBrowserViewState {
 		return { url: this.currentUrl };
+	}
+
+	getCurrentTitle(): string {
+		return this.currentTitle;
 	}
 
 	navigate(url: string, addToHistory = true, updateWebView = true) {
