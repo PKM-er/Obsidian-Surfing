@@ -1,10 +1,10 @@
 {
-	"id": "another-web-browser",
-	"name": "Another Web Browser",
+	"id": "surfing",
+	"name": "Surfing",
 	"version": "0.2.4",
 	"minAppVersion": "1.0.0",
 	"description": "Lets you browse the web within Obsidian with some neat features.",
-	"author": "Dion Tryban (Trikzon) && Boninall",
-	"authorUrl": "https://github.com/Trikzon",
+	"author": "Boninall",
+	"authorUrl": "https://github.com/Quorafind",
 	"isDesktopOnly": true
 }

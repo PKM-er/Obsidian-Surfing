@@ -1,5 +1,5 @@
 {
-	"name": "another-web-browser",
+	"name": "surfing",
 	"version": "0.2.4",
 	"description": "Lets you browse the web within Obsidian with some neat features.",
 	"main": "main.js",
@@ -12,7 +12,7 @@
 		"prepare": "husky install"
 	},
 	"keywords": [],
-	"author": "Dion Tryban (Trikzon) && Boninall",
+	"author": "Boninall",
 	"license": "MIT",
 	"devDependencies": {
 		"@codemirror/language": "^6.2.1",

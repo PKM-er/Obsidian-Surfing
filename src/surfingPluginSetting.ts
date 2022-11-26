@@ -10,13 +10,13 @@ import {
 } from "obsidian";
 import { t } from "./translations/helper";
 import { clipboard } from "electron";
-import AnotherWebBrowserPlugin from "./anotherWebBrowserIndex";
+import SurfingPlugin from "./surfingIndex";
 
 type settingSearchInfo = { containerEl: HTMLElement, name: string, description: string, options: SearchOptionInfo[], alias?: string }
 type TabContentInfo = { content: HTMLElement, heading: HTMLElement, navButton: HTMLElement }
 export type SearchOptionInfo = { name: string, description: string, options?: DropdownRecord[] }
 
-export interface AnotherWebBrowserPluginSettings {
+export interface SurfingSettings {
 	defaultSearchEngine: string;
 	customSearchEngine: SearchEngine[];
 	alwaysShowCustomSearch: boolean;
@@ -32,7 +32,7 @@ interface SearchEngine {
 	url: string;
 }
 
-export const DEFAULT_SETTINGS: AnotherWebBrowserPluginSettings = {
+export const DEFAULT_SETTINGS: SurfingSettings = {
 	defaultSearchEngine: 'duckduckgo',
 	customSearchEngine: [{
 		name: 'duckduckgo',
@@ -92,17 +92,17 @@ export class DropdownRecord {
 	}
 }
 
-export class WebBrowserSettingTab extends PluginSettingTab {
-	plugin: AnotherWebBrowserPlugin;
+export class SurfingSettingTab extends PluginSettingTab {
+	plugin: SurfingPlugin;
 	private applyDebounceTimer = 0;
 	private tabContent: Map<string, TabContentInfo> = new Map<string, TabContentInfo>();
 	private selectedTab = 'General';
 	private search: SearchComponent;
 	private searchSettingInfo: Map<string, settingSearchInfo[]> = new Map();
 	private searchZeroState: HTMLDivElement;
-	private navEl: HTMLElement;
+	private navigateEl: HTMLElement;
 
-	constructor(app: App, plugin: AnotherWebBrowserPlugin) {
+	constructor(app: App, plugin: SurfingPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -117,9 +117,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const { containerEl } = this;
-
 		containerEl.empty();
-
 
 		this.generateSettingsTitle();
 		this.addTabHeader();
@@ -133,11 +131,11 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 
 	private addTabHeader() {
 		const navContainer = this.containerEl.createEl('nav', { cls: 'wb-setting-header' });
-		this.navEl = navContainer.createDiv('wb-setting-tab-group');
+		this.navigateEl = navContainer.createDiv('wb-setting-tab-group');
 		const settingsEl = this.containerEl.createDiv('wb-setting-content');
 
-		this.createTabAndContent('General', this.navEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateGeneralSettings(tabName, el));
-		this.createTabAndContent('Search', this.navEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateSearchSettings(tabName, el));
+		this.createTabAndContent('General', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateGeneralSettings(tabName, el));
+		this.createTabAndContent('Search', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateSearchSettings(tabName, el));
 
 		this.createSearchZeroState(settingsEl);
 	}
@@ -166,11 +164,11 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 
 				this.selectedTab = '';
 			}
-			this.navEl.addClass('wb-setting-searching');
+			this.navigateEl.addClass('wb-setting-searching');
 		};
 
 		this.search.inputEl.onblur = () => {
-			this.navEl.removeClass('wb-setting-searching');
+			this.navigateEl.removeClass('wb-setting-searching');
 		}
 
 		this.search.onChange((value: string) => {
@@ -305,6 +303,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 		this.addOpenInSameTab(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
 		this.addOpenInObsidianWeb(tabName, wbContainerEl);
+		this.addAboutInfo(tabName, wbContainerEl);
 	}
 
 	private generateSearchSettings(tabName: string, wbContainerEl: HTMLElement): void {
@@ -563,5 +562,21 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 		})
 
 		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, settingName);
+	}
+
+	private addAboutInfo(tabName: string, wbContainerEl: HTMLElement) {
+
+		const bookmarkLetsContainerEl = wbContainerEl.createDiv({ cls: 'wb-about-card' });
+
+		setIcon(bookmarkLetsContainerEl.createDiv({ cls: 'wb-about-icon' }), 'surfing');
+
+		bookmarkLetsContainerEl.createEl('div', { cls: "wb-about-text", text: 'Surfing' });
+
+		const text = this.plugin.manifest.version;
+		const url = "https://github.com/Quorafind/Obsidian-Surfing/releases/tag/" + text;
+
+		bookmarkLetsContainerEl.createEl("a", { cls: 'wb-about-version', href: url, text: text });
+
+		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, "surfing");
 	}
 }

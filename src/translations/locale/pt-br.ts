@@ -2,5 +2,5 @@
 // Brazilian Portuguese
 
 export default {
-	// anotherWebBrowserSetting.ts
+	// surfingPluginSetting.ts
 };
