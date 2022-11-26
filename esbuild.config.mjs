@@ -15,7 +15,7 @@ esbuild.build({
 	banner: {
 		js: banner,
 	},
-	entryPoints: ['src/anotherWebBrowserIndex.ts'],
+	entryPoints: ['src/surfingIndex.ts'],
 	bundle: true,
 	external: [
 		'obsidian',

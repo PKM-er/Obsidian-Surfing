@@ -1,13 +1,13 @@
-import AnotherWebBrowserPlugin from "../anotherWebBrowserIndex";
+import SurfingPlugin from "../surfingIndex";
 import { t } from "../translations/helper";
 
 export class HeaderBar {
-	plugin: AnotherWebBrowserPlugin;
+	plugin: SurfingPlugin;
 	private searchBar: HTMLInputElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>;
 	removeChild = true;
 
-	constructor(parent: Element, plugin: AnotherWebBrowserPlugin, removeChild?: boolean) {
+	constructor(parent: Element, plugin: SurfingPlugin, removeChild?: boolean) {
 		this.plugin = plugin;
 		if (removeChild !== undefined) this.removeChild = removeChild;
 		// CSS class removes the gradient at the right of the header bar.

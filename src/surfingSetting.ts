@@ -10,13 +10,13 @@ import {
 } from "obsidian";
 import { t } from "./translations/helper";
 import { clipboard } from "electron";
-import AnotherWebBrowserPlugin from "./anotherWebBrowserIndex";
+import SurfingPlugin from "./surfingIndex";
 
 type settingSearchInfo = { containerEl: HTMLElement, name: string, description: string, options: SearchOptionInfo[], alias?: string }
 type TabContentInfo = { content: HTMLElement, heading: HTMLElement, navButton: HTMLElement }
 export type SearchOptionInfo = { name: string, description: string, options?: DropdownRecord[] }
 
-export interface AnotherWebBrowserPluginSettings {
+export interface SurfingSettings {
 	defaultSearchEngine: string;
 	customSearchEngine: SearchEngine[];
 	alwaysShowCustomSearch: boolean;
@@ -32,7 +32,7 @@ interface SearchEngine {
 	url: string;
 }
 
-export const DEFAULT_SETTINGS: AnotherWebBrowserPluginSettings = {
+export const DEFAULT_SETTINGS: SurfingSettings = {
 	defaultSearchEngine: 'duckduckgo',
 	customSearchEngine: [{
 		name: 'duckduckgo',
@@ -93,7 +93,7 @@ export class DropdownRecord {
 }
 
 export class WebBrowserSettingTab extends PluginSettingTab {
-	plugin: AnotherWebBrowserPlugin;
+	plugin: SurfingPlugin;
 	private applyDebounceTimer = 0;
 	private tabContent: Map<string, TabContentInfo> = new Map<string, TabContentInfo>();
 	private selectedTab = 'General';
@@ -102,7 +102,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 	private searchZeroState: HTMLDivElement;
 	private navEl: HTMLElement;
 
-	constructor(app: App, plugin: AnotherWebBrowserPlugin) {
+	constructor(app: App, plugin: SurfingPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -563,5 +563,19 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 		})
 
 		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, settingName);
+	}
+
+	private addAboutInfo(tabName: string, wbContainerEl: HTMLElement) {
+
+		const bookmarkLetsContainerEl = wbContainerEl.createDiv({ cls: 'wb-about-card' });
+
+		setIcon(bookmarkLetsContainerEl.createDiv({ cls: 'wb-about-icon' }), 'mountain-snow');
+
+		const text = this.plugin.manifest.version;
+		const url = ""
+
+		bookmarkLetsContainerEl.createDiv({ cls: 'wb-about-title', text: text });
+
+		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, text);
 	}
 }

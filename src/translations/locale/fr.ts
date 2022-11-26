@@ -1,5 +1,5 @@
 // français
 
 export default {
-	// anotherWebBrowserSetting.ts
+	// surfingSetting.ts
 };

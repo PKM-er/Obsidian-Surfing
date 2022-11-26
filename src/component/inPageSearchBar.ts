@@ -1,13 +1,13 @@
-import AnotherWebBrowserPlugin from "../anotherWebBrowserIndex";
+import SurfingPlugin from "../surfingIndex";
 import { t } from "../translations/helper";
 
 export class InPageSearchBar {
-	plugin: AnotherWebBrowserPlugin;
+	plugin: SurfingPlugin;
 	private inPageSearchBarEl: HTMLInputElement;
 	private inPageSearchBarContainerEl: HTMLDivElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>;
 
-	constructor(parent: Element, plugin: AnotherWebBrowserPlugin) {
+	constructor(parent: Element, plugin: SurfingPlugin) {
 		this.plugin = plugin;
 		// CSS class removes the gradient at the right of the header bar.
 		parent.addClass("wb-page-search-bar");

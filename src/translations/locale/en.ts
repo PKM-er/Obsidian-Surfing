@@ -1,7 +1,7 @@
 // English
 
 export default {
-	// anotherWebBrowserSetting.ts
+	// surfingSetting.ts
 	"Search with": "Search with",
 	"or enter address": "or enter address",
 	'Default Search Engine': 'Default Search Engine',
@@ -28,8 +28,8 @@ export default {
 	"Copy BookmarkLets Success": "Copy BookmarkLets Success",
 	'Refresh Current Page': 'Refresh Current Page',
 	'Show Search Bar In Empty Page': 'Show Search Bar In Empty Page',
-	"You enabled obsidian-web-browser plugin, please disable it/disable another-web-browser to avoid conflict.": "You enabled obsidian-web-browser plugin, please disable it/disable another-web-browser to avoid conflict.",
-	"You didn't enable show tab title bar in apperance settings, please enable it to use another web browser happily.": "You didn't enable show tab header in apperance settings, please enable it to use another web browser happily.",
+	"You enabled obsidian-web-browser plugin, please disable it/disable surfing to avoid conflict.": "You enabled obsidian-web-browser plugin, please disable it/disable Surfing to avoid conflict.",
+	"You didn't enable show tab title bar in apperance settings, please enable it to use surfing happily.": "You didn't enable show tab header in apperance settings, please enable it to use Surfing happily.",
 	'Get Current Timestamp from Web Browser': 'Get Current Timestamp from Web Browser',
 	'Search In Current Page Title Bar': 'Search In Current Page Title Bar',
 	"   <- Drag or click on me": "   <- Drag or click on me",

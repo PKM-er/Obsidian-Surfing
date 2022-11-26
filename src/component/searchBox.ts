@@ -1,8 +1,8 @@
 import { setIcon, WorkspaceLeaf } from "obsidian";
-import AnotherWebBrowserPlugin from "../anotherWebBrowserIndex";
+import SurfingPlugin from "../surfingIndex";
 
 export default class searchBox {
-	plugin: AnotherWebBrowserPlugin;
+	plugin: SurfingPlugin;
 	leaf: WorkspaceLeaf;
 
 	webContents: any;
@@ -13,7 +13,7 @@ export default class searchBox {
 	searchBoxEl: HTMLElement;
 	clicked: boolean;
 
-	constructor(leaf: WorkspaceLeaf, webContents: any, plugin: AnotherWebBrowserPlugin, removeChild?: boolean) {
+	constructor(leaf: WorkspaceLeaf, webContents: any, plugin: SurfingPlugin, removeChild?: boolean) {
 		this.leaf = leaf;
 		this.webContents = webContents;
 		this.plugin = plugin;

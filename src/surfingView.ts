@@ -2,16 +2,16 @@ import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView, Editor, debounc
 import { HeaderBar } from "./component/headerBar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
-import AnotherWebBrowserPlugin from "./anotherWebBrowserIndex";
+import SurfingPlugin from "./surfingIndex";
 import { moment } from "obsidian";
 import { t } from "./translations/helper";
 import searchBox from "./component/searchBox";
-import { SEARCH_ENGINES } from "./anotherWebBrowserSetting";
+import { SEARCH_ENGINES } from "./surfingSetting";
 
-export const WEB_BROWSER_VIEW_ID = "another-web-browser-view";
+export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
-export class AnotherWebBrowserView extends ItemView {
-	plugin: AnotherWebBrowserPlugin;
+export class SurfingView extends ItemView {
+	plugin: SurfingPlugin;
 	searchBox: searchBox;
 	private currentUrl: string;
 	private currentTitle = "New tab";
@@ -20,13 +20,13 @@ export class AnotherWebBrowserView extends ItemView {
 	private favicon: HTMLImageElement;
 	private frame: HTMLIFrameElement;
 
-	constructor(leaf: WorkspaceLeaf, plugin: AnotherWebBrowserPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: SurfingPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 	}
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
-		const isOpenInSameTab = app.plugins.getPlugin("another-web-browser").settings.openInSameTab;
+		const isOpenInSameTab = app.plugins.getPlugin("surfing").settings.openInSameTab;
 		if (!isOpenInSameTab) {
 			if (state.url.contains("bilibili")) {
 				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
@@ -68,7 +68,7 @@ export class AnotherWebBrowserView extends ItemView {
 				const newLeafID = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
 				if (newLeafID) {
 					localStorage.setItem("web-browser-leaf-id", newLeafID);
-					(app.workspace.getLeafById(newLeafID)?.view as AnotherWebBrowserView).navigate(state.url, true);
+					(app.workspace.getLeafById(newLeafID)?.view as SurfingView).navigate(state.url, true);
 					app.workspace.getLeafById(newLeafID)?.rebuildView();
 					return;
 				}
@@ -76,7 +76,7 @@ export class AnotherWebBrowserView extends ItemView {
 
 			if (app.workspace.getLeafById(leafId)?.view.getViewType() === WEB_BROWSER_VIEW_ID) {
 				// @ts-ignore
-				(app.workspace.getLeafById(leafId)?.view as AnotherWebBrowserView).navigate(state.url, true);
+				(app.workspace.getLeafById(leafId)?.view as SurfingView).navigate(state.url, true);
 				app.workspace.getLeafById(leafId).rebuildView();
 				return;
 			}
@@ -126,7 +126,7 @@ export class AnotherWebBrowserView extends ItemView {
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
-				AnotherWebBrowserView.spawnWebBrowserView(true, { url: event.url });
+				SurfingView.spawnWebBrowserView(true, { url: event.url });
 				return {
 					action: "allow",
 				}
@@ -199,7 +199,7 @@ export class AnotherWebBrowserView extends ItemView {
 					menu.append(new MenuItem({
 						label: t('Search Text'), click: function () {
 							try {
-								AnotherWebBrowserView.spawnWebBrowserView(true, { url: params.selectionText });
+								SurfingView.spawnWebBrowserView(true, { url: params.selectionText });
 								console.log('Page URL copied to clipboard');
 							} catch (err) {
 								console.error('Failed to copy: ', err);

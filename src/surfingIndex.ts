@@ -1,19 +1,19 @@
 import { Editor, EventRef, ItemView, MarkdownView, Menu, Notice, Plugin, } from "obsidian";
 import { HeaderBar } from "./component/headerBar";
-import { AnotherWebBrowserView, WEB_BROWSER_VIEW_ID } from "./web_browser_view";
-import { AnotherWebBrowserFileView, HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID } from "./web_browser_file_view";
+import { SurfingView, WEB_BROWSER_VIEW_ID } from "./surfingView";
+import { SurfingFileView, HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID } from "./surfingFileView";
 import { t } from "./translations/helper";
 import { around } from "monkey-around";
 import {
-	AnotherWebBrowserPluginSettings,
+	SurfingSettings,
 	DEFAULT_SETTINGS,
 	SEARCH_ENGINES,
 	WebBrowserSettingTab
-} from "./anotherWebBrowserSetting";
+} from "./surfingSetting";
 import { InPageSearchBar } from "./component/inPageSearchBar";
 
-export default class AnotherWebBrowserPlugin extends Plugin {
-	settings: AnotherWebBrowserPluginSettings;
+export default class SurfingPlugin extends Plugin {
+	settings: SurfingSettings;
 	private onLayoutChangeEventRef: EventRef;
 
 	async onload() {
@@ -22,8 +22,8 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 
 		this.addSettingTab(new WebBrowserSettingTab(this.app, this));
 
-		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new AnotherWebBrowserView(leaf, this));
-		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new AnotherWebBrowserFileView(leaf));
+		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
+		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
 
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
@@ -65,7 +65,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			// Focus on current inputEl
 			if (!this.settings.showSearchBarInPage) headerBar.focus();
 			headerBar.addOnSearchBarEnterListener((url: string) => {
-				AnotherWebBrowserView.spawnWebBrowserView(false, { url });
+				SurfingView.spawnWebBrowserView(false, { url });
 			});
 		}
 		if (!currentView.contentEl.children[0].hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
@@ -75,7 +75,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			}
 			inPageSearchBar.focus();
 			inPageSearchBar.addOnSearchBarEnterListener((url: string) => {
-				AnotherWebBrowserView.spawnWebBrowserView(false, { url });
+				SurfingView.spawnWebBrowserView(false, { url });
 			});
 		}
 	}
@@ -115,7 +115,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			if (!url) return;
 			if (decodeURI(url) !== url) url = decodeURI(url).toString().replace(/\s/g, "%20");
 
-			AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
+			SurfingView.spawnWebBrowserView(true, { url: url });
 		});
 	}
 
@@ -139,7 +139,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 								.setTitle(engine.name)
 								.onClick(() => {
 									// @ts-ignore
-									AnotherWebBrowserView.spawnWebBrowserView(true, { url: engine.url + selection });
+									SurfingView.spawnWebBrowserView(true, { url: engine.url + selection });
 								})
 						})
 					})
@@ -149,7 +149,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 							item.setIcon('search')
 								.setTitle("custom")
 								.onClick(() => {
-									AnotherWebBrowserView.spawnWebBrowserView(true, { url: this.settings.customSearchEngine + selection });
+									SurfingView.spawnWebBrowserView(true, { url: this.settings.customSearchEngine + selection });
 								})
 						})
 					}
@@ -166,7 +166,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			name: t('Open Current URL In External Browser'),
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
-				const webbrowserView = this.app.workspace.getActiveViewOfType(AnotherWebBrowserView);
+				const webbrowserView = this.app.workspace.getActiveViewOfType(SurfingView);
 				if (webbrowserView) {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
@@ -187,7 +187,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			name: t('Clear Current Page History'),
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
-				const webbrowserView = this.app.workspace.getActiveViewOfType(AnotherWebBrowserView);
+				const webbrowserView = this.app.workspace.getActiveViewOfType(SurfingView);
 				if (webbrowserView) {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
@@ -208,7 +208,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			name: t('Refresh Current Page'),
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
-				const webbrowserView = this.app.workspace.getActiveViewOfType(AnotherWebBrowserView);
+				const webbrowserView = this.app.workspace.getActiveViewOfType(SurfingView);
 				if (webbrowserView) {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
@@ -236,12 +236,12 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 			id: 'get-current-timestamp',
 			name: t('Get Current Timestamp from Web Browser'),
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				const lastActiveLeaves = this.app.workspace.getLeavesOfType("another-web-browser-view");
+				const lastActiveLeaves = this.app.workspace.getLeavesOfType("surfing-view");
 				if (lastActiveLeaves.length === 0) return;
 
 				const lastActiveLeaf = lastActiveLeaves.sort((a, b) => b.activeTime - a.activeTime)[0];
 
-				const webbrowserView = lastActiveLeaf.view as AnotherWebBrowserView;
+				const webbrowserView = lastActiveLeaf.view as SurfingView;
 				const url = webbrowserView.getState()?.url;
 				if (!url?.contains("bilibili")) return;
 
@@ -258,7 +258,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 				if (currentView.headerEl.childNodes.length > 4) return;
 				const searchBarEl = new HeaderBar(currentView.headerEl, this, false);
 				searchBarEl.addOnSearchBarEnterListener((url: string) => {
-					AnotherWebBrowserView.spawnWebBrowserView(false, { url });
+					SurfingView.spawnWebBrowserView(false, { url });
 				});
 				searchBarEl.focus();
 			}
@@ -267,9 +267,9 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 
 	private checkWebBrowser() {
 		const webBrowser = app.plugins.getPlugin("obsidian-web-browser")
-		if (webBrowser) new Notice(t("You enabled obsidian-web-browser plugin, please disable it/disable another-web-browser to avoid conflict."), 4000);
+		if (webBrowser) new Notice(t("You enabled obsidian-web-browser plugin, please disable it/disable surfing to avoid conflict."), 4000);
 		const tabHeader = app.vault.getConfig("showViewHeader")
-		if (!tabHeader) new Notice(t("You didn't enable show tab title bar in apperance settings, please enable it to use another web browser happily."), 4000);
+		if (!tabHeader) new Notice(t("You didn't enable show tab title bar in apperance settings, please enable it to use surfing happily."), 4000);
 	}
 
 	// TODO: Licat said that this method will be changed in the future.
@@ -362,7 +362,7 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 					}
 
 					// TODO: Open external link in current leaf when meta key isn't being held down.
-					AnotherWebBrowserView.spawnWebBrowserView(true, { url: urlString });
+					SurfingView.spawnWebBrowserView(true, { url: urlString });
 					return null;
 				}
 		})
