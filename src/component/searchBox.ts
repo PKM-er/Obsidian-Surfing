@@ -24,24 +24,24 @@ export default class searchBox {
 	onload() {
 		const containerEl = this.leaf.view.contentEl;
 		this.searchBoxEl = containerEl.createEl("div", {
-			cls: "web-browser-search-box"
+			cls: "wb-search-box"
 		});
 		this.inputEl = this.searchBoxEl.createEl("input", {
 			type: "text",
 			placeholder: "",
-			cls: "web-browser-search-input"
+			cls: "wb-search-input"
 		});
 		const searchButtonGroupEl = this.searchBoxEl.createEl("div", {
-			cls: "web-browser-search-button-group"
+			cls: "wb-search-button-group"
 		});
 		this.backwardButtonEl = searchButtonGroupEl.createEl("div", {
-			cls: "web-browser-search-button search-forward"
+			cls: "wb-search-button search-forward"
 		});
 		this.forwardButtonEl = searchButtonGroupEl.createEl("div", {
-			cls: "web-browser-search-button search-backward"
+			cls: "wb-search-button search-backward"
 		});
 		this.closeButtonEl = searchButtonGroupEl.createEl("div", {
-			cls: "web-browser-search-button search-close"
+			cls: "wb-search-button search-close"
 		});
 
 		this.closeButtonEl.addEventListener("click", this.unload.bind(this));

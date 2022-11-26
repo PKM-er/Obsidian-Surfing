@@ -1,10 +1,9 @@
-import { App, Editor, EventRef, ItemView, MarkdownRenderer, MarkdownView, Menu, Notice, Plugin, } from "obsidian";
+import { Editor, EventRef, ItemView, MarkdownView, Menu, Notice, Plugin, } from "obsidian";
 import { HeaderBar } from "./component/headerBar";
 import { AnotherWebBrowserView, WEB_BROWSER_VIEW_ID } from "./web_browser_view";
 import { AnotherWebBrowserFileView, HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID } from "./web_browser_file_view";
 import { t } from "./translations/helper";
 import { around } from "monkey-around";
-import { tokenType } from "./types/obsidian";
 import {
 	AnotherWebBrowserPluginSettings,
 	DEFAULT_SETTINGS,
@@ -12,8 +11,6 @@ import {
 	WebBrowserSettingTab
 } from "./anotherWebBrowserSetting";
 import { InPageSearchBar } from "./component/inPageSearchBar";
-
-// import { around } from "monkey-around";
 
 export default class AnotherWebBrowserPlugin extends Plugin {
 	settings: AnotherWebBrowserPluginSettings;
@@ -134,23 +131,25 @@ export default class AnotherWebBrowserPlugin extends Plugin {
 
 				menu.addItem((item) => {
 					// Add sub menu
+					const searchEngines = [...SEARCH_ENGINES, ...this.settings.customSearchEngine]
 					const subMenu = item.setTitle(`Search In WebBrowser`).setIcon('search').setSubmenu();
-					for (const key in SEARCH_ENGINES) {
+					searchEngines.forEach((engine) => {
 						subMenu.addItem((item) => {
 							item.setIcon('search')
-								.setTitle(key)
+								.setTitle(engine.name)
 								.onClick(() => {
 									// @ts-ignore
-									AnotherWebBrowserView.spawnWebBrowserView(true, { url: SEARCH_ENGINES[key] + selection });
+									AnotherWebBrowserView.spawnWebBrowserView(true, { url: engine.url + selection });
 								})
 						})
-					}
+					})
+
 					if (this.settings.defaultSearchEngine === 'custom') {
 						subMenu.addItem((item) => {
 							item.setIcon('search')
 								.setTitle("custom")
 								.onClick(() => {
-									AnotherWebBrowserView.spawnWebBrowserView(true, { url: this.settings.customSearchUrl + selection });
+									AnotherWebBrowserView.spawnWebBrowserView(true, { url: this.settings.customSearchEngine + selection });
 								})
 						})
 					}

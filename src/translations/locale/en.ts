@@ -41,4 +41,5 @@ export default {
 	'Search all settings': 'Search all settings',
 	'General': 'General',
 	'Search': 'Search',
+	'Always Show Custom Engines': 'Always Show Custom Engines',
 };

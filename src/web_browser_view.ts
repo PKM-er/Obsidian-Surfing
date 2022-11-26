@@ -111,8 +111,8 @@ export class AnotherWebBrowserView extends ItemView {
 		this.frame.setAttribute("allowpopups", "");
 
 		// CSS classes makes frame fill the entire tab's content space.
-		this.frame.addClass("web-browser-frame");
-		this.contentEl.addClass("web-browser-view-content");
+		this.frame.addClass("wb-frame");
+		this.contentEl.addClass("wb-view-content");
 		this.contentEl.appendChild(this.frame);
 
 		this.headerBar.addOnSearchBarEnterListener((url: string) => {
@@ -424,8 +424,10 @@ export class AnotherWebBrowserView extends ItemView {
 			}
 		} else if ((!(url.startsWith("file://") || (/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url)))) {
 			// If url is not a valid FILE url, search it with search engine.
+			const allSearchEngine = [...SEARCH_ENGINES, ...this.plugin.settings.customSearchEngine];
+			const currentSearchEngine = allSearchEngine.find((engine) => engine.name === this.plugin.settings.defaultSearchEngine);
 			// @ts-ignore
-			url = (this.plugin.settings.defaultSearchEngine != 'custom' ? SEARCH_ENGINES[this.plugin.settings.defaultSearchEngine] : this.plugin.settings.customSearchUrl) + url;
+			url = (currentSearchEngine ? currentSearchEngine.url : SEARCH_ENGINES[0].url) + url;
 		}
 
 

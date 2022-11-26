@@ -6,7 +6,7 @@ export default {
 	'Set Custom Search Engine Url': '设置自定义搜索引擎网址',
 	"Set custom search engine url for yourself. 'Duckduckgo' By default": "设置自定义搜索引擎网址。默认为'Duckduckgo'",
 	'Custom Link to Highlight Format': '自定义指向突出显示的链接的格式',
-	'Copy Link to Text Fragment Format': '复制指向突出显示的链接的格式',
+	'Copy Link to Highlight Format': '复制指向突出显示的链接的格式',
 	"Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date.": "设置复制文本片段的链接的格式。默认为[{CONTENT}]({URL})。你也可以设置{TIME:YYYY-MM-DD HH:mm:ss}来获取当前日期时间。",
 	'Open URL In Same Tab': '在同一标签页中打开网页',
 	'Custom': '自定义',
@@ -39,4 +39,5 @@ export default {
 	'Search all settings': '搜索设置',
 	'General': '常规选项',
 	'Search': '搜索选项',
+	'Always Show Custom Engines': '始终显示自定义引擎',
 };

@@ -18,7 +18,8 @@ export type SearchOptionInfo = { name: string, description: string, options?: Dr
 
 export interface AnotherWebBrowserPluginSettings {
 	defaultSearchEngine: string;
-	customSearchUrl: SearchEngine[];
+	customSearchEngine: SearchEngine[];
+	alwaysShowCustomSearch: boolean;
 	showSearchBarInPage: boolean;
 	customHighlightFormat: boolean;
 	highlightFormat: string;
@@ -29,16 +30,15 @@ export interface AnotherWebBrowserPluginSettings {
 interface SearchEngine {
 	name: string;
 	url: string;
-	searchWith: boolean;
 }
 
 export const DEFAULT_SETTINGS: AnotherWebBrowserPluginSettings = {
 	defaultSearchEngine: 'duckduckgo',
-	customSearchUrl: [{
+	customSearchEngine: [{
 		name: 'duckduckgo',
 		url: 'https://duckduckgo.com/?q=',
-		searchWith: false,
 	}],
+	alwaysShowCustomSearch: false,
 	showSearchBarInPage: false,
 	customHighlightFormat: false,
 	highlightFormat: '[{CONTENT}]({URL})',
@@ -46,14 +46,36 @@ export const DEFAULT_SETTINGS: AnotherWebBrowserPluginSettings = {
 	openInObsidianWeb: false,
 }
 // Add search engines here for the future used.
-export const SEARCH_ENGINES = {
-	'google': 'https://www.google.com/search?q=',
-	'bing': 'https://www.bing.com/search?q=',
-	'duckduckgo': 'https://duckduckgo.com/?q=',
-	'yahoo': 'https://search.yahoo.com/search?p=',
-	'baidu': 'https://www.baidu.com/s?wd=',
-	'wikipedia': 'https://en.wikipedia.org/w/index.php?search=',
-};
+export const SEARCH_ENGINES: SearchEngine[] = [
+	{
+		name: 'google',
+		url: 'https://www.google.com/search?q=',
+	},
+	{
+		name: 'bing',
+		url: 'https://www.bing.com/search?q=',
+	},
+	{
+		name: 'duckduckgo',
+		url: 'https://duckduckgo.com/?q=',
+	},
+	{
+		name: 'yahoo',
+		url: 'https://search.yahoo.com/search?p=',
+	},
+	{
+		name: 'baidu',
+		url: 'https://www.baidu.com/s?wd=',
+	},
+	{
+		name: 'yandex',
+		url: 'https://yandex.com/search/?text=',
+	},
+	{
+		name: 'wikipeida',
+		url: 'https://en.wikipedia.org/w/index.php?search=',
+	}
+];
 
 const tabNameToTabIconId: Record<string, string> = {
 	General: 'chrome',
@@ -74,7 +96,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 	plugin: AnotherWebBrowserPlugin;
 	private applyDebounceTimer = 0;
 	private tabContent: Map<string, TabContentInfo> = new Map<string, TabContentInfo>();
-	private selectedTab: string = 'General';
+	private selectedTab = 'General';
 	private search: SearchComponent;
 	private searchSettingInfo: Map<string, settingSearchInfo[]> = new Map();
 	private searchZeroState: HTMLDivElement;
@@ -223,8 +245,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 
 	private searchSettings(searchVal: string) {
 		const tabsWithSettingsInSearchResults = new Set<string>();
-		const that = this;
-		const showSearchResultAndAddTabToResultList = function (settingContainer: HTMLElement, tabName: string) {
+		const showSearchResultAndAddTabToResultList = (settingContainer: HTMLElement, tabName: string) => {
 			(settingContainer as HTMLElement).show();
 
 			if (!tabsWithSettingsInSearchResults.has(tabName)) {
@@ -281,18 +302,19 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 	}
 
 	private generateGeneralSettings(tabName: string, wbContainerEl: HTMLElement) {
-		this.addInpageSearch(tabName, wbContainerEl);
 		this.addOpenInSameTab(tabName, wbContainerEl);
+		this.addHighlightFormat(tabName, wbContainerEl);
 		this.addOpenInObsidianWeb(tabName, wbContainerEl);
 	}
 
 	private generateSearchSettings(tabName: string, wbContainerEl: HTMLElement): void {
-		this.addHighlightFormat(tabName, wbContainerEl);
+		this.addInpageSearch(tabName, wbContainerEl);
+
 		this.addSearchEngine(tabName, wbContainerEl);
 	}
 
 	// @ts-ignore
-	private addSettingToMasterSettingsList(tabName: string, containerEl: HTMLElement, name: string = '', description: string = '', options: SearchOptionInfo[] = null, alias: string = null) {
+	private addSettingToMasterSettingsList(tabName: string, containerEl: HTMLElement, name = '', description = '', options: SearchOptionInfo[] = null, alias: string = null) {
 		const settingInfo = {
 			containerEl: containerEl,
 			name: name.toLowerCase(),
@@ -315,8 +337,8 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 	}
 
 	private addInpageSearch(tabName: string, wbContainerEl: HTMLElement) {
-		let settingName = t('Show Search Bar In Empty Page');
-		let setting = new Setting(wbContainerEl)
+		const settingName = t('Show Search Bar In Empty Page');
+		const setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.showSearchBarInPage)
@@ -335,29 +357,49 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 		let setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.addDropdown(async (drowdown: DropdownComponent) => {
-				drowdown
+				const aDropdown = drowdown
 					.addOption('duckduckgo', t('DuckDuckGo'))
 					.addOption('google', t('Google'))
 					.addOption('bing', t('Bing'))
 					.addOption('yahoo', t('Yahoo'))
-					.addOption('baidu', t('Baidu'))
-					.addOption('custom', t('Custom'))
-					.setValue(this.plugin.settings.defaultSearchEngine).onChange(async (value) => {
+					.addOption('baidu', t('Baidu'));
+
+				this.plugin.settings.customSearchEngine.forEach((value, key) => {
+					aDropdown.addOption(value.name, value.name)
+				});
+
+				aDropdown.setValue(this.plugin.settings.defaultSearchEngine).onChange(async (value) => {
 					this.plugin.settings.defaultSearchEngine = value;
 					this.applySettingsUpdate();
 					// Force refresh
 					this.display();
-				});
+				})
 			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 
-		if (!(this.plugin.settings.defaultSearchEngine === 'custom')) {
+		settingName = t('Always Show Custom Engines');
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.alwaysShowCustomSearch)
+					.onChange(async (value) => {
+						this.plugin.settings.alwaysShowCustomSearch = value;
+						this.applySettingsUpdate();
+						// Force refresh
+						this.display();
+					});
+			})
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
+
+		if (!this.plugin.settings.alwaysShowCustomSearch) {
 			return;
 		}
 
-		if (typeof this.plugin.settings.customSearchUrl !== "object") {
-			this.plugin.settings.customSearchUrl = DEFAULT_SETTINGS.customSearchUrl;
+		if (typeof this.plugin.settings.customSearchEngine !== "object") {
+			this.plugin.settings.customSearchEngine = DEFAULT_SETTINGS.customSearchEngine;
 		}
 
 		settingName = t('Add new custom search engine');
@@ -366,10 +408,9 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 			.addButton((button) => button
 				.setButtonText('+')
 				.onClick(async () => {
-					this.plugin.settings.customSearchUrl.push({
-						name: `Custom Search ${ this.plugin.settings.customSearchUrl.length + 1 }`,
+					this.plugin.settings.customSearchEngine.push({
+						name: `Custom Search ${ this.plugin.settings.customSearchEngine.length + 1 }`,
 						url: 'https://www.google.com/search?q=',
-						searchWith: false,
 					});
 					await this.plugin.saveSettings();
 					this.display();
@@ -377,15 +418,15 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 
-		this.plugin.settings.customSearchUrl.forEach((searchEngine, index) => {
-			settingName = searchEngine.name ? searchEngine.name : t('Custom Search') + `${ this.plugin.settings.customSearchUrl.length > 1 ? ` ${ index + 1 }` : '' }`;
+		this.plugin.settings.customSearchEngine.forEach((searchEngine, index) => {
+			settingName = searchEngine.name ? searchEngine.name : t('Custom Search') + `${ this.plugin.settings.customSearchEngine.length > 1 ? ` ${ index + 1 }` : '' }`;
 			const topLevelSetting = new Setting(wbContainerEl)
 				.setClass('search-engine-setting')
 				.setName(settingName)
 				.addButton((button) => button
 					.setButtonText(t('Delete Custom Search'))
 					.onClick(async () => {
-						this.plugin.settings.customSearchUrl.splice(index, 1);
+						this.plugin.settings.customSearchEngine.splice(index, 1);
 						await this.plugin.saveSettings();
 						this.display();
 					}));
@@ -402,7 +443,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 				value: searchEngine.name,
 			}).on('change', '.search-engine-name-input', async (evt: Event) => {
 				const target = evt.target as HTMLInputElement;
-				this.plugin.settings.customSearchUrl[index] = { ...searchEngine, name: target.value };
+				this.plugin.settings.customSearchEngine[index] = { ...searchEngine, name: target.value };
 				await this.plugin.saveSettings();
 			});
 
@@ -413,7 +454,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 				value: searchEngine.url,
 			}).on('change', '.search-engine-url-input', async (evt: Event) => {
 				const target = evt.target as HTMLInputElement;
-				this.plugin.settings.customSearchUrl[index] = { ...searchEngine, url: target.value };
+				this.plugin.settings.customSearchEngine[index] = { ...searchEngine, url: target.value };
 				await this.plugin.saveSettings();
 			});
 
@@ -443,7 +484,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 		}
 
 		settingName = t('Copy Link to Highlight Format');
-		let settingDesc = t("Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date.");
+		const settingDesc = t("Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date.");
 		setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(settingDesc)
@@ -467,8 +508,8 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 	}
 
 	private addOpenInSameTab(tabName: string, wbContainerEl: HTMLElement) {
-		let settingName = t('Open URL In Same Tab');
-		let setting = new Setting(wbContainerEl)
+		const settingName = t('Open URL In Same Tab');
+		const setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -484,8 +525,8 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 	}
 
 	private addOpenInObsidianWeb(tabName: string, wbContainerEl: HTMLElement) {
-		let settingName = t('Open URL In Obsidian Web From Other Software');
-		let setting = new Setting(wbContainerEl)
+		const settingName = t('Open URL In Obsidian Web From Other Software');
+		const setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.openInObsidianWeb)

@@ -11,7 +11,7 @@ export class HeaderBar {
 		this.plugin = plugin;
 		if (removeChild !== undefined) this.removeChild = removeChild;
 		// CSS class removes the gradient at the right of the header bar.
-		parent.addClass("web-browser-header-bar");
+		parent.addClass("wb-header-bar");
 		// Remove default title from header bar.
 		// Use Obsidian API to remove the title.
 		if (this.removeChild) parent.empty();
@@ -21,7 +21,7 @@ export class HeaderBar {
 		this.searchBar = parent.createEl("input", {
 			type: "text",
 			placeholder: t("Search with") + this.plugin.settings.defaultSearchEngine + t("or enter address"),
-			cls: "web-browser-search-bar"
+			cls: "wb-search-bar"
 		});
 
 		// TODO: Would this be ok to use Obsidian add domlistener instead?
