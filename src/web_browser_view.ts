@@ -1,16 +1,16 @@
 import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView, Editor, debounce } from "obsidian";
-import { HeaderBar } from "./header_bar";
+import { HeaderBar } from "./component/headerBar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
-import { FunctionHooks } from "./hooks";
-import AnotherWebBrowserPlugin, { SEARCH_ENGINES } from "./anotherWebBrowserIndex";
+import AnotherWebBrowserPlugin from "./anotherWebBrowserIndex";
 import { moment } from "obsidian";
 import { t } from "./translations/helper";
-import { searchBox } from "./component/searchBox";
+import searchBox from "./component/searchBox";
+import { SEARCH_ENGINES } from "./anotherWebBrowserSetting";
 
 export const WEB_BROWSER_VIEW_ID = "another-web-browser-view";
 
-export class WebBrowserView extends ItemView {
+export class AnotherWebBrowserView extends ItemView {
 	plugin: AnotherWebBrowserPlugin;
 	searchBox: searchBox;
 	private currentUrl: string;
@@ -26,7 +26,7 @@ export class WebBrowserView extends ItemView {
 	}
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
-		const isOpenInSameTab = app.plugins.getPlugin("another-web-browser").settings.openInSameTab
+		const isOpenInSameTab = app.plugins.getPlugin("another-web-browser").settings.openInSameTab;
 		if (!isOpenInSameTab) {
 			if (state.url.contains("bilibili")) {
 				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
@@ -63,11 +63,12 @@ export class WebBrowserView extends ItemView {
 			leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass("same-tab");
 			return;
 		} else {
+
 			if (!app.workspace.getLeafById(leafId)) {
 				const newLeafID = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
 				if (newLeafID) {
 					localStorage.setItem("web-browser-leaf-id", newLeafID);
-					(app.workspace.getLeafById(newLeafID)?.view as WebBrowserView).navigate(state.url, true);
+					(app.workspace.getLeafById(newLeafID)?.view as AnotherWebBrowserView).navigate(state.url, true);
 					app.workspace.getLeafById(newLeafID)?.rebuildView();
 					return;
 				}
@@ -75,7 +76,7 @@ export class WebBrowserView extends ItemView {
 
 			if (app.workspace.getLeafById(leafId)?.view.getViewType() === WEB_BROWSER_VIEW_ID) {
 				// @ts-ignore
-				(app.workspace.getLeafById(leafId)?.view as WebBrowserView).navigate(state.url, true);
+				(app.workspace.getLeafById(leafId)?.view as AnotherWebBrowserView).navigate(state.url, true);
 				app.workspace.getLeafById(leafId).rebuildView();
 				return;
 			}
@@ -110,8 +111,8 @@ export class WebBrowserView extends ItemView {
 		this.frame.setAttribute("allowpopups", "");
 
 		// CSS classes makes frame fill the entire tab's content space.
-		this.frame.addClass("web-browser-frame");
-		this.contentEl.addClass("web-browser-view-content");
+		this.frame.addClass("wb-frame");
+		this.contentEl.addClass("wb-view-content");
 		this.contentEl.appendChild(this.frame);
 
 		this.headerBar.addOnSearchBarEnterListener((url: string) => {
@@ -125,7 +126,7 @@ export class WebBrowserView extends ItemView {
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
-				WebBrowserView.spawnWebBrowserView(true, { url: event.url });
+				AnotherWebBrowserView.spawnWebBrowserView(true, { url: event.url });
 				return {
 					action: "allow",
 				}
@@ -184,7 +185,7 @@ export class WebBrowserView extends ItemView {
 						{
 							label: t('Open Current URL In External Browser'),
 							click: function () {
-								FunctionHooks.ogWindow$Open.call(window, params.pageURL, "_blank");
+								window.open(params.pageURL, "_blank");
 							}
 						}
 					)
@@ -198,7 +199,7 @@ export class WebBrowserView extends ItemView {
 					menu.append(new MenuItem({
 						label: t('Search Text'), click: function () {
 							try {
-								WebBrowserView.spawnWebBrowserView(true, { url: params.selectionText });
+								AnotherWebBrowserView.spawnWebBrowserView(true, { url: params.selectionText });
 								console.log('Page URL copied to clipboard');
 							} catch (err) {
 								console.error('Failed to copy: ', err);
@@ -302,6 +303,16 @@ export class WebBrowserView extends ItemView {
 					repeat: input.isAutoRepeat
 				});
 
+				// TODO: Allow set hotkey in webview;
+				if (emulatedKeyboardEvent.key === '/') {
+					webContents.executeJavaScript(`
+											document.activeElement instanceof HTMLInputElement
+										`, true).then((result: any) => {
+						if (!result) this.headerBar.focus();
+					});
+					return;
+				}
+
 				// TODO Detect pressed hotkeys if exists in default hotkeys list
 				// If so, prevent default and execute the hotkey
 				// If not, send the event to the webview
@@ -310,6 +321,8 @@ export class WebBrowserView extends ItemView {
 				if (emulatedKeyboardEvent.ctrlKey && emulatedKeyboardEvent.key === 'f') {
 					this.searchBox = new searchBox(this.leaf, webContents, this.plugin);
 				}
+
+
 			});
 
 			// TODO: Do we need to show a link that cursor hovering?
@@ -411,8 +424,10 @@ export class WebBrowserView extends ItemView {
 			}
 		} else if ((!(url.startsWith("file://") || (/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url)))) {
 			// If url is not a valid FILE url, search it with search engine.
+			const allSearchEngine = [...SEARCH_ENGINES, ...this.plugin.settings.customSearchEngine];
+			const currentSearchEngine = allSearchEngine.find((engine) => engine.name === this.plugin.settings.defaultSearchEngine);
 			// @ts-ignore
-			url = (this.plugin.settings.defaultSearchEngine != 'custom' ? SEARCH_ENGINES[this.plugin.settings.defaultSearchEngine] : this.plugin.settings.customSearchUrl) + url;
+			url = (currentSearchEngine ? currentSearchEngine.url : SEARCH_ENGINES[0].url) + url;
 		}
 
 

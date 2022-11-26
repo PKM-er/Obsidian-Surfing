@@ -1,9 +1,10 @@
 import { setIcon, WorkspaceLeaf } from "obsidian";
 import AnotherWebBrowserPlugin from "../anotherWebBrowserIndex";
 
-export class searchBox {
+export default class searchBox {
 	plugin: AnotherWebBrowserPlugin;
 	leaf: WorkspaceLeaf;
+
 	webContents: any;
 	closeButtonEl: HTMLElement;
 	backwardButtonEl: HTMLElement;
@@ -12,7 +13,7 @@ export class searchBox {
 	searchBoxEl: HTMLElement;
 	clicked: boolean;
 
-	constructor(leaf: WorkspaceLeaf, webContents: any, plugin: AnotherWebBrowserPlugin) {
+	constructor(leaf: WorkspaceLeaf, webContents: any, plugin: AnotherWebBrowserPlugin, removeChild?: boolean) {
 		this.leaf = leaf;
 		this.webContents = webContents;
 		this.plugin = plugin;
@@ -23,24 +24,24 @@ export class searchBox {
 	onload() {
 		const containerEl = this.leaf.view.contentEl;
 		this.searchBoxEl = containerEl.createEl("div", {
-			cls: "web-browser-search-box"
+			cls: "wb-search-box"
 		});
 		this.inputEl = this.searchBoxEl.createEl("input", {
 			type: "text",
 			placeholder: "",
-			cls: "web-browser-search-input"
+			cls: "wb-search-input"
 		});
 		const searchButtonGroupEl = this.searchBoxEl.createEl("div", {
-			cls: "web-browser-search-button-group"
+			cls: "wb-search-button-group"
 		});
 		this.backwardButtonEl = searchButtonGroupEl.createEl("div", {
-			cls: "web-browser-search-button search-forward"
+			cls: "wb-search-button search-forward"
 		});
 		this.forwardButtonEl = searchButtonGroupEl.createEl("div", {
-			cls: "web-browser-search-button search-backward"
+			cls: "wb-search-button search-backward"
 		});
 		this.closeButtonEl = searchButtonGroupEl.createEl("div", {
-			cls: "web-browser-search-button search-close"
+			cls: "wb-search-button search-close"
 		});
 
 		this.closeButtonEl.addEventListener("click", this.unload.bind(this));

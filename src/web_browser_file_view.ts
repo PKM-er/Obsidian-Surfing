@@ -1,10 +1,10 @@
 import { FileSystemAdapter, FileView, TFile, WorkspaceLeaf } from "obsidian";
-import { WebBrowserView } from "./web_browser_view";
+import { AnotherWebBrowserView } from "./web_browser_view";
 
 export const HTML_FILE_EXTENSIONS = ["html", "htm"];
 export const WEB_BROWSER_FILE_VIEW_ID = "another-web-browser-file-view";
 
-export class WebBrowserFileView extends FileView {
+export class AnotherWebBrowserFileView extends FileView {
 	allowNoFile: false;
 
 	constructor(leaf: WorkspaceLeaf) {
@@ -14,7 +14,7 @@ export class WebBrowserFileView extends FileView {
 	async onLoadFile(file: TFile): Promise<void> {
 		const adapter = this.app.vault.adapter as FileSystemAdapter;
 		const urlString = "file:///" + (adapter.getBasePath() + "/" + file.path).toString().replace(/\s/g, "%20");
-		WebBrowserView.spawnWebBrowserView(true, { url: urlString });
+		AnotherWebBrowserView.spawnWebBrowserView(true, { url: urlString });
 		if (this.leaf) this.leaf.detach();
 	}
 
