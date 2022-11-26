@@ -152,7 +152,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		this.search.setPlaceholder(t('Search all settings'));
 
-		this.search.inputEl.onfocus = () => {
+		this.search.inputEl.oninput = () => {
 			for (const tabInfo of this.tabContent) {
 				const tab = tabInfo[1];
 				tab.navButton.removeClass('wb-navigation-item-selected');
@@ -178,9 +178,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 		});
 	}
 
-	createTabAndContent(tabName: string, navEl: HTMLElement, containerEl: HTMLElement, generateTabContent?: (el: HTMLElement, tabName: string) => void) {
+	createTabAndContent(tabName: string, navigateEl: HTMLElement, containerEl: HTMLElement, generateTabContent?: (el: HTMLElement, tabName: string) => void) {
 		const displayTabContent = this.selectedTab === tabName;
-		const tabEl = navEl.createDiv('wb-navigation-item');
+		const tabEl = navigateEl.createDiv('wb-navigation-item');
 
 		const tabClass = 'wb-desktop';
 		tabEl.addClass(tabClass);
@@ -459,13 +459,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 				await this.plugin.saveSettings();
 			});
 
-			this.addSettingToMasterSettingsList(tabName, topLevelSetting.settingEl, settingName);
+			this.addSettingToMasterSettingsList(tabName, topLevelSetting.settingEl, settingName + t("Search Engine"));
 		});
 	}
 
 	private addMarkdownPath(tabName: string, wbContainerEl: HTMLElement) {
-		let settingName = t('Save As Markdown Path');
-		let setting = new Setting(wbContainerEl)
+		const settingName = t('Save As Markdown Path');
+		const setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.addText((text) => text
 				.setPlaceholder(t('Path like /_Tempcard'))

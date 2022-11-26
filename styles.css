@@ -56,7 +56,7 @@
 	margin-left: 4px;
 }
 
-.wb-page-search-bar-input {
+.wb-page-search-bar-input-container, .wb-page-search-bar-input {
 	width: 500px;
 	min-width: 20px;
 	height: 44px !important;

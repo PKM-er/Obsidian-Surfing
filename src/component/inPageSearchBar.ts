@@ -1,9 +1,11 @@
 import SurfingPlugin from "../surfingIndex";
 import { t } from "../translations/helper";
+import { setIcon } from "obsidian";
 
 export class InPageSearchBar {
 	plugin: SurfingPlugin;
-	private inPageSearchBarEl: HTMLInputElement;
+	private inPageSearchBarInputEl: HTMLInputElement;
+	private SearchBarInputContainerEl: HTMLElement;
 	private inPageSearchBarContainerEl: HTMLDivElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>;
 
@@ -23,16 +25,20 @@ export class InPageSearchBar {
 			cls: "wb-page-search-bar-text"
 		})
 
+		this.SearchBarInputContainerEl = this.inPageSearchBarContainerEl.createEl("div", {
+			cls: "wb-page-search-bar-input-container"
+		});
+
 		// Create search bar in header bar.
 		// Use Obsidian CreateEL method.
-		this.inPageSearchBarEl = this.inPageSearchBarContainerEl.createEl("input", {
+		this.inPageSearchBarInputEl = this.SearchBarInputContainerEl.createEl("input", {
 			type: "text",
 			placeholder: t("Search with") + this.plugin.settings.defaultSearchEngine + t("or enter address"),
 			cls: "wb-page-search-bar-input"
 		});
 
 		// TODO: Would this be ok to use Obsidian add domlistener instead?
-		this.inPageSearchBarEl.addEventListener("keyup", (event: KeyboardEvent) => {
+		this.inPageSearchBarInputEl.addEventListener("keyup", (event: KeyboardEvent) => {
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			if (!event) {
 				// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -40,21 +46,21 @@ export class InPageSearchBar {
 			}
 			if (event.key === "Enter") {
 				for (const listener of this.onSearchBarEnterListener) {
-					listener(this.inPageSearchBarEl.value);
+					listener(this.inPageSearchBarInputEl.value);
 				}
 			}
 		}, false);
 
 		// Use focusin to bubble up to the parent
 		// Rather than just input element itself.
-		this.inPageSearchBarEl.addEventListener("focusin", (event: FocusEvent) => {
-			this.inPageSearchBarEl.select();
+		this.inPageSearchBarInputEl.addEventListener("focusin", (event: FocusEvent) => {
+			this.inPageSearchBarInputEl.select();
 		})
 
 		// When focusout, unselect the text to prevent it is still selected when focus back
 		// It will trigger some unexpected behavior,like you will not select all text and the cursor will set to current position;
 		// The expected behavior is that you will select all text when focus back;
-		this.inPageSearchBarEl.addEventListener("focusout", (event: FocusEvent) => {
+		this.inPageSearchBarInputEl.addEventListener("focusout", (event: FocusEvent) => {
 			window.getSelection()?.removeAllRanges();
 		})
 	}
@@ -64,6 +70,6 @@ export class InPageSearchBar {
 	}
 
 	focus() {
-		this.inPageSearchBarEl.focus();
+		this.inPageSearchBarInputEl.focus();
 	}
 }
