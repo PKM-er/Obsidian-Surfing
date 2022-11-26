@@ -1,6 +1,6 @@
 {
 	"name": "surfing",
-	"version": "0.2.4",
+	"version": "0.3.0",
 	"description": "Lets you browse the web within Obsidian with some neat features.",
 	"main": "main.js",
 	"scripts": {
