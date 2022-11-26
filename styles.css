@@ -66,6 +66,11 @@
 	margin-right: auto;
 }
 
+.wb-page-search-bar-container {
+	margin-left: auto;
+	margin-right: auto;
+}
+
 .wb-page-search-bar {
 	flex-direction: column-reverse;
 }

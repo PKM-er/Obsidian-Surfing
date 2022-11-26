@@ -1,6 +1,5 @@
 import SurfingPlugin from "../surfingIndex";
 import { t } from "../translations/helper";
-import { setIcon } from "obsidian";
 
 export class InPageSearchBar {
 	plugin: SurfingPlugin;
