@@ -46,4 +46,5 @@ export default {
 	'Save As Markdown Path': 'Save As Markdown Path',
 	'Path like /_Tempcard': 'Path like /_Tempcard',
 	"Search Engine": "Search Engine",
+	'settings': 'settings',
 };

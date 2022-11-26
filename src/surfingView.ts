@@ -1,9 +1,17 @@
-import { ItemView, ViewStateResult, WorkspaceLeaf, MarkdownView, Editor, debounce, htmlToMarkdown } from "obsidian";
+import {
+	debounce,
+	Editor,
+	htmlToMarkdown,
+	ItemView,
+	MarkdownView,
+	moment,
+	ViewStateResult,
+	WorkspaceLeaf
+} from "obsidian";
 import { HeaderBar } from "./component/headerBar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
 import SurfingPlugin from "./surfingIndex";
-import { moment } from "obsidian";
 import { t } from "./translations/helper";
 import searchBox from "./component/searchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
@@ -83,6 +91,7 @@ export class SurfingView extends ItemView {
 		}
 
 	}
+
 
 	getDisplayText(): string {
 		return this.currentTitle;
@@ -392,6 +401,16 @@ export class SurfingView extends ItemView {
 			console.log("Webview attached");
 		})
 
+		this.initHeaderButtons();
+	}
+
+	initHeaderButtons() {
+		this.addAction("settings", t("settings"), () => {
+			//@ts-expect-error, private method
+			app.setting.open();
+			//@ts-expect-error, private method
+			app.setting.openTabById('obsidian-memos');
+		})
 	}
 
 	async setState(state: WebBrowserViewState, result: ViewStateResult) {

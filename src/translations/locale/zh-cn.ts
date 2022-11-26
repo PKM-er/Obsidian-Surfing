@@ -44,4 +44,5 @@ export default {
 	'Save As Markdown Path': '保存为 Markdown 路径',
 	'Path like /_Tempcard': '路径例如 /_Tempcard',
 	"Search Engine": "搜索引擎",
+	'settings': '设置',
 };
