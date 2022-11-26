@@ -71,7 +71,7 @@ export default class searchBox {
 
 	exist(event: KeyboardEvent) {
 		event.preventDefault();
-		if (event.key === "Esc") {
+		if (event.key === "Escape") {
 			this.unload();
 		}
 	}
