@@ -22,6 +22,7 @@ export interface SurfingSettings {
 	alwaysShowCustomSearch: boolean;
 	showSearchBarInPage: boolean;
 	customHighlightFormat: boolean;
+	markdownPath: string;
 	highlightFormat: string;
 	openInSameTab: boolean;
 	openInObsidianWeb: boolean;
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	}],
 	alwaysShowCustomSearch: false,
 	showSearchBarInPage: false,
+	markdownPath: "/",
 	customHighlightFormat: false,
 	highlightFormat: '[{CONTENT}]({URL})',
 	openInSameTab: false,
@@ -302,13 +304,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 	private generateGeneralSettings(tabName: string, wbContainerEl: HTMLElement) {
 		this.addOpenInSameTab(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
+		this.addMarkdownPath(tabName, wbContainerEl);
 		this.addOpenInObsidianWeb(tabName, wbContainerEl);
 		this.addAboutInfo(tabName, wbContainerEl);
 	}
 
 	private generateSearchSettings(tabName: string, wbContainerEl: HTMLElement): void {
 		this.addInpageSearch(tabName, wbContainerEl);
-
 		this.addSearchEngine(tabName, wbContainerEl);
 	}
 
@@ -459,6 +461,21 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 			this.addSettingToMasterSettingsList(tabName, topLevelSetting.settingEl, settingName);
 		});
+	}
+
+	private addMarkdownPath(tabName: string, wbContainerEl: HTMLElement) {
+		let settingName = t('Save As Markdown Path');
+		let setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addText((text) => text
+				.setPlaceholder(t('Path like /_Tempcard'))
+				.setValue(this.plugin.settings.markdownPath)
+				.onChange(async (value) => {
+					this.plugin.settings.markdownPath = value;
+					this.applySettingsUpdate();
+				}));
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 	}
 
 	private addHighlightFormat(tabName: string, wbContainerEl: HTMLElement) {

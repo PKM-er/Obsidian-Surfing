@@ -42,4 +42,7 @@ export default {
 	'General': 'General',
 	'Search': 'Search',
 	'Always Show Custom Engines': 'Always Show Custom Engines',
+	'Save Current Page As Markdown': 'Save Current Page As Markdown',
+	'Save As Markdown Path': 'Save As Markdown Path',
+	'Path like /_Tempcard': 'Path like /_Tempcard',
 };
