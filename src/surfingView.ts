@@ -6,7 +6,7 @@ import SurfingPlugin from "./surfingIndex";
 import { moment } from "obsidian";
 import { t } from "./translations/helper";
 import searchBox from "./component/searchBox";
-import { SEARCH_ENGINES } from "./surfingSetting";
+import { SEARCH_ENGINES } from "./surfingPluginSetting";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 

@@ -1,7 +1,7 @@
 // English
 
 export default {
-	// surfingSetting.ts
+	// surfingPluginSetting.ts
 	"Search with": "Search with",
 	"or enter address": "or enter address",
 	'Default Search Engine': 'Default Search Engine',

@@ -12,7 +12,7 @@
 		"prepare": "husky install"
 	},
 	"keywords": [],
-	"author": "Dion Tryban (Trikzon) && Boninall",
+	"author": "Boninall",
 	"license": "MIT",
 	"devDependencies": {
 		"@codemirror/language": "^6.2.1",

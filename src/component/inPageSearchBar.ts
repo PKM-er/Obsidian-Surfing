@@ -19,7 +19,7 @@ export class InPageSearchBar {
 		});
 
 		this.inPageSearchBarContainerEl.createEl("div", {
-			text: "Surf It",
+			text: "Surfing",
 			cls: "wb-page-search-bar-text"
 		})
 

@@ -2,5 +2,5 @@
 // Brazilian Portuguese
 
 export default {
-	// surfingSetting.ts
+	// surfingPluginSetting.ts
 };

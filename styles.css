@@ -73,21 +73,26 @@
 .wb-page-search-bar-text {
 	text-align: center;
 	margin-bottom: 20px;
-	font-size: 33px;
+	font-size: 72px;
+	font-weight: bolder;
 	color: var(--color-purple);
 }
 
 .wb-btn-tip {
-	opacity: 0.5;
+	color: var(--color-base-60);
 }
 
 .wb-btn:hover {
-	background: bisque !important;
+	background: var(--color-purple) !important;
 
 }
 
 .wb-btn {
 	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
+}
+
+.theme-dark .wb-btn a {
+	color: var(--color-base-80) !important;
 }
 
 .setting-item.search-engine-setting {
@@ -178,5 +183,34 @@
 
 .wb-setting-heading {
 	color: var(--color-purple);
+}
+
+.wb-about-icon {
+	height: 72px;
+	text-align: center;
+}
+
+.wb-about-icon .surfing {
+	height: 72px !important;
+	width: 72px !important;
+}
+
+.wb-about-text {
+	font-size: 16px;
+	color: var(--color-purple);
+}
+
+.wb-about-card {
+	display: flex;
+	align-items: center;
+	flex-direction: column;
+	margin-top: 30px;
+}
+
+.wb-about-version {
+	font-size: 14px;
+	text-decoration: unset !important;
+	opacity: 0.8;
+	color: var(--link-color);
 }
 

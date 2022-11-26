@@ -1,5 +1,5 @@
 // Português
 
 export default {
-	// surfingSetting.ts
+	// surfingPluginSetting.ts
 };

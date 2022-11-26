@@ -92,7 +92,7 @@ export class DropdownRecord {
 	}
 }
 
-export class WebBrowserSettingTab extends PluginSettingTab {
+export class SurfingSettingTab extends PluginSettingTab {
 	plugin: SurfingPlugin;
 	private applyDebounceTimer = 0;
 	private tabContent: Map<string, TabContentInfo> = new Map<string, TabContentInfo>();
@@ -100,7 +100,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 	private search: SearchComponent;
 	private searchSettingInfo: Map<string, settingSearchInfo[]> = new Map();
 	private searchZeroState: HTMLDivElement;
-	private navEl: HTMLElement;
+	private navigateEl: HTMLElement;
 
 	constructor(app: App, plugin: SurfingPlugin) {
 		super(app, plugin);
@@ -117,9 +117,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const { containerEl } = this;
-
 		containerEl.empty();
-
 
 		this.generateSettingsTitle();
 		this.addTabHeader();
@@ -133,11 +131,11 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 
 	private addTabHeader() {
 		const navContainer = this.containerEl.createEl('nav', { cls: 'wb-setting-header' });
-		this.navEl = navContainer.createDiv('wb-setting-tab-group');
+		this.navigateEl = navContainer.createDiv('wb-setting-tab-group');
 		const settingsEl = this.containerEl.createDiv('wb-setting-content');
 
-		this.createTabAndContent('General', this.navEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateGeneralSettings(tabName, el));
-		this.createTabAndContent('Search', this.navEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateSearchSettings(tabName, el));
+		this.createTabAndContent('General', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateGeneralSettings(tabName, el));
+		this.createTabAndContent('Search', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateSearchSettings(tabName, el));
 
 		this.createSearchZeroState(settingsEl);
 	}
@@ -166,11 +164,11 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 
 				this.selectedTab = '';
 			}
-			this.navEl.addClass('wb-setting-searching');
+			this.navigateEl.addClass('wb-setting-searching');
 		};
 
 		this.search.inputEl.onblur = () => {
-			this.navEl.removeClass('wb-setting-searching');
+			this.navigateEl.removeClass('wb-setting-searching');
 		}
 
 		this.search.onChange((value: string) => {
@@ -305,6 +303,7 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 		this.addOpenInSameTab(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
 		this.addOpenInObsidianWeb(tabName, wbContainerEl);
+		this.addAboutInfo(tabName, wbContainerEl);
 	}
 
 	private generateSearchSettings(tabName: string, wbContainerEl: HTMLElement): void {
@@ -569,13 +568,15 @@ export class WebBrowserSettingTab extends PluginSettingTab {
 
 		const bookmarkLetsContainerEl = wbContainerEl.createDiv({ cls: 'wb-about-card' });
 
-		setIcon(bookmarkLetsContainerEl.createDiv({ cls: 'wb-about-icon' }), 'mountain-snow');
+		setIcon(bookmarkLetsContainerEl.createDiv({ cls: 'wb-about-icon' }), 'surfing');
+
+		bookmarkLetsContainerEl.createEl('div', { cls: "wb-about-text", text: 'Surfing' });
 
 		const text = this.plugin.manifest.version;
-		const url = ""
+		const url = "https://github.com/Quorafind/Obsidian-Surfing/releases/tag/" + text;
 
-		bookmarkLetsContainerEl.createDiv({ cls: 'wb-about-title', text: text });
+		bookmarkLetsContainerEl.createEl("a", { cls: 'wb-about-version', href: url, text: text });
 
-		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, text);
+		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, "surfing");
 	}
 }

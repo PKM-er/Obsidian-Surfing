@@ -1,5 +1,5 @@
 export default {
-	// surfingSetting.ts
+	// surfingPluginSetting.ts
 	"Search with": "使用",
 	"or enter address": "搜索，或输入地址",
 	'Default Search Engine': '默认搜索引擎',
