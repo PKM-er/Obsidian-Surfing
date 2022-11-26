@@ -1,7 +1,7 @@
 ## Surfing
 
 > This fork is maintained by Boninall, it is for personal use only. If you want to use it,
-> add `quorafind/obsidian-web-browser` rather than original one.
+> add `quorafind/obsidian-surfing` rather than original one.
 > Original fork is [here](https://github.com/Trikzon/obsidian-web-browser).
 
 [中文文档](README-ZH.md) ｜ [English Doc](README.md)

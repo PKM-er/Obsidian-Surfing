@@ -1,6 +1,6 @@
 ## Surfing
 
-> 这个分支由 Boninall 维护，仅作个人使用。如果你想用该插件，使用 `quorafind/obsidian-web-browser` 分支而不是以前的；
+> 这个分支由 Boninall 维护，仅作个人使用。如果你想用该插件，使用 `quorafind/obsidian-surfing` 分支而不是以前的；
 > 原始分支来自[这里](https://github.com/Trikzon/obsidian-web-browser)
 
 [English Doc](README.md)
