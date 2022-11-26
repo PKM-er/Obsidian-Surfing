@@ -32,7 +32,7 @@ export class InPageSearchBar {
 		});
 
 		// TODO: Would this be ok to use Obsidian add domlistener instead?
-		this.inPageSearchBarEl.addEventListener("keydown", (event: KeyboardEvent) => {
+		this.inPageSearchBarEl.addEventListener("keyup", (event: KeyboardEvent) => {
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			if (!event) {
 				// eslint-disable-next-line @typescript-eslint/no-unused-vars
