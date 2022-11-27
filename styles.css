@@ -219,3 +219,10 @@
 	color: var(--link-color);
 }
 
+.surfing-settings-icon {
+	width: fit-content;
+	height: fit-content;
+	position: absolute;
+	right: 20px;
+}
+

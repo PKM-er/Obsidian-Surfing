@@ -8,7 +8,7 @@ import {
 	MarkdownView,
 	Menu,
 	Notice,
-	Plugin,
+	Plugin, setIcon,
 	TFile,
 } from "obsidian";
 import { HeaderBar } from "./component/headerBar";
@@ -413,10 +413,10 @@ export default class SurfingPlugin extends Plugin {
 		this.register(uninstaller);
 	}
 
-
 	private patchEmptyView() {
 		const patchEmptyView = () => {
 			const view = app.workspace.getLeavesOfType("empty").first()?.view;
+			const leaf = app.workspace.getLeavesOfType("empty").first();
 			if (!view) return false;
 
 			const EmptyView = view.constructor;
@@ -424,16 +424,24 @@ export default class SurfingPlugin extends Plugin {
 				around(EmptyView.prototype, {
 					onOpen: (next) =>
 						function (...args: any) {
-							this.addAction("settings", t("settings"), () => {
-								//@ts-expect-error, private method
-								app.setting.open();
-								//@ts-expect-error, private method
-								app.setting.openTabById('surfing');
-							})
+							if (!this.contentEl.querySelector('.surfing-settings-icon')) {
+								const iconEl = this.contentEl.createDiv({
+									cls: 'surfing-settings-icon'
+								})
+								iconEl.addEventListener('click', () => {
+									//@ts-expect-error, private method
+									app.setting.open();
+									//@ts-expect-error, private method
+									app.setting.openTabById('surfing');
+								})
+								setIcon(iconEl, 'settings');
+							}
 							return next.call(this, ...args);
 						},
 				})
 			);
+			// Rebuild view after patch successfully;
+			leaf?.rebuildView();
 			console.log("Obsidian-Surfing: empty view patched");
 			return true;
 		};
