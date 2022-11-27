@@ -169,11 +169,18 @@ export class SurfingSettingTab extends PluginSettingTab {
 			this.navigateEl.addClass('wb-setting-searching');
 		};
 
+		// this.search.clearButtonEl.addEventListener('click', () => {
+		// 	this.selectedTab = 'General';
+		// })
+
 		this.search.inputEl.onblur = () => {
 			this.navigateEl.removeClass('wb-setting-searching');
 		}
 
 		this.search.onChange((value: string) => {
+			if (value === '') {
+				this.navigateEl.children[0].dispatchEvent(new PointerEvent('click'));
+			}
 			this.searchSettings(value.toLowerCase());
 		});
 	}
