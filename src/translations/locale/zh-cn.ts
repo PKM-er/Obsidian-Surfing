@@ -45,4 +45,6 @@ export default {
 	'Path like /_Tempcard': '路径例如 /_Tempcard',
 	"Search Engine": "搜索引擎",
 	'settings': '设置',
+	'Using ': '使用',
+	' to search': '来检索'
 };

@@ -4,7 +4,7 @@ import {
 	EventRef,
 	ItemView,
 	MarkdownPreviewRenderer,
-	MarkdownPreviewRendererStatic, MarkdownSourceView,
+	MarkdownPreviewRendererStatic,
 	MarkdownView,
 	Menu,
 	Notice,
@@ -155,17 +155,6 @@ export default class SurfingPlugin extends Plugin {
 								})
 						})
 					})
-
-					if (this.settings.defaultSearchEngine === 'custom') {
-						subMenu.addItem((item) => {
-							item.setIcon('search')
-								.setTitle("custom")
-								.onClick(() => {
-									SurfingView.spawnWebBrowserView(true, { url: this.settings.customSearchEngine + selection });
-								})
-						})
-					}
-
 				})
 			}))
 	}
@@ -275,6 +264,23 @@ export default class SurfingPlugin extends Plugin {
 				searchBarEl.focus();
 			}
 		});
+
+		const searchEngines = [...SEARCH_ENGINES, ...this.settings.customSearchEngine]
+		searchEngines.forEach((engine) => {
+			this.addCommand({
+				id: 'using' + engine.name.replace(/\s/g, '-') + '-to-search',
+				name: t('Using ') + engine.name + t(' to search'),
+				editorCallback: (editor: Editor, view: MarkdownView) => {
+					if (editor.getSelection().length === 0) return;
+					const selection = editor.getSelection();
+
+					// @ts-ignore
+					SurfingView.spawnWebBrowserView(true, { url: engine.url + selection });
+				}
+			});
+		})
+
+
 	}
 
 	private registerCustomIcon() {

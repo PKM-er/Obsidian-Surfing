@@ -47,4 +47,6 @@ export default {
 	'Path like /_Tempcard': 'Path like /_Tempcard',
 	"Search Engine": "Search Engine",
 	'settings': 'settings',
+	'Using ': 'Using ',
+	' to search': ' to search'
 };
