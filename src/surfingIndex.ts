@@ -2,10 +2,9 @@ import {
 	addIcon,
 	Editor,
 	EventRef,
-	HoverParent,
 	ItemView,
 	MarkdownPreviewRenderer,
-	MarkdownPreviewRendererStatic,
+	MarkdownPreviewRendererStatic, MarkdownSourceView,
 	MarkdownView,
 	Menu,
 	Notice,
@@ -20,6 +19,7 @@ import { around } from "monkey-around";
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, SurfingSettings, SurfingSettingTab } from "./surfingPluginSetting";
 import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
+import { checkIfWebBrowserAvailable } from "./utils/urltest";
 
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
@@ -305,7 +305,7 @@ export default class SurfingPlugin extends Plugin {
 		// 	}),
 		// );
 
-		const patchEditView = () => {
+		const patchLivePreivewView = () => {
 			const view = app.workspace.getLeavesOfType("markdown").first()?.view;
 			if (!view) return false;
 			const editMode = view.editMode ?? view.sourceMode;
@@ -320,23 +320,30 @@ export default class SurfingPlugin extends Plugin {
 				around(MarkdownEditView.prototype, {
 					triggerClickableToken: (next) =>
 						function (token: tokenType, newLeaf: boolean | string, ...args: any) {
-							console.log(token, newLeaf, args);
 							if (token.type === "external-link") {
+								if (newLeaf === 'tab' || newLeaf === 'window') {
+									window.open(token.text, '_blank', 'external');
+									return;
+								}
 								const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
-								SurfingView.spawnWebBrowserView(true, { url: url });
+								if (checkIfWebBrowserAvailable(url)) {
+									SurfingView.spawnWebBrowserView(true, { url: url });
+								} else {
+									window.open(url, '_blank', 'external');
+								}
 								return;
 							}
 							return next.call(this, token, newLeaf, ...args);
 						},
 				})
 			);
-			console.log("Obsidian-Surfing: external link patched");
+			console.log("Obsidian-Surfing: editmode external link patched");
 			return true;
 		};
 		this.app.workspace.onLayoutReady(() => {
-			if (!patchEditView()) {
+			if (!patchLivePreivewView()) {
 				const evt = app.workspace.on("layout-change", () => {
-					patchEditView() && app.workspace.offref(evt);
+					patchLivePreivewView() && app.workspace.offref(evt);
 				});
 				this.registerEvent(evt);
 			}
@@ -360,7 +367,7 @@ export default class SurfingPlugin extends Plugin {
 
 					// 2. Perform default behavior if the url isn't "http://" or "https://"
 					// TODO: Change to `isWebUri()` when I change to use the valid-url library.
-					if ((urlString === "about:blank" && features) || (!urlString.startsWith("http://") && !urlString.startsWith("https://") && !(urlString.startsWith("file://") && /\.htm(l)?/g.test(urlString))) || (urlString !== "about:blank" && target === "_blank")) {
+					if ((urlString === "about:blank" && features) || !checkIfWebBrowserAvailable(urlString) || (urlString !== "about:blank" && target === "_blank") || features === 'external') {
 						return next(url, target, features)
 					}
 
@@ -368,11 +375,40 @@ export default class SurfingPlugin extends Plugin {
 					SurfingView.spawnWebBrowserView(true, { url: urlString });
 					return null;
 				}
-		})
+		});
 		this.register(uninstaller);
 	}
 
-	patchEmptyView() {
+	private patchMarkdownPreviewRenderer() {
+		const uninstaller = around(MarkdownPreviewRenderer as MarkdownPreviewRendererStatic, {
+			// @ts-ignore
+			registerDomEvents: (next) =>
+				function (el: HTMLElement, instance: { getFile?(): TFile; }, ...args: unknown[]) {
+					el?.on("click", ".external-link", (event: MouseEvent, targetEl: HTMLElement) => {
+						if (targetEl) {
+							const url = targetEl.getAttribute("href");
+							if (url) {
+								if (event.ctrlKey) {
+									window.open(url, '_blank', 'external');
+									return;
+								}
+								if (checkIfWebBrowserAvailable(url)) {
+									SurfingView.spawnWebBrowserView(true, { url: url });
+								} else {
+									window.open(url, '_blank', 'external');
+								}
+								return;
+							}
+						}
+					});
+					return next.call(this, el, instance, ...args);
+				},
+		});
+		this.register(uninstaller);
+	}
+
+
+	private patchEmptyView() {
 		const patchEmptyView = () => {
 			const view = app.workspace.getLeavesOfType("empty").first()?.view;
 			if (!view) return false;
@@ -403,30 +439,6 @@ export default class SurfingPlugin extends Plugin {
 				this.registerEvent(evt);
 			}
 		});
-	}
-
-	patchMarkdownPreviewRenderer() {
-		const uninstaller = around(MarkdownPreviewRenderer as MarkdownPreviewRendererStatic, {
-			// @ts-ignore
-			registerDomEvents(old: Function) {
-				return function (
-					el: HTMLElement,
-					instance: { getFile?(): TFile; hoverParent?: HoverParent, info?: HoverParent & { getFile(): TFile } },
-					...args: unknown[]
-				) {
-					el?.on("click", ".external-link", (event: MouseEvent, targetEl: HTMLElement) => {
-						if (targetEl) {
-							const url = targetEl.getAttribute("href");
-							if (url) {
-								SurfingView.spawnWebBrowserView(true, { url: url });
-							}
-						}
-					});
-					return old.call(this, el, instance, ...args);
-				};
-			},
-		});
-		this.register(uninstaller);
 	}
 
 	async loadSettings() {
