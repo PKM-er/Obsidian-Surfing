@@ -143,7 +143,7 @@ export default class SurfingPlugin extends Plugin {
 
 				menu.addItem((item) => {
 					// Add sub menu
-					const searchEngines = [...SEARCH_ENGINES, ...this.settings.customSearchEngine]
+					const searchEngines = [...SEARCH_ENGINES, ...this.settings.customSearchEngine];
 					const subMenu = item.setTitle(`Search In WebBrowser`).setIcon('search').setSubmenu();
 					searchEngines.forEach((engine) => {
 						subMenu.addItem((item) => {

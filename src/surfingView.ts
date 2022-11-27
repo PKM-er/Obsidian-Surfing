@@ -128,7 +128,6 @@ export class SurfingView extends ItemView {
 			this.navigate(url);
 		});
 
-
 		this.frame.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
@@ -210,7 +209,7 @@ export class SurfingView extends ItemView {
 											document.body.outerHTML
 										`, true).then(async (result: any) => {
 										const url = params.pageURL.replace(/\?(.*)/g, "");
-										const parseContent = result.replaceAll(/src="([^"]*)"/g, "src=\"" + url + "$1\"");
+										const parseContent = result.replaceAll(/src="(?!(https|http))([^"]*)"/g, "src=\"" + url + "$2\"");
 										const content = htmlToMarkdown(parseContent);
 										// @ts-ignore
 										const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
