@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import * as obsidian from 'obsidian';
-import { MarkdownPreviewRenderer, Menu } from "obsidian";
+import { EditorPosition, MarkdownPreviewRenderer, Menu } from "obsidian";
 
 declare module "obsidian" {
 	export interface ItemView {
@@ -51,6 +51,10 @@ declare module "obsidian" {
 		contentEl: HTMLElement,
 		editMode: any,
 		sourceMode: any
+	}
+
+	export interface Editor {
+		getClickableTokenAt: (editorPos: EditorPosition) => tokenType
 	}
 
 	export interface MenuItem {
