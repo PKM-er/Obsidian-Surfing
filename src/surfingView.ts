@@ -413,7 +413,7 @@ export class SurfingView extends ItemView {
 			//@ts-expect-error, private method
 			app.setting.open();
 			//@ts-expect-error, private method
-			app.setting.openTabById('obsidian-memos');
+			app.setting.openTabById('surfing');
 		})
 	}
 
