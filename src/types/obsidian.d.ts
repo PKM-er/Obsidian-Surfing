@@ -24,6 +24,11 @@ declare module "obsidian" {
 		tabHeaderInnerTitleEl: HTMLDivElement
 		activeTime: number
 		rebuildView: () => void;
+		setDimension: (dimension: any) => void;
+	}
+
+	export interface WorkspaceItem {
+		type: string;
 	}
 
 	interface VaultSettings {

@@ -89,9 +89,7 @@ export class SurfingView extends ItemView {
 				return;
 			}
 		}
-
 	}
-
 
 	getDisplayText(): string {
 		return this.currentTitle;
@@ -139,7 +137,6 @@ export class SurfingView extends ItemView {
 					action: "allow",
 				}
 			});
-
 
 			// TODO: Try to improve this dark mode.
 			try {
@@ -348,6 +345,7 @@ export class SurfingView extends ItemView {
 					return;
 				}
 
+
 				// TODO Detect pressed hotkeys if exists in default hotkeys list
 				// If so, prevent default and execute the hotkey
 				// If not, send the event to the webview
@@ -373,7 +371,7 @@ export class SurfingView extends ItemView {
 		});
 
 		this.frame.addEventListener("page-favicon-updated", (event: any) => {
-			this.favicon.src = event.favicons[0];
+			if (event.favicons[0] !== undefined) this.favicon.src = event.favicons[0];
 			this.leaf.tabHeaderInnerIconEl.empty();
 			this.leaf.tabHeaderInnerIconEl.appendChild(this.favicon);
 		});

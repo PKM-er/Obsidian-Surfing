@@ -8,18 +8,23 @@ import {
 	MarkdownView,
 	Menu,
 	Notice,
-	Plugin, setIcon,
+	Plugin,
+	setIcon,
 	TFile,
+	ViewState,
+	Workspace,
+	WorkspaceLeaf, WorkspaceWindowInitData,
 } from "obsidian";
 import { HeaderBar } from "./component/headerBar";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "./surfingView";
 import { HTML_FILE_EXTENSIONS, SurfingFileView, WEB_BROWSER_FILE_VIEW_ID } from "./surfingFileView";
 import { t } from "./translations/helper";
-import { around } from "monkey-around";
+import { after, around } from "monkey-around";
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, SurfingSettings, SurfingSettingTab } from "./surfingPluginSetting";
 import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/urltest";
+import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
 
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
@@ -33,6 +38,7 @@ export default class SurfingPlugin extends Plugin {
 
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
+		this.registerView(WEB_BROWSER_IFRAME_VIEW_ID, (leaf) => new SurfingIframeView(leaf, this));
 
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
@@ -55,6 +61,7 @@ export default class SurfingPlugin extends Plugin {
 		this.registerCustomIcon();
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
+		this.patchWorkspaceLeaf();
 	}
 
 	onunload() {
@@ -453,7 +460,88 @@ export default class SurfingPlugin extends Plugin {
 				this.registerEvent(evt);
 			}
 		});
+
+		// Dirty workaround to prevent webview cause Obsidian crashed
+
 	}
+
+	patchWorkspaceLeaf() {
+		this.register(
+			around(WorkspaceLeaf.prototype, {
+				setViewState(next) {
+					return function (state: ViewState, ...rest: any[]) {
+						if (this.getRoot()?.type === "floating" && state.type === WEB_BROWSER_VIEW_ID) {
+							return next.call(this, {
+								type: WEB_BROWSER_IFRAME_VIEW_ID,
+								active: true,
+								state: {
+									url: state.state.url
+								}
+							}, ...rest);
+						}
+						// console.log("Obsidian-Surfing: setViewState", state);
+						if (this.getRoot()?.type === "split" && state.type === WEB_BROWSER_IFRAME_VIEW_ID) {
+							return next.call(this, {
+								type: WEB_BROWSER_VIEW_ID,
+								active: true,
+								state: {
+									url: state.state.url
+								}
+							}, ...rest);
+						}
+						return next.apply(this, [state, ...rest]);
+					};
+				},
+				setDimension(old) {
+					return async function (dimension: any) {
+						await old.call(this, dimension);
+						if (dimension === null && (this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
+							app.workspace.setActiveLeaf(this);
+						}
+					}
+				}
+			})
+		);
+
+		this.register(
+			around(Workspace.prototype, {
+				setActiveLeaf(next) {
+					return function (leaf: WorkspaceLeaf, params?: any) {
+
+						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
+							leaf.setViewState({
+								type: WEB_BROWSER_IFRAME_VIEW_ID,
+								active: true,
+								state: {
+									url: leaf.view.getState()?.url
+								}
+							});
+							return;
+						}
+						if (leaf.view instanceof SurfingIframeView && leaf?.getRoot()?.type === "split") {
+							leaf.setViewState({
+								type: WEB_BROWSER_VIEW_ID,
+								active: true,
+								state: {
+									url: leaf.view.getState()?.url
+								}
+							});
+							return;
+						}
+						return next.call(this, leaf, params);
+					};
+				},
+				moveLeafToPopout(old) {
+					return function (leaf: WorkspaceLeaf, data?: any) {
+						const result = old.call(this, leaf, data);
+						app.workspace.setActiveLeaf(leaf);
+						return result;
+					};
+				},
+			})
+		)
+	}
+
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());

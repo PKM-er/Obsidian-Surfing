@@ -46,5 +46,7 @@ export default {
 	"Search Engine": "搜索引擎",
 	'settings': '设置',
 	'Using ': '使用',
-	' to search': '来检索'
+	' to search': '来检索',
+	"Surfing Iframe": "Surfing Iframe",
+	'Surfing is using iframe to prevent crashed when loading some websites.': 'Surfing 使用 iframe 来防止加载某些网站时崩溃。',
 };
