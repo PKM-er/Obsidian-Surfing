@@ -4,7 +4,7 @@ import {
 	EventRef,
 	ItemView,
 	MarkdownPreviewRenderer,
-	MarkdownPreviewRendererStatic, MarkdownSourceView,
+	MarkdownPreviewRendererStatic, MarkdownRenderer, MarkdownSourceView,
 	MarkdownView,
 	Menu,
 	Notice,
@@ -367,12 +367,12 @@ export default class SurfingPlugin extends Plugin {
 
 					// 2. Perform default behavior if the url isn't "http://" or "https://"
 					// TODO: Change to `isWebUri()` when I change to use the valid-url library.
-					if ((urlString === "about:blank" && features) || !checkIfWebBrowserAvailable(urlString) || (urlString !== "about:blank" && target === "_blank") || features === 'external') {
+					if ((urlString === "about:blank" && features) || !checkIfWebBrowserAvailable(urlString) || (urlString !== "about:blank" && (target === "_blank" || target === "_self")) || features === 'external') {
 						return next(url, target, features)
 					}
 
-					// TODO: Open external link in current leaf when meta key isn't being held down.
-					SurfingView.spawnWebBrowserView(true, { url: urlString });
+					// // TODO: Open external link in current leaf when meta key isn't being held down.
+					// SurfingView.spawnWebBrowserView(true, { url: urlString });
 					return null;
 				}
 		});
@@ -401,11 +401,20 @@ export default class SurfingPlugin extends Plugin {
 							}
 						}
 					});
+
 					return next.call(this, el, instance, ...args);
 				},
 		});
 		this.register(uninstaller);
 	}
+
+	// patchMarkdownRenderer() {
+	// 	const uninstaller = around(MarkdownRenderer.prototype, {
+	// 		// @ts-ignore
+	//
+	// 	});
+	// 	this.register(uninstaller);
+	// }
 
 
 	private patchEmptyView() {
