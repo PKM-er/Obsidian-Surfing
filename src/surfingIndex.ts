@@ -8,7 +8,7 @@ import {
 	MarkdownView,
 	Menu,
 	Notice,
-	Plugin,
+	Plugin, requireApiVersion,
 	setIcon,
 	TFile,
 	ViewState,
@@ -51,6 +51,8 @@ export default class SurfingPlugin extends Plugin {
 		this.registerCustomURI();
 		this.patchMarkdownView();
 		this.patchWindowOpen();
+		this.patchMarkdownView();
+		if (requireApiVersion("1.0.4")) this.patchEditMode()
 
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
 			const activeView = this.app.workspace.getActiveViewOfType(ItemView);
@@ -303,21 +305,30 @@ export default class SurfingPlugin extends Plugin {
 
 	// TODO: Licat said that this method will be changed in the future.
 	private patchMarkdownView() {
-		// this.register(
-		// 	around(MarkdownView.prototype, {
-		// 		triggerClickableToken: (next) =>
-		// 			function (token: tokenType, newLeaf: boolean | string, ...args: any) {
-		// 				console.log(token, newLeaf, args);
-		// 				if (token.type === "external-link") {
-		// 					const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
-		// 					SurfingView.spawnWebBrowserView(true, { url: url });
-		// 					return;
-		// 				}
-		// 				return next.call(this, token, newLeaf, ...args);
-		// 			},
-		// 	}),
-		// );
+		this.register(
+			around(MarkdownView.prototype, {
+				triggerClickableToken: (next) =>
+					function (token: tokenType, newLeaf: boolean | string, ...args: any) {
+						if (token.type === "external-link") {
+							if (newLeaf === 'tab' || newLeaf === 'window') {
+								window.open(token.text, '_blank', 'external');
+								return;
+							}
+							const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
+							if (checkIfWebBrowserAvailable(url)) {
+								SurfingView.spawnWebBrowserView(true, { url: url });
+							} else {
+								window.open(url, '_blank', 'external');
+							}
+							return;
+						}
+						return next.call(this, token, newLeaf, ...args);
+					},
+			}),
+		);
+	}
 
+	private patchEditMode() {
 		const patchLivePreivewView = () => {
 			const view = app.workspace.getLeavesOfType("markdown").first()?.view;
 			if (!view) return false;
