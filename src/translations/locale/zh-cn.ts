@@ -49,4 +49,6 @@ export default {
 	' to search': '来检索',
 	"Surfing Iframe": "Surfing Iframe",
 	'Surfing is using iframe to prevent crashed when loading some websites.': 'Surfing 使用 iframe 来防止加载某些网站时崩溃。',
+	'Open With External Browser': '在外部浏览器中打开',
+	'Open With Surfing': '在 Surfing 中打开',
 };

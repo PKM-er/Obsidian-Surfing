@@ -44,6 +44,7 @@ export class SurfingIframeView extends ItemView {
 		this.navigation = true;
 
 		this.contentEl.empty();
+		this.initHeaderButtons();
 
 		// Create search bar in the header bar.
 		this.headerBar = new HeaderBar(this.headerEl.children[2], this.plugin);
@@ -133,6 +134,15 @@ export class SurfingIframeView extends ItemView {
 			this.frame.setAttribute("src", url);
 		}
 		app.workspace.requestSaveLayout();
+	}
+
+	initHeaderButtons() {
+		this.addAction("settings", t("settings"), () => {
+			//@ts-expect-error, private method
+			app.setting.open();
+			//@ts-expect-error, private method
+			app.setting.openTabById('surfing');
+		})
 	}
 }
 

@@ -147,7 +147,28 @@ export default class SurfingPlugin extends Plugin {
 				if (!editor) {
 					return;
 				}
-				if (editor.getSelection().length === 0) return;
+				if (editor.getSelection().length === 0) {
+					const token = editor.getClickableTokenAt(editor.getCursor());
+					if (token && token.type === "external-link") {
+						menu.addItem((item) => {
+							item.setIcon('surfing')
+								.setTitle(t('Open With Surfing'))
+								.onClick(() => {
+									// @ts-ignore
+									SurfingView.spawnWebBrowserView(true, { url: token.text });
+								})
+						}).addItem((item) => {
+							item.setIcon('surfing')
+								.setTitle(t('Open With External Browser'))
+								.onClick(() => {
+									// @ts-ignore
+									window.open(token.text, '_blank', 'external')
+								})
+						})
+					}
+
+					return;
+				}
 				const selection = editor.getSelection();
 
 				menu.addItem((item) => {
