@@ -173,6 +173,8 @@ export class SurfingView extends ItemView {
 				console.error('Failed to get background color: ', err);
 			}
 
+			webContents.openDevTools();
+
 			webContents.on("context-menu", (event: any, params: any) => {
 				event.preventDefault();
 
@@ -292,9 +294,16 @@ export class SurfingView extends ItemView {
 												 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
 											}
 											var timeStr= "";
-											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr;
+											var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
+											var pageStr = "";
+											if(typeof pageStrMatch === "object" && pageStrMatch.length > 0){
+											    pageStr = '&' + pageStrMatch[0];
+											}else if(typeof pageStrMatch === "string") {
+											    pageStr = '&' + pageStrMatch;
+											}
+											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
 										`, true).then((result: any) => {
-									clipboard.writeText("[" + result.split('?t=')[1] + "](" + result + ")"); // Will be the JSON object from the fetch call
+									clipboard.writeText("[" + result.split('?t=')[1].replace(/&p=[1-9]{1,}/g, "") + "](" + result + ")"); // Will be the JSON object from the fetch call
 								});
 								console.log('Page URL copied to clipboard');
 							} catch (err) {
