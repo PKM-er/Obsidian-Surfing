@@ -4,7 +4,7 @@ import {
 	EventRef,
 	ItemView,
 	MarkdownPreviewRenderer,
-	MarkdownPreviewRendererStatic, MarkdownRenderer, MarkdownSourceView,
+	MarkdownPreviewRendererStatic,
 	MarkdownView,
 	Menu,
 	Notice,
