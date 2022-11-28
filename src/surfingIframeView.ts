@@ -1,8 +1,7 @@
-import { ItemView, MarkdownView, ViewStateResult, WorkspaceLeaf } from "obsidian";
+import { ItemView, ViewStateResult, WorkspaceLeaf } from "obsidian";
 import SurfingPlugin from "./surfingIndex";
 import { HeaderBar } from "./component/headerBar";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
-import { WEB_BROWSER_VIEW_ID } from "./surfingView";
 import { t } from "./translations/helper";
 
 export const WEB_BROWSER_IFRAME_VIEW_ID = "surfing-iframe-view";

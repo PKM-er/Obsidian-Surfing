@@ -13,13 +13,13 @@ import {
 	TFile,
 	ViewState,
 	Workspace,
-	WorkspaceLeaf, WorkspaceWindowInitData,
+	WorkspaceLeaf,
 } from "obsidian";
 import { HeaderBar } from "./component/headerBar";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "./surfingView";
 import { HTML_FILE_EXTENSIONS, SurfingFileView, WEB_BROWSER_FILE_VIEW_ID } from "./surfingFileView";
 import { t } from "./translations/helper";
-import { after, around } from "monkey-around";
+import { around } from "monkey-around";
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, SurfingSettings, SurfingSettingTab } from "./surfingPluginSetting";
 import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
