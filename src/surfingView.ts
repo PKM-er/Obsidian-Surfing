@@ -89,9 +89,7 @@ export class SurfingView extends ItemView {
 				return;
 			}
 		}
-
 	}
-
 
 	getDisplayText(): string {
 		return this.currentTitle;
@@ -128,7 +126,6 @@ export class SurfingView extends ItemView {
 			this.navigate(url);
 		});
 
-
 		this.frame.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
@@ -140,7 +137,6 @@ export class SurfingView extends ItemView {
 					action: "allow",
 				}
 			});
-
 
 			// TODO: Try to improve this dark mode.
 			try {
@@ -210,7 +206,7 @@ export class SurfingView extends ItemView {
 											document.body.outerHTML
 										`, true).then(async (result: any) => {
 										const url = params.pageURL.replace(/\?(.*)/g, "");
-										const parseContent = result.replaceAll(/src="([^"]*)"/g, "src=\"" + url + "$1\"");
+										const parseContent = result.replaceAll(/src="(?!(https|http))([^"]*)"/g, "src=\"" + url + "$2\"");
 										const content = htmlToMarkdown(parseContent);
 										// @ts-ignore
 										const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
@@ -349,6 +345,7 @@ export class SurfingView extends ItemView {
 					return;
 				}
 
+
 				// TODO Detect pressed hotkeys if exists in default hotkeys list
 				// If so, prevent default and execute the hotkey
 				// If not, send the event to the webview
@@ -374,7 +371,7 @@ export class SurfingView extends ItemView {
 		});
 
 		this.frame.addEventListener("page-favicon-updated", (event: any) => {
-			this.favicon.src = event.favicons[0];
+			if (event.favicons[0] !== undefined) this.favicon.src = event.favicons[0];
 			this.leaf.tabHeaderInnerIconEl.empty();
 			this.leaf.tabHeaderInnerIconEl.appendChild(this.favicon);
 		});

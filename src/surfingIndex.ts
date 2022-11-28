@@ -9,7 +9,11 @@ import {
 	Menu,
 	Notice,
 	Plugin,
+	setIcon,
 	TFile,
+	ViewState,
+	Workspace,
+	WorkspaceLeaf,
 } from "obsidian";
 import { HeaderBar } from "./component/headerBar";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "./surfingView";
@@ -20,6 +24,7 @@ import { DEFAULT_SETTINGS, SEARCH_ENGINES, SurfingSettings, SurfingSettingTab } 
 import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/urltest";
+import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
 
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
@@ -33,6 +38,7 @@ export default class SurfingPlugin extends Plugin {
 
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
+		this.registerView(WEB_BROWSER_IFRAME_VIEW_ID, (leaf) => new SurfingIframeView(leaf, this));
 
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
@@ -55,6 +61,7 @@ export default class SurfingPlugin extends Plugin {
 		this.registerCustomIcon();
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
+		this.patchWorkspaceLeaf();
 	}
 
 	onunload() {
@@ -143,7 +150,7 @@ export default class SurfingPlugin extends Plugin {
 
 				menu.addItem((item) => {
 					// Add sub menu
-					const searchEngines = [...SEARCH_ENGINES, ...this.settings.customSearchEngine]
+					const searchEngines = [...SEARCH_ENGINES, ...this.settings.customSearchEngine];
 					const subMenu = item.setTitle(`Search In WebBrowser`).setIcon('search').setSubmenu();
 					searchEngines.forEach((engine) => {
 						subMenu.addItem((item) => {
@@ -155,17 +162,6 @@ export default class SurfingPlugin extends Plugin {
 								})
 						})
 					})
-
-					if (this.settings.defaultSearchEngine === 'custom') {
-						subMenu.addItem((item) => {
-							item.setIcon('search')
-								.setTitle("custom")
-								.onClick(() => {
-									SurfingView.spawnWebBrowserView(true, { url: this.settings.customSearchEngine + selection });
-								})
-						})
-					}
-
 				})
 			}))
 	}
@@ -275,6 +271,23 @@ export default class SurfingPlugin extends Plugin {
 				searchBarEl.focus();
 			}
 		});
+
+		const searchEngines = [...SEARCH_ENGINES, ...this.settings.customSearchEngine]
+		searchEngines.forEach((engine) => {
+			this.addCommand({
+				id: 'using' + engine.name.replace(/\s/g, '-') + '-to-search',
+				name: t('Using ') + engine.name + t(' to search'),
+				editorCallback: (editor: Editor, view: MarkdownView) => {
+					if (editor.getSelection().length === 0) return;
+					const selection = editor.getSelection();
+
+					// @ts-ignore
+					SurfingView.spawnWebBrowserView(true, { url: engine.url + selection });
+				}
+			});
+		})
+
+
 	}
 
 	private registerCustomIcon() {
@@ -408,18 +421,11 @@ export default class SurfingPlugin extends Plugin {
 		this.register(uninstaller);
 	}
 
-	// patchMarkdownRenderer() {
-	// 	const uninstaller = around(MarkdownRenderer.prototype, {
-	// 		// @ts-ignore
-	//
-	// 	});
-	// 	this.register(uninstaller);
-	// }
-
 
 	private patchEmptyView() {
 		const patchEmptyView = () => {
 			const view = app.workspace.getLeavesOfType("empty").first()?.view;
+			const leaf = app.workspace.getLeavesOfType("empty").first();
 			if (!view) return false;
 
 			const EmptyView = view.constructor;
@@ -427,16 +433,24 @@ export default class SurfingPlugin extends Plugin {
 				around(EmptyView.prototype, {
 					onOpen: (next) =>
 						function (...args: any) {
-							this.addAction("settings", t("settings"), () => {
-								//@ts-expect-error, private method
-								app.setting.open();
-								//@ts-expect-error, private method
-								app.setting.openTabById('surfing');
-							})
+							if (!this.contentEl.querySelector('.surfing-settings-icon')) {
+								const iconEl = this.contentEl.createDiv({
+									cls: 'surfing-settings-icon'
+								})
+								iconEl.addEventListener('click', () => {
+									//@ts-expect-error, private method
+									app.setting.open();
+									//@ts-expect-error, private method
+									app.setting.openTabById('surfing');
+								})
+								setIcon(iconEl, 'settings');
+							}
 							return next.call(this, ...args);
 						},
 				})
 			);
+			// Rebuild view after patch successfully;
+			leaf?.rebuildView();
 			console.log("Obsidian-Surfing: empty view patched");
 			return true;
 		};
@@ -448,7 +462,88 @@ export default class SurfingPlugin extends Plugin {
 				this.registerEvent(evt);
 			}
 		});
+
+		// Dirty workaround to prevent webview cause Obsidian crashed
+
 	}
+
+	patchWorkspaceLeaf() {
+		this.register(
+			around(WorkspaceLeaf.prototype, {
+				setViewState(next) {
+					return function (state: ViewState, ...rest: any[]) {
+						if (this.getRoot()?.type === "floating" && state.type === WEB_BROWSER_VIEW_ID) {
+							return next.call(this, {
+								type: WEB_BROWSER_IFRAME_VIEW_ID,
+								active: true,
+								state: {
+									url: state.state.url
+								}
+							}, ...rest);
+						}
+						// console.log("Obsidian-Surfing: setViewState", state);
+						if (this.getRoot()?.type === "split" && state.type === WEB_BROWSER_IFRAME_VIEW_ID) {
+							return next.call(this, {
+								type: WEB_BROWSER_VIEW_ID,
+								active: true,
+								state: {
+									url: state.state.url
+								}
+							}, ...rest);
+						}
+						return next.apply(this, [state, ...rest]);
+					};
+				},
+				setDimension(old) {
+					return async function (dimension: any) {
+						await old.call(this, dimension);
+						if (dimension === null && (this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
+							app.workspace.setActiveLeaf(this);
+						}
+					}
+				}
+			})
+		);
+
+		this.register(
+			around(Workspace.prototype, {
+				setActiveLeaf(next) {
+					return function (leaf: WorkspaceLeaf, params?: any) {
+
+						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
+							leaf.setViewState({
+								type: WEB_BROWSER_IFRAME_VIEW_ID,
+								active: true,
+								state: {
+									url: leaf.view.getState()?.url
+								}
+							});
+							return;
+						}
+						if (leaf.view instanceof SurfingIframeView && leaf?.getRoot()?.type === "split") {
+							leaf.setViewState({
+								type: WEB_BROWSER_VIEW_ID,
+								active: true,
+								state: {
+									url: leaf.view.getState()?.url
+								}
+							});
+							return;
+						}
+						return next.call(this, leaf, params);
+					};
+				},
+				moveLeafToPopout(old) {
+					return function (leaf: WorkspaceLeaf, data?: any) {
+						const result = old.call(this, leaf, data);
+						app.workspace.setActiveLeaf(leaf);
+						return result;
+					};
+				},
+			})
+		)
+	}
+
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());

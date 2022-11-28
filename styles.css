@@ -219,3 +219,18 @@
 	color: var(--link-color);
 }
 
+.surfing-settings-icon {
+	width: fit-content;
+	height: fit-content;
+	position: absolute;
+	right: 20px;
+}
+
+.wb-frame-notice {
+	text-align: center;
+	background-color: var(--color-yellow);
+	font-size: 14px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
+
