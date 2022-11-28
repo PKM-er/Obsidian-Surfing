@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import * as obsidian from 'obsidian';
-import { Menu } from "obsidian";
+import { MarkdownPreviewRenderer, Menu } from "obsidian";
 
 declare module "obsidian" {
 	export interface ItemView {
@@ -11,7 +11,6 @@ declare module "obsidian" {
 		plugins: {
 			getPlugin(name: string): any;
 		};
-
 		getTheme: () => string;
 	}
 
@@ -37,6 +36,10 @@ declare module "obsidian" {
 		getConfig<T extends keyof VaultSettings>(setting: T): VaultSettings[T];
 
 		setConfig<T extends keyof VaultSettings>(setting: T, value: any): void;
+	}
+
+	class MarkdownPreviewRendererStatic extends MarkdownPreviewRenderer {
+		static registerDomEvents(el: HTMLElement, handlerInstance: unknown, cb: (el: HTMLElement) => unknown): void;
 	}
 
 	export interface View {

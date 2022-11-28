@@ -1,16 +1,25 @@
-import { addIcon, Editor, EventRef, ItemView, MarkdownView, Menu, Notice, Plugin, } from "obsidian";
+import {
+	addIcon,
+	Editor,
+	EventRef,
+	ItemView,
+	MarkdownPreviewRenderer,
+	MarkdownPreviewRendererStatic,
+	MarkdownView,
+	Menu,
+	Notice,
+	Plugin,
+	TFile,
+} from "obsidian";
 import { HeaderBar } from "./component/headerBar";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "./surfingView";
-import { SurfingFileView, HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID } from "./surfingFileView";
+import { HTML_FILE_EXTENSIONS, SurfingFileView, WEB_BROWSER_FILE_VIEW_ID } from "./surfingFileView";
 import { t } from "./translations/helper";
 import { around } from "monkey-around";
-import {
-	SurfingSettings,
-	DEFAULT_SETTINGS,
-	SEARCH_ENGINES,
-	SurfingSettingTab
-} from "./surfingPluginSetting";
+import { DEFAULT_SETTINGS, SEARCH_ENGINES, SurfingSettings, SurfingSettingTab } from "./surfingPluginSetting";
 import { InPageSearchBar } from "./component/inPageSearchBar";
+import { tokenType } from "./types/obsidian";
+import { checkIfWebBrowserAvailable } from "./utils/urltest";
 
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
@@ -34,8 +43,8 @@ export default class SurfingPlugin extends Plugin {
 		this.updateEmptyLeaves(false);
 		this.registerContextMenu();
 		this.registerCustomURI();
-		// this.dispatchMarkdownView();
-		this.dispatchWindowOpen();
+		this.patchMarkdownView();
+		this.patchWindowOpen();
 
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
 			const activeView = this.app.workspace.getActiveViewOfType(ItemView);
@@ -44,6 +53,8 @@ export default class SurfingPlugin extends Plugin {
 
 		this.registerCommands();
 		this.registerCustomIcon();
+		this.patchEmptyView();
+		this.patchMarkdownPreviewRenderer();
 	}
 
 	onunload() {
@@ -144,17 +155,6 @@ export default class SurfingPlugin extends Plugin {
 								})
 						})
 					})
-
-					if (this.settings.defaultSearchEngine === 'custom') {
-						subMenu.addItem((item) => {
-							item.setIcon('search')
-								.setTitle("custom")
-								.onClick(() => {
-									SurfingView.spawnWebBrowserView(true, { url: this.settings.customSearchEngine + selection });
-								})
-						})
-					}
-
 				})
 			}))
 	}
@@ -264,6 +264,23 @@ export default class SurfingPlugin extends Plugin {
 				searchBarEl.focus();
 			}
 		});
+
+		const searchEngines = [...SEARCH_ENGINES, ...this.settings.customSearchEngine]
+		searchEngines.forEach((engine) => {
+			this.addCommand({
+				id: 'using' + engine.name.replace(/\s/g, '-') + '-to-search',
+				name: t('Using ') + engine.name + t(' to search'),
+				editorCallback: (editor: Editor, view: MarkdownView) => {
+					if (editor.getSelection().length === 0) return;
+					const selection = editor.getSelection();
+
+					// @ts-ignore
+					SurfingView.spawnWebBrowserView(true, { url: engine.url + selection });
+				}
+			});
+		})
+
+
 	}
 
 	private registerCustomIcon() {
@@ -278,74 +295,68 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	// TODO: Licat said that this method will be changed in the future.
-	// So we should not dispatch it now
-	// private dispatchMarkdownView() {
-	// 	this.register(
-	// 		around(MarkdownView.prototype, {
-	// 			triggerClickableToken: (next) =>
-	// 				function (token: tokenType, newLeaf: boolean | string, ...args: any) {
-	// 					console.log(token, newLeaf, args);
-	// 					// if (token.type === "external-link") {
-	// 					// 	const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
-	// 					// 	AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
-	// 					// 	return;
-	// 					// }
-	// 					return next.call(this, token, newLeaf, ...args);
-	// 				},
-	// 		}),
-	// 	);
-	//
-	// 	const patchEditView = () => {
-	// 		const view = app.workspace.getLeavesOfType("markdown").first()?.view;
-	// 		if (!view) return false;
-	// 		const editMode = view.editMode ?? view.sourceMode;
-	//
-	// 		if (!editMode)
-	// 			throw new Error(
-	// 				"Failed to patch external link: no edit view found"
-	// 			);
-	//
-	// 		const MarkdownEditView = editMode.constructor;
-	// 		this.register(
-	// 			around(MarkdownEditView.prototype, {
-	// 				triggerClickableToken: (next) =>
-	// 					function (token: tokenType, newLeaf: boolean | string, ...args: any) {
-	// 						console.log(token, newLeaf, args);
-	// 						// if (token.type === "external-link") {
-	// 						// 	const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
-	// 						// 	AnotherWebBrowserView.spawnWebBrowserView(true, { url: url });
-	// 						// 	return;
-	// 						// }
-	// 						return next.call(this, token, newLeaf, ...args);
-	// 					},
-	// 			})
-	// 		);
-	// 		console.log("Another-Web-browser: external link patched");
-	// 		return true;
-	// 	};
-	// 	this.app.workspace.onLayoutReady(() => {
-	// 		if (!patchEditView()) {
-	// 			const evt = app.workspace.on("layout-change", () => {
-	// 				patchEditView() && app.workspace.offref(evt);
-	// 			});
-	// 			this.registerEvent(evt);
-	// 		}
-	// 	});
-	//
-	// 	// TODO: we should hack markdown preview
-	// 	this.register(
-	// 		around(MarkdownRenderer.prototype, {
-	// 			constructor: (next) =>
-	// 				function (this: any, app: App, html: HTMLElement, ...args: any) {
-	// 					const renderer = next.call(this, app, html, ...args);
-	// 					console.log(args, renderer);
-	// 					return renderer;
-	// 				},
-	// 		})
-	// 	);
-	// }
+	private patchMarkdownView() {
+		// this.register(
+		// 	around(MarkdownView.prototype, {
+		// 		triggerClickableToken: (next) =>
+		// 			function (token: tokenType, newLeaf: boolean | string, ...args: any) {
+		// 				console.log(token, newLeaf, args);
+		// 				if (token.type === "external-link") {
+		// 					const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
+		// 					SurfingView.spawnWebBrowserView(true, { url: url });
+		// 					return;
+		// 				}
+		// 				return next.call(this, token, newLeaf, ...args);
+		// 			},
+		// 	}),
+		// );
 
-	dispatchWindowOpen() {
+		const patchLivePreivewView = () => {
+			const view = app.workspace.getLeavesOfType("markdown").first()?.view;
+			if (!view) return false;
+			const editMode = view.editMode ?? view.sourceMode;
+
+			if (!editMode)
+				throw new Error(
+					"Failed to patch external link: no edit view found"
+				);
+
+			const MarkdownEditView = editMode.constructor;
+			this.register(
+				around(MarkdownEditView.prototype, {
+					triggerClickableToken: (next) =>
+						function (token: tokenType, newLeaf: boolean | string, ...args: any) {
+							if (token.type === "external-link") {
+								if (newLeaf === 'tab' || newLeaf === 'window') {
+									window.open(token.text, '_blank', 'external');
+									return;
+								}
+								const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
+								if (checkIfWebBrowserAvailable(url)) {
+									SurfingView.spawnWebBrowserView(true, { url: url });
+								} else {
+									window.open(url, '_blank', 'external');
+								}
+								return;
+							}
+							return next.call(this, token, newLeaf, ...args);
+						},
+				})
+			);
+			console.log("Obsidian-Surfing: editmode external link patched");
+			return true;
+		};
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchLivePreivewView()) {
+				const evt = app.workspace.on("layout-change", () => {
+					patchLivePreivewView() && app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
+	}
+
+	private patchWindowOpen() {
 		// Use monkey-around to match current need.
 		// @ts-ignore
 		const uninstaller = around(window, {
@@ -362,7 +373,7 @@ export default class SurfingPlugin extends Plugin {
 
 					// 2. Perform default behavior if the url isn't "http://" or "https://"
 					// TODO: Change to `isWebUri()` when I change to use the valid-url library.
-					if ((urlString === "about:blank" && features) || (!urlString.startsWith("http://") && !urlString.startsWith("https://") && !(urlString.startsWith("file://") && /\.htm(l)?/g.test(urlString))) || (urlString !== "about:blank" && target === "_blank")) {
+					if ((urlString === "about:blank" && features) || !checkIfWebBrowserAvailable(urlString) || (urlString !== "about:blank" && target === "_blank") || features === 'external') {
 						return next(url, target, features)
 					}
 
@@ -370,8 +381,70 @@ export default class SurfingPlugin extends Plugin {
 					SurfingView.spawnWebBrowserView(true, { url: urlString });
 					return null;
 				}
-		})
+		});
 		this.register(uninstaller);
+	}
+
+	private patchMarkdownPreviewRenderer() {
+		const uninstaller = around(MarkdownPreviewRenderer as MarkdownPreviewRendererStatic, {
+			// @ts-ignore
+			registerDomEvents: (next) =>
+				function (el: HTMLElement, instance: { getFile?(): TFile; }, ...args: unknown[]) {
+					el?.on("click", ".external-link", (event: MouseEvent, targetEl: HTMLElement) => {
+						if (targetEl) {
+							const url = targetEl.getAttribute("href");
+							if (url) {
+								if (event.ctrlKey) {
+									window.open(url, '_blank', 'external');
+									return;
+								}
+								if (checkIfWebBrowserAvailable(url)) {
+									SurfingView.spawnWebBrowserView(true, { url: url });
+								} else {
+									window.open(url, '_blank', 'external');
+								}
+								return;
+							}
+						}
+					});
+					return next.call(this, el, instance, ...args);
+				},
+		});
+		this.register(uninstaller);
+	}
+
+
+	private patchEmptyView() {
+		const patchEmptyView = () => {
+			const view = app.workspace.getLeavesOfType("empty").first()?.view;
+			if (!view) return false;
+
+			const EmptyView = view.constructor;
+			this.register(
+				around(EmptyView.prototype, {
+					onOpen: (next) =>
+						function (...args: any) {
+							this.addAction("settings", t("settings"), () => {
+								//@ts-expect-error, private method
+								app.setting.open();
+								//@ts-expect-error, private method
+								app.setting.openTabById('surfing');
+							})
+							return next.call(this, ...args);
+						},
+				})
+			);
+			console.log("Obsidian-Surfing: empty view patched");
+			return true;
+		};
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchEmptyView()) {
+				const evt = app.workspace.on("layout-change", () => {
+					patchEmptyView() && app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
 	}
 
 	async loadSettings() {
