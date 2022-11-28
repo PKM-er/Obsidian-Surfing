@@ -89,9 +89,7 @@ export class SurfingView extends ItemView {
 				return;
 			}
 		}
-
 	}
-
 
 	getDisplayText(): string {
 		return this.currentTitle;
@@ -128,7 +126,6 @@ export class SurfingView extends ItemView {
 			this.navigate(url);
 		});
 
-
 		this.frame.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
@@ -140,7 +137,6 @@ export class SurfingView extends ItemView {
 					action: "allow",
 				}
 			});
-
 
 			// TODO: Try to improve this dark mode.
 			try {
@@ -210,7 +206,7 @@ export class SurfingView extends ItemView {
 											document.body.outerHTML
 										`, true).then(async (result: any) => {
 										const url = params.pageURL.replace(/\?(.*)/g, "");
-										const parseContent = result.replaceAll(/src="([^"]*)"/g, "src=\"" + url + "$1\"");
+										const parseContent = result.replaceAll(/src="(?!(https|http))([^"]*)"/g, "src=\"" + url + "$2\"");
 										const content = htmlToMarkdown(parseContent);
 										// @ts-ignore
 										const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
@@ -296,9 +292,16 @@ export class SurfingView extends ItemView {
 												 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
 											}
 											var timeStr= "";
-											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr;
+											var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
+											var pageStr = "";
+											if(typeof pageStrMatch === "object" && pageStrMatch.length > 0){
+											    pageStr = '&' + pageStrMatch[0];
+											}else if(typeof pageStrMatch === "string") {
+											    pageStr = '&' + pageStrMatch;
+											}
+											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
 										`, true).then((result: any) => {
-									clipboard.writeText("[" + result.split('?t=')[1] + "](" + result + ")"); // Will be the JSON object from the fetch call
+									clipboard.writeText("[" + result.split('?t=')[1].replace(/&p=[1-9]{1,}/g, "") + "](" + result + ")"); // Will be the JSON object from the fetch call
 								});
 								console.log('Page URL copied to clipboard');
 							} catch (err) {
@@ -349,6 +352,7 @@ export class SurfingView extends ItemView {
 					return;
 				}
 
+
 				// TODO Detect pressed hotkeys if exists in default hotkeys list
 				// If so, prevent default and execute the hotkey
 				// If not, send the event to the webview
@@ -374,7 +378,7 @@ export class SurfingView extends ItemView {
 		});
 
 		this.frame.addEventListener("page-favicon-updated", (event: any) => {
-			this.favicon.src = event.favicons[0];
+			if (event.favicons[0] !== undefined) this.favicon.src = event.favicons[0];
 			this.leaf.tabHeaderInnerIconEl.empty();
 			this.leaf.tabHeaderInnerIconEl.appendChild(this.favicon);
 		});
@@ -409,7 +413,7 @@ export class SurfingView extends ItemView {
 			//@ts-expect-error, private method
 			app.setting.open();
 			//@ts-expect-error, private method
-			app.setting.openTabById('obsidian-memos');
+			app.setting.openTabById('surfing');
 		})
 	}
 

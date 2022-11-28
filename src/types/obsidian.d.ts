@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import * as obsidian from 'obsidian';
-import { MarkdownPreviewRenderer, Menu } from "obsidian";
+import { EditorPosition, MarkdownPreviewRenderer, Menu } from "obsidian";
 
 declare module "obsidian" {
 	export interface ItemView {
@@ -24,6 +24,11 @@ declare module "obsidian" {
 		tabHeaderInnerTitleEl: HTMLDivElement
 		activeTime: number
 		rebuildView: () => void;
+		setDimension: (dimension: any) => void;
+	}
+
+	export interface WorkspaceItem {
+		type: string;
 	}
 
 	interface VaultSettings {
@@ -46,6 +51,10 @@ declare module "obsidian" {
 		contentEl: HTMLElement,
 		editMode: any,
 		sourceMode: any
+	}
+
+	export interface Editor {
+		getClickableTokenAt: (editorPos: EditorPosition) => tokenType
 	}
 
 	export interface MenuItem {

@@ -169,11 +169,18 @@ export class SurfingSettingTab extends PluginSettingTab {
 			this.navigateEl.addClass('wb-setting-searching');
 		};
 
+		// this.search.clearButtonEl.addEventListener('click', () => {
+		// 	this.selectedTab = 'General';
+		// })
+
 		this.search.inputEl.onblur = () => {
 			this.navigateEl.removeClass('wb-setting-searching');
 		}
 
 		this.search.onChange((value: string) => {
+			if (value === '') {
+				this.navigateEl.children[0].dispatchEvent(new PointerEvent('click'));
+			}
 			this.searchSettings(value.toLowerCase());
 		});
 	}
@@ -569,7 +576,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 			cls: 'cm-url',
 			href: 'javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();'
 		})
-		bookmarkLetsBtn.addEventListener("click", () => {
+		bookmarkLetsBtn.addEventListener("click", (e) => {
+			e.preventDefault();
 			clipboard.writeText(`javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();`)
 			new Notice(t("Copy BookmarkLets Success"))
 		})

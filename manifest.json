@@ -1,9 +1,9 @@
 {
 	"id": "surfing",
 	"name": "Surfing",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"minAppVersion": "1.0.0",
-	"description": "Lets you browse the web within Obsidian with some neat features.",
+	"description": "Surf the Net in Obsidian.",
 	"author": "Boninall",
 	"authorUrl": "https://github.com/Quorafind",
 	"isDesktopOnly": true

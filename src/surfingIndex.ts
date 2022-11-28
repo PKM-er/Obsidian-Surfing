@@ -8,8 +8,12 @@ import {
 	MarkdownView,
 	Menu,
 	Notice,
-	Plugin, setIcon,
+	Plugin, requireApiVersion,
+	setIcon,
 	TFile,
+	ViewState,
+	Workspace,
+	WorkspaceLeaf,
 } from "obsidian";
 import { HeaderBar } from "./component/headerBar";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "./surfingView";
@@ -20,6 +24,7 @@ import { DEFAULT_SETTINGS, SEARCH_ENGINES, SurfingSettings, SurfingSettingTab } 
 import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/urltest";
+import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
 
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
@@ -33,6 +38,7 @@ export default class SurfingPlugin extends Plugin {
 
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
+		this.registerView(WEB_BROWSER_IFRAME_VIEW_ID, (leaf) => new SurfingIframeView(leaf, this));
 
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
@@ -45,6 +51,8 @@ export default class SurfingPlugin extends Plugin {
 		this.registerCustomURI();
 		this.patchMarkdownView();
 		this.patchWindowOpen();
+		this.patchMarkdownView();
+		if (requireApiVersion("1.0.4")) this.patchEditMode()
 
 		this.onLayoutChangeEventRef = this.app.workspace.on("layout-change", () => {
 			const activeView = this.app.workspace.getActiveViewOfType(ItemView);
@@ -55,6 +63,7 @@ export default class SurfingPlugin extends Plugin {
 		this.registerCustomIcon();
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
+		this.patchWorkspaceLeaf();
 	}
 
 	onunload() {
@@ -138,12 +147,33 @@ export default class SurfingPlugin extends Plugin {
 				if (!editor) {
 					return;
 				}
-				if (editor.getSelection().length === 0) return;
+				if (editor.getSelection().length === 0) {
+					const token = editor.getClickableTokenAt(editor.getCursor());
+					if (token && token.type === "external-link") {
+						menu.addItem((item) => {
+							item.setIcon('surfing')
+								.setTitle(t('Open With Surfing'))
+								.onClick(() => {
+									// @ts-ignore
+									SurfingView.spawnWebBrowserView(true, { url: token.text });
+								})
+						}).addItem((item) => {
+							item.setIcon('surfing')
+								.setTitle(t('Open With External Browser'))
+								.onClick(() => {
+									// @ts-ignore
+									window.open(token.text, '_blank', 'external')
+								})
+						})
+					}
+
+					return;
+				}
 				const selection = editor.getSelection();
 
 				menu.addItem((item) => {
 					// Add sub menu
-					const searchEngines = [...SEARCH_ENGINES, ...this.settings.customSearchEngine]
+					const searchEngines = [...SEARCH_ENGINES, ...this.settings.customSearchEngine];
 					const subMenu = item.setTitle(`Search In WebBrowser`).setIcon('search').setSubmenu();
 					searchEngines.forEach((engine) => {
 						subMenu.addItem((item) => {
@@ -296,21 +326,30 @@ export default class SurfingPlugin extends Plugin {
 
 	// TODO: Licat said that this method will be changed in the future.
 	private patchMarkdownView() {
-		// this.register(
-		// 	around(MarkdownView.prototype, {
-		// 		triggerClickableToken: (next) =>
-		// 			function (token: tokenType, newLeaf: boolean | string, ...args: any) {
-		// 				console.log(token, newLeaf, args);
-		// 				if (token.type === "external-link") {
-		// 					const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
-		// 					SurfingView.spawnWebBrowserView(true, { url: url });
-		// 					return;
-		// 				}
-		// 				return next.call(this, token, newLeaf, ...args);
-		// 			},
-		// 	}),
-		// );
+		this.register(
+			around(MarkdownView.prototype, {
+				triggerClickableToken: (next) =>
+					function (token: tokenType, newLeaf: boolean | string, ...args: any) {
+						if (token.type === "external-link") {
+							if (newLeaf === 'tab' || newLeaf === 'window') {
+								window.open(token.text, '_blank', 'external');
+								return;
+							}
+							const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
+							if (checkIfWebBrowserAvailable(url)) {
+								SurfingView.spawnWebBrowserView(true, { url: url });
+							} else {
+								window.open(url, '_blank', 'external');
+							}
+							return;
+						}
+						return next.call(this, token, newLeaf, ...args);
+					},
+			}),
+		);
+	}
 
+	private patchEditMode() {
 		const patchLivePreivewView = () => {
 			const view = app.workspace.getLeavesOfType("markdown").first()?.view;
 			if (!view) return false;
@@ -373,12 +412,12 @@ export default class SurfingPlugin extends Plugin {
 
 					// 2. Perform default behavior if the url isn't "http://" or "https://"
 					// TODO: Change to `isWebUri()` when I change to use the valid-url library.
-					if ((urlString === "about:blank" && features) || !checkIfWebBrowserAvailable(urlString) || (urlString !== "about:blank" && target === "_blank") || features === 'external') {
+					if ((urlString === "about:blank" && features) || !checkIfWebBrowserAvailable(urlString) || (urlString !== "about:blank" && (target === "_blank" || target === "_self")) || features === 'external') {
 						return next(url, target, features)
 					}
 
-					// TODO: Open external link in current leaf when meta key isn't being held down.
-					SurfingView.spawnWebBrowserView(true, { url: urlString });
+					// // TODO: Open external link in current leaf when meta key isn't being held down.
+					// SurfingView.spawnWebBrowserView(true, { url: urlString });
 					return null;
 				}
 		});
@@ -407,11 +446,13 @@ export default class SurfingPlugin extends Plugin {
 							}
 						}
 					});
+
 					return next.call(this, el, instance, ...args);
 				},
 		});
 		this.register(uninstaller);
 	}
+
 
 	private patchEmptyView() {
 		const patchEmptyView = () => {
@@ -453,7 +494,88 @@ export default class SurfingPlugin extends Plugin {
 				this.registerEvent(evt);
 			}
 		});
+
+		// Dirty workaround to prevent webview cause Obsidian crashed
+
 	}
+
+	patchWorkspaceLeaf() {
+		this.register(
+			around(WorkspaceLeaf.prototype, {
+				setViewState(next) {
+					return function (state: ViewState, ...rest: any[]) {
+						if (this.getRoot()?.type === "floating" && state.type === WEB_BROWSER_VIEW_ID) {
+							return next.call(this, {
+								type: WEB_BROWSER_IFRAME_VIEW_ID,
+								active: true,
+								state: {
+									url: state.state.url
+								}
+							}, ...rest);
+						}
+						// console.log("Obsidian-Surfing: setViewState", state);
+						if (this.getRoot()?.type === "split" && state.type === WEB_BROWSER_IFRAME_VIEW_ID) {
+							return next.call(this, {
+								type: WEB_BROWSER_VIEW_ID,
+								active: true,
+								state: {
+									url: state.state.url
+								}
+							}, ...rest);
+						}
+						return next.apply(this, [state, ...rest]);
+					};
+				},
+				setDimension(old) {
+					return async function (dimension: any) {
+						await old.call(this, dimension);
+						if (dimension === null && (this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
+							app.workspace.setActiveLeaf(this);
+						}
+					}
+				}
+			})
+		);
+
+		this.register(
+			around(Workspace.prototype, {
+				setActiveLeaf(next) {
+					return function (leaf: WorkspaceLeaf, params?: any) {
+
+						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
+							leaf.setViewState({
+								type: WEB_BROWSER_IFRAME_VIEW_ID,
+								active: true,
+								state: {
+									url: leaf.view.getState()?.url
+								}
+							});
+							return;
+						}
+						if (leaf.view instanceof SurfingIframeView && leaf?.getRoot()?.type === "split") {
+							leaf.setViewState({
+								type: WEB_BROWSER_VIEW_ID,
+								active: true,
+								state: {
+									url: leaf.view.getState()?.url
+								}
+							});
+							return;
+						}
+						return next.call(this, leaf, params);
+					};
+				},
+				moveLeafToPopout(old) {
+					return function (leaf: WorkspaceLeaf, data?: any) {
+						const result = old.call(this, leaf, data);
+						app.workspace.setActiveLeaf(leaf);
+						return result;
+					};
+				},
+			})
+		)
+	}
+
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());

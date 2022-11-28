@@ -48,5 +48,9 @@ export default {
 	"Search Engine": "Search Engine",
 	'settings': 'settings',
 	'Using ': 'Using ',
-	' to search': ' to search'
+	' to search': ' to search',
+	"Surfing Iframe": "Surfing Iframe",
+	'Surfing is using iframe to prevent crashed when loading some websites.': 'Surfing is using iframe to prevent crashed when loading some websites.',
+	'Open With External Browser': 'Open With External Browser',
+	'Open With Surfing': 'Open With Surfing',
 };
