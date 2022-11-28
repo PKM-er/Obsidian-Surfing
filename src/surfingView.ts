@@ -173,8 +173,6 @@ export class SurfingView extends ItemView {
 				console.error('Failed to get background color: ', err);
 			}
 
-			webContents.openDevTools();
-
 			webContents.on("context-menu", (event: any, params: any) => {
 				event.preventDefault();
 
