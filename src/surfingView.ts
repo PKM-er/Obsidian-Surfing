@@ -27,6 +27,7 @@ export class SurfingView extends ItemView {
 	private headerBar: HeaderBar;
 	private favicon: HTMLImageElement;
 	private frame: HTMLIFrameElement;
+	private menu: any;
 
 	constructor(leaf: WorkspaceLeaf, plugin: SurfingPlugin) {
 		super(leaf);
@@ -251,6 +252,7 @@ export class SurfingView extends ItemView {
 		this.frame.addEventListener("page-title-updated", (event: any) => {
 			this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
 			this.currentTitle = event.title;
+
 		});
 
 		this.frame.addEventListener("will-navigate", (event: any) => {
@@ -259,7 +261,7 @@ export class SurfingView extends ItemView {
 
 		this.frame.addEventListener("did-navigate-in-page", (event: any) => {
 			this.navigate(event.url, true, false);
-			this.leaf.rebuildView();
+			this.menu = undefined;
 		});
 
 		this.frame.addEventListener("new-window", (event: any) => {
@@ -299,11 +301,11 @@ export class SurfingView extends ItemView {
 
 		const run = debounce((params: any) => {
 			const { Menu, MenuItem } = remote;
-			const menu = new Menu();
+			this.menu = new Menu();
 			// Basic Menu For Webview
 			// TODO: Support adding different commands to the menu.
 			// Possible to use Obsidian Default API?
-			menu.append(
+			this.menu.append(
 				new MenuItem(
 					{
 						label: t('Open Current URL In External Browser'),
@@ -314,7 +316,7 @@ export class SurfingView extends ItemView {
 				)
 			);
 
-			menu.append(
+			this.menu.append(
 				new MenuItem(
 					{
 						label: t('Save Current Page As Markdown'),
@@ -345,8 +347,8 @@ export class SurfingView extends ItemView {
 			// TODO: Support cut, paste, select All.
 			// Only works when something is selected.
 			if (params.selectionText) {
-				menu.append(new MenuItem({ type: 'separator' }));
-				menu.append(new MenuItem({
+				this.menu.append(new MenuItem({ type: 'separator' }));
+				this.menu.append(new MenuItem({
 					label: t('Search Text'), click: function () {
 						try {
 							SurfingView.spawnWebBrowserView(true, { url: params.selectionText });
@@ -356,8 +358,8 @@ export class SurfingView extends ItemView {
 						}
 					}
 				}));
-				menu.append(new MenuItem({ type: 'separator' }));
-				menu.append(new MenuItem({
+				this.menu.append(new MenuItem({ type: 'separator' }));
+				this.menu.append(new MenuItem({
 					label: t('Copy Plain Text'), click: function () {
 						try {
 							webContents.copy();
@@ -368,7 +370,7 @@ export class SurfingView extends ItemView {
 					}
 				}));
 				const highlightFormat = this.plugin.settings.highlightFormat;
-				menu.append(new MenuItem({
+				this.menu.append(new MenuItem({
 					label: t('Copy Link to Highlight'), click: function () {
 						try {
 							// eslint-disable-next-line no-useless-escape
@@ -393,11 +395,11 @@ export class SurfingView extends ItemView {
 					}
 				}));
 
-				menu.popup(webContents);
+				this.menu.popup(webContents);
 			}
 
 			if (params.pageURL?.contains("bilibili")) {
-				menu.append(new MenuItem({
+				this.menu.append(new MenuItem({
 					label: t('Copy Video Timestamp'), click: function () {
 						try {
 							webContents.executeJavaScript(`
@@ -435,10 +437,10 @@ export class SurfingView extends ItemView {
 			// I tried to use this.frame.shadowRoot.childNodes to locate the iframe HTML element
 			// It doesn't work.
 			setTimeout(() => {
-				menu.popup(webContents);
+				this.menu.popup(webContents);
 				// Dirty workaround for showing the menu, when currentUrl is not the same as the url of the webview
 				if (this.currentUrl !== params.pageURL && !params.selectionText) {
-					menu.popup(webContents);
+					this.menu.popup(webContents);
 				}
 			}, 0)
 		}, 10, true)
