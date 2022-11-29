@@ -261,7 +261,7 @@ export class SurfingView extends ItemView {
 
 		this.frame.addEventListener("did-navigate-in-page", (event: any) => {
 			this.navigate(event.url, true, false);
-			this.menu.destroy();
+			this.menu = undefined;
 		});
 
 		this.frame.addEventListener("new-window", (event: any) => {
