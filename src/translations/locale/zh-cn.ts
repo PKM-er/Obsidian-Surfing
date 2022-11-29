@@ -22,7 +22,7 @@ export default {
 	'Copy Plain Text': '复制纯文本',
 	'Copy Link to Highlight': '复制指向突出显示的链接',
 	'Copy Video Timestamp': '复制视频时间戳',
-	'Open URL In Obsidian Web From Other Software': '从别的软件在 Obsidian Web 中打开网址',
+	'Open URL In Obsidian Web From Other Software (Reload to take effect)': '从别的软件在 Obsidian Web 中打开网址 （重启 Ob 以生效）',
 	"Copy BookmarkLets Success": '复制 BookmarkLets 成功',
 	'Refresh Current Page': '刷新当前页面',
 	'Show Search Bar In Empty Page': '在空白页面中显示搜索栏',
@@ -51,4 +51,6 @@ export default {
 	'Surfing is using iframe to prevent crashed when loading some websites.': 'Surfing 使用 iframe 来防止加载某些网站时崩溃。',
 	'Open With External Browser': '在外部浏览器中打开',
 	'Open With Surfing': '在 Surfing 中打开',
+	"When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.": "当在笔记中点击相同域名的 URL 时，跳转到相同的 Surfing 视图而不是打开新的 Surfing 视图。",
+	'Jump to Opened Page': '跳转到已打开的页面',
 };

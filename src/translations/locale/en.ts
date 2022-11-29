@@ -24,7 +24,7 @@ export default {
 	'Copy Plain Text': 'Copy Plain Text',
 	'Copy Link to Highlight': 'Copy Link to Highlight',
 	'Copy Video Timestamp': 'Copy Video Time',
-	'Open URL In Obsidian Web From Other Software': 'Open URL In Obsidian Web From Other Software',
+	'Open URL In Obsidian Web From Other Software (Reload to take effect)': 'Open URL In Obsidian Web From Other Software (Reload to take effect)',
 	"Copy BookmarkLets Success": "Copy BookmarkLets Success",
 	'Refresh Current Page': 'Refresh Current Page',
 	'Show Search Bar In Empty Page': 'Show Search Bar In Empty Page',
@@ -53,4 +53,6 @@ export default {
 	'Surfing is using iframe to prevent crashed when loading some websites.': 'Surfing is using iframe to prevent crashed when loading some websites.',
 	'Open With External Browser': 'Open With External Browser',
 	'Open With Surfing': 'Open With Surfing',
+	"When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.": "When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.",
+	'Jump to Opened Page': 'Jump to Opened Page',
 };

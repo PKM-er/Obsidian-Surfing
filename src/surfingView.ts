@@ -15,9 +15,6 @@ import SurfingPlugin from "./surfingIndex";
 import { t } from "./translations/helper";
 import searchBox from "./component/searchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
-import { around } from "monkey-around";
-import { tokenType } from "./types/obsidian";
-import { checkIfWebBrowserAvailable } from "./utils/urltest";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
@@ -37,11 +34,22 @@ export class SurfingView extends ItemView {
 	}
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
-		const isOpenInSameTab = app.plugins.getPlugin("surfing").settings.openInSameTab;
+		const pluginSettings = app.plugins.getPlugin("surfing").settings;
+		const isOpenInSameTab = pluginSettings.openInSameTab;
+		const highlightInSameTab = pluginSettings.highlightInSameTab;
 		if (!isOpenInSameTab) {
 			if (state.url.contains("bilibili")) {
 				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
 					if (app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].getViewState().state.url.split('?t=')[0] === state.url.split('?t=')[0]) {
+						// @ts-ignore
+						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].view.navigate(state.url, false, true);
+						(app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]).rebuildView();
+						return;
+					}
+				}
+			} else if (state.url.contains("#:~:text=") && highlightInSameTab) {
+				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
+					if (app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].getViewState().state.url.split('#:~:text=')[0] === state.url.split('#:~:text=')[0]) {
 						// @ts-ignore
 						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].view.navigate(state.url, false, true);
 						(app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]).rebuildView();
