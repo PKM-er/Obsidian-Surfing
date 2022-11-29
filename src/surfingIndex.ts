@@ -411,14 +411,20 @@ export default class SurfingPlugin extends Plugin {
 					if (decodeURI(urlString) !== urlString) urlString = decodeURI(urlString).toString().replace(/\s/g, "%20");
 
 					// 2. Perform default behavior if the url isn't "http://" or "https://"
-					// TODO: Change to `isWebUri()` when I change to use the valid-url library.
+					// No need anymore
 					if ((urlString === "about:blank" && features) || !checkIfWebBrowserAvailable(urlString) || (urlString !== "about:blank" && (target === "_blank" || target === "_self")) || features === 'external') {
-						return next(url, target, features)
+						return next(url, target, features);
 					}
+
+					if (urlString && !target && !features) {
+						SurfingView.spawnWebBrowserView(true, { url: urlString });
+						return null;
+					}
+
 
 					// // TODO: Open external link in current leaf when meta key isn't being held down.
 					// SurfingView.spawnWebBrowserView(true, { url: urlString });
-					return null;
+					// return null;
 				}
 		});
 		this.register(uninstaller);
