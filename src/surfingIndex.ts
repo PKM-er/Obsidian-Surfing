@@ -418,8 +418,9 @@ export default class SurfingPlugin extends Plugin {
 
 					if (urlString && !target && !features) {
 						SurfingView.spawnWebBrowserView(true, { url: urlString });
-						return null;
 					}
+
+					return null;
 
 
 					// // TODO: Open external link in current leaf when meta key isn't being held down.
