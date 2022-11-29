@@ -18,7 +18,6 @@ declare module "obsidian" {
 		id: string
 
 		history: {
-			constructor: () => {}
 			backHistory: Array<any>,
 			forwardHistory: Array<any>
 		},
