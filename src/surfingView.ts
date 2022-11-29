@@ -15,6 +15,9 @@ import SurfingPlugin from "./surfingIndex";
 import { t } from "./translations/helper";
 import searchBox from "./component/searchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
+import { around } from "monkey-around";
+import { tokenType } from "./types/obsidian";
+import { checkIfWebBrowserAvailable } from "./utils/urltest";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
@@ -138,6 +141,8 @@ export class SurfingView extends ItemView {
 				}
 			});
 
+			this.registerContextMenuInWebcontents();
+
 			// TODO: Try to improve this dark mode.
 			try {
 				webContents.executeJavaScript(`
@@ -172,154 +177,6 @@ export class SurfingView extends ItemView {
 			} catch (err) {
 				console.error('Failed to get background color: ', err);
 			}
-
-			webContents.on("context-menu", (event: any, params: any) => {
-				event.preventDefault();
-
-				run(params);
-			}, false);
-
-			const run = debounce((params: any) => {
-				const { Menu, MenuItem } = remote;
-				const menu = new Menu();
-				// Basic Menu For Webview
-				// TODO: Support adding different commands to the menu.
-				// Possible to use Obsidian Default API?
-				menu.append(
-					new MenuItem(
-						{
-							label: t('Open Current URL In External Browser'),
-							click: function () {
-								window.open(params.pageURL, "_blank");
-							}
-						}
-					)
-				);
-
-				menu.append(
-					new MenuItem(
-						{
-							label: t('Save Current Page As Markdown'),
-							click: async function () {
-								try {
-									webContents.executeJavaScript(`
-											document.body.outerHTML
-										`, true).then(async (result: any) => {
-										const url = params.pageURL.replace(/\?(.*)/g, "");
-										const parseContent = result.replaceAll(/src="(?!(https|http))([^"]*)"/g, "src=\"" + url + "$2\"");
-										const content = htmlToMarkdown(parseContent);
-										// @ts-ignore
-										const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
-										const file = await app.vault.create((app.plugins.getPlugin("surfing").settings.markdownPath ? app.plugins.getPlugin("surfing").settings.markdownPath + "/" : "/") + currentTitle + ".md", content);
-										await app.workspace.openLinkText(file.path, "", true);
-									});
-									console.log('Page Title copied to clipboard');
-								} catch (err) {
-									console.error('Failed to copy: ', err);
-								}
-
-							}
-						}
-					)
-				);
-
-				// TODO: Support customize menu items.
-				// TODO: Support cut, paste, select All.
-				// Only works when something is selected.
-				if (params.selectionText) {
-					menu.append(new MenuItem({ type: 'separator' }));
-					menu.append(new MenuItem({
-						label: t('Search Text'), click: function () {
-							try {
-								SurfingView.spawnWebBrowserView(true, { url: params.selectionText });
-								console.log('Page URL copied to clipboard');
-							} catch (err) {
-								console.error('Failed to copy: ', err);
-							}
-						}
-					}));
-					menu.append(new MenuItem({ type: 'separator' }));
-					menu.append(new MenuItem({
-						label: t('Copy Plain Text'), click: function () {
-							try {
-								webContents.copy();
-								console.log('Page URL copied to clipboard');
-							} catch (err) {
-								console.error('Failed to copy: ', err);
-							}
-						}
-					}));
-					const highlightFormat = this.plugin.settings.highlightFormat;
-					menu.append(new MenuItem({
-						label: t('Copy Link to Highlight'), click: function () {
-							try {
-								// eslint-disable-next-line no-useless-escape
-								const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
-								const selectionText = params.selectionText;
-								let link = "";
-								if (highlightFormat.contains("{TIME")) {
-									// eslint-disable-next-line no-useless-escape
-									const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
-									if (timeString) {
-										// eslint-disable-next-line no-useless-escape
-										const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
-										link = highlightFormat.replace(timeString, momentTime);
-									}
-								}
-								link = (link != "" ? link : highlightFormat).replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText);
-								clipboard.writeText(link);
-								console.log('Link URL copied to clipboard');
-							} catch (err) {
-								console.error('Failed to copy: ', err);
-							}
-						}
-					}));
-
-					menu.popup(webContents);
-				}
-
-				if (params.pageURL?.contains("bilibili")) {
-					menu.append(new MenuItem({
-						label: t('Copy Video Timestamp'), click: function () {
-							try {
-								webContents.executeJavaScript(`
-											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
-											var timeYMSArr=time.split(':');
-											var joinTimeStr='00h00m00s';
-											if(timeYMSArr.length===3){
-												 joinTimeStr=timeYMSArr[0]+'h'+timeYMSArr[1]+'m'+timeYMSArr[2]+'s';
-											}else if(timeYMSArr.length===2){
-												 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
-											}
-											var timeStr= "";
-											var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
-											var pageStr = "";
-											if(typeof pageStrMatch === "object" && pageStrMatch.length > 0){
-											    pageStr = '&' + pageStrMatch[0];
-											}else if(typeof pageStrMatch === "string") {
-											    pageStr = '&' + pageStrMatch;
-											}
-											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
-										`, true).then((result: any) => {
-									clipboard.writeText("[" + result.split('?t=')[1].replace(/&p=[1-9]{1,}/g, "") + "](" + result + ")"); // Will be the JSON object from the fetch call
-								});
-								console.log('Page URL copied to clipboard');
-							} catch (err) {
-								console.error('Failed to copy: ', err);
-							}
-						}
-					}));
-				}
-
-				// Should use this method to prevent default copy+c
-				// The default context menu is related to the shadow root that in the webview tag
-				// So it is not possible to preventDefault because it cannot be accessed.
-				// I tried to use this.frame.shadowRoot.childNodes to locate the iframe HTML element
-				// It doesn't work.
-				setTimeout(() => {
-					menu.popup(webContents);
-				}, 0)
-			}, 10, true)
 
 			// webContents.on('found-in-page', (event: any, result: any) => {
 			// 	if (result.finalUpdate) webContents.stopFindInPage('clearSelection')
@@ -394,6 +251,7 @@ export class SurfingView extends ItemView {
 
 		this.frame.addEventListener("did-navigate-in-page", (event: any) => {
 			this.navigate(event.url, true, false);
+			this.leaf.rebuildView();
 		});
 
 		this.frame.addEventListener("new-window", (event: any) => {
@@ -419,6 +277,163 @@ export class SurfingView extends ItemView {
 
 	async setState(state: WebBrowserViewState, result: ViewStateResult) {
 		this.navigate(state.url, false);
+	}
+
+	registerContextMenuInWebcontents() {
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+
+		webContents.on("context-menu", (event: any, params: any) => {
+			event.preventDefault();
+
+			run(params);
+		}, false);
+
+		const run = debounce((params: any) => {
+			const { Menu, MenuItem } = remote;
+			const menu = new Menu();
+			// Basic Menu For Webview
+			// TODO: Support adding different commands to the menu.
+			// Possible to use Obsidian Default API?
+			menu.append(
+				new MenuItem(
+					{
+						label: t('Open Current URL In External Browser'),
+						click: function () {
+							window.open(params.pageURL, "_blank");
+						}
+					}
+				)
+			);
+
+			menu.append(
+				new MenuItem(
+					{
+						label: t('Save Current Page As Markdown'),
+						click: async function () {
+							try {
+								webContents.executeJavaScript(`
+											document.body.outerHTML
+										`, true).then(async (result: any) => {
+									const url = params.pageURL.replace(/\?(.*)/g, "");
+									const parseContent = result.replaceAll(/src="(?!(https|http))([^"]*)"/g, "src=\"" + url + "$2\"");
+									const content = htmlToMarkdown(parseContent);
+									// @ts-ignore
+									const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
+									const file = await app.vault.create((app.plugins.getPlugin("surfing").settings.markdownPath ? app.plugins.getPlugin("surfing").settings.markdownPath + "/" : "/") + currentTitle + ".md", content);
+									await app.workspace.openLinkText(file.path, "", true);
+								});
+								console.log('Page Title copied to clipboard');
+							} catch (err) {
+								console.error('Failed to copy: ', err);
+							}
+
+						}
+					}
+				)
+			);
+
+			// TODO: Support customize menu items.
+			// TODO: Support cut, paste, select All.
+			// Only works when something is selected.
+			if (params.selectionText) {
+				menu.append(new MenuItem({ type: 'separator' }));
+				menu.append(new MenuItem({
+					label: t('Search Text'), click: function () {
+						try {
+							SurfingView.spawnWebBrowserView(true, { url: params.selectionText });
+							console.log('Page URL copied to clipboard');
+						} catch (err) {
+							console.error('Failed to copy: ', err);
+						}
+					}
+				}));
+				menu.append(new MenuItem({ type: 'separator' }));
+				menu.append(new MenuItem({
+					label: t('Copy Plain Text'), click: function () {
+						try {
+							webContents.copy();
+							console.log('Page URL copied to clipboard');
+						} catch (err) {
+							console.error('Failed to copy: ', err);
+						}
+					}
+				}));
+				const highlightFormat = this.plugin.settings.highlightFormat;
+				menu.append(new MenuItem({
+					label: t('Copy Link to Highlight'), click: function () {
+						try {
+							// eslint-disable-next-line no-useless-escape
+							const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
+							const selectionText = params.selectionText;
+							let link = "";
+							if (highlightFormat.contains("{TIME")) {
+								// eslint-disable-next-line no-useless-escape
+								const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+								if (timeString) {
+									// eslint-disable-next-line no-useless-escape
+									const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
+									link = highlightFormat.replace(timeString, momentTime);
+								}
+							}
+							link = (link != "" ? link : highlightFormat).replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText);
+							clipboard.writeText(link);
+							console.log('Link URL copied to clipboard');
+						} catch (err) {
+							console.error('Failed to copy: ', err);
+						}
+					}
+				}));
+
+				menu.popup(webContents);
+			}
+
+			if (params.pageURL?.contains("bilibili")) {
+				menu.append(new MenuItem({
+					label: t('Copy Video Timestamp'), click: function () {
+						try {
+							webContents.executeJavaScript(`
+											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
+											var timeYMSArr=time.split(':');
+											var joinTimeStr='00h00m00s';
+											if(timeYMSArr.length===3){
+												 joinTimeStr=timeYMSArr[0]+'h'+timeYMSArr[1]+'m'+timeYMSArr[2]+'s';
+											}else if(timeYMSArr.length===2){
+												 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
+											}
+											var timeStr= "";
+											var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
+											var pageStr = "";
+											if(typeof pageStrMatch === "object" && pageStrMatch.length > 0){
+											    pageStr = '&' + pageStrMatch[0];
+											}else if(typeof pageStrMatch === "string") {
+											    pageStr = '&' + pageStrMatch;
+											}
+											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
+										`, true).then((result: any) => {
+								clipboard.writeText("[" + result.split('?t=')[1].replace(/&p=[1-9]{1,}/g, "") + "](" + result + ")"); // Will be the JSON object from the fetch call
+							});
+							console.log('Page URL copied to clipboard');
+						} catch (err) {
+							console.error('Failed to copy: ', err);
+						}
+					}
+				}));
+			}
+
+			// Should use this method to prevent default copy+c
+			// The default context menu is related to the shadow root that in the webview tag
+			// So it is not possible to preventDefault because it cannot be accessed.
+			// I tried to use this.frame.shadowRoot.childNodes to locate the iframe HTML element
+			// It doesn't work.
+			setTimeout(() => {
+				menu.popup(webContents);
+				// Dirty workaround for showing the menu, when currentUrl is not the same as the url of the webview
+				if (this.currentUrl !== params.pageURL && !params.selectionText) {
+					menu.popup(webContents);
+				}
+			}, 0)
+		}, 10, true)
 	}
 
 	clearHistory(): void {
