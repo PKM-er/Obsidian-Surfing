@@ -2,8 +2,8 @@
 
 export default {
 	// surfingPluginSetting.ts
-	"Search with": "Search with",
-	"or enter address": "or enter address",
+	"Search with": " Search with",
+	"or enter address": " or enter address",
 	'Default Search Engine': 'Default Search Engine',
 	'Set Custom Search Engine Url': 'Set Custom Search Engine Url',
 	"Set custom search engine url for yourself. 'Duckduckgo' By default": "Set custom search engine url for yourself. 'Duckduckgo' By default",

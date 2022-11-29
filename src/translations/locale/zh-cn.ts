@@ -1,7 +1,7 @@
 export default {
 	// surfingPluginSetting.ts
-	"Search with": "使用",
-	"or enter address": "搜索，或输入地址",
+	"Search with": "使用 ",
+	"or enter address": " 搜索，或输入地址",
 	'Default Search Engine': '默认搜索引擎',
 	'Set Custom Search Engine Url': '设置自定义搜索引擎网址',
 	"Set custom search engine url for yourself. 'Duckduckgo' By default": "设置自定义搜索引擎网址。默认为'Duckduckgo'",
