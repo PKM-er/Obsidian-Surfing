@@ -25,6 +25,7 @@ export interface SurfingSettings {
 	markdownPath: string;
 	highlightFormat: string;
 	openInSameTab: boolean;
+	highlightInSameTab: boolean;
 	openInObsidianWeb: boolean;
 }
 
@@ -44,6 +45,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	markdownPath: "/",
 	customHighlightFormat: false,
 	highlightFormat: '[{CONTENT}]({URL})',
+	highlightInSameTab: false,
 	openInSameTab: false,
 	openInObsidianWeb: false,
 }
@@ -507,7 +509,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		}
 
 		settingName = t('Copy Link to Highlight Format');
-		const settingDesc = t("Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date.");
+		let settingDesc = t("Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date.");
 		setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(settingDesc)
@@ -526,6 +528,22 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					}),
 			);
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName, settingDesc);
+
+		settingName = t('Jump to Opened Page');
+		settingDesc = t("When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(settingDesc)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.highlightInSameTab)
+					.onChange(async (value) => {
+						this.plugin.settings.highlightInSameTab = value;
+						this.applySettingsUpdate();
+					});
+			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName, settingDesc);
 	}
@@ -548,7 +566,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 	}
 
 	private addOpenInObsidianWeb(tabName: string, wbContainerEl: HTMLElement) {
-		const settingName = t('Open URL In Obsidian Web From Other Software');
+		const settingName = t('Open URL In Obsidian Web From Other Software (Reload to take effect)');
 		const setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {

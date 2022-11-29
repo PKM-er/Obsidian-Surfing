@@ -34,7 +34,9 @@ export class SurfingView extends ItemView {
 	}
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
-		const isOpenInSameTab = app.plugins.getPlugin("surfing").settings.openInSameTab;
+		const pluginSettings = app.plugins.getPlugin("surfing").settings;
+		const isOpenInSameTab = pluginSettings.openInSameTab;
+		const highlightInSameTab = pluginSettings.highlightInSameTab;
 		if (!isOpenInSameTab) {
 			if (state.url.contains("bilibili")) {
 				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
@@ -45,7 +47,7 @@ export class SurfingView extends ItemView {
 						return;
 					}
 				}
-			} else if (state.url.contains("#:~:text=")) {
+			} else if (state.url.contains("#:~:text=") && highlightInSameTab) {
 				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
 					if (app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].getViewState().state.url.split('#:~:text=')[0] === state.url.split('#:~:text=')[0]) {
 						// @ts-ignore
