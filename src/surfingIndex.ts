@@ -509,7 +509,7 @@ export default class SurfingPlugin extends Plugin {
 	patchWorkspaceLeaf() {
 		this.register(
 			around(WorkspaceLeaf.prototype, {
-				setViewState(next) {
+				setViewState: (next) => {
 					return function (state: ViewState, ...rest: any[]) {
 						if (this.getRoot()?.type === "floating" && state.type === WEB_BROWSER_VIEW_ID) {
 							return next.call(this, {
@@ -533,20 +533,20 @@ export default class SurfingPlugin extends Plugin {
 						return next.apply(this, [state, ...rest]);
 					};
 				},
-				setDimension(old) {
+				setDimension: (old) => {
 					return async function (dimension: any) {
 						await old.call(this, dimension);
 						if (dimension === null && (this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
 							app.workspace.setActiveLeaf(this);
 						}
 					}
-				}
+				},
 			})
 		);
 
 		this.register(
 			around(Workspace.prototype, {
-				setActiveLeaf(next) {
+				setActiveLeaf: (next) => {
 					return function (leaf: WorkspaceLeaf, params?: any) {
 
 						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
@@ -572,7 +572,7 @@ export default class SurfingPlugin extends Plugin {
 						return next.call(this, leaf, params);
 					};
 				},
-				moveLeafToPopout(old) {
+				moveLeafToPopout: (old) => {
 					return function (leaf: WorkspaceLeaf, data?: any) {
 						const result = old.call(this, leaf, data);
 						app.workspace.setActiveLeaf(leaf);
@@ -582,7 +582,6 @@ export default class SurfingPlugin extends Plugin {
 			})
 		)
 	}
-
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
