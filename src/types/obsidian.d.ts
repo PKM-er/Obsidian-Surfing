@@ -50,7 +50,8 @@ declare module "obsidian" {
 	export interface View {
 		contentEl: HTMLElement,
 		editMode: any,
-		sourceMode: any
+		sourceMode: any,
+		canvas?: any,
 	}
 
 	export interface Editor {

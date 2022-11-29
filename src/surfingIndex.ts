@@ -25,6 +25,7 @@ import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/urltest";
 import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
+import { remote } from "electron";
 
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
@@ -64,6 +65,7 @@ export default class SurfingPlugin extends Plugin {
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
 		this.patchWorkspaceLeaf();
+		this.patchCanvasNode();
 	}
 
 	onunload() {
@@ -581,6 +583,120 @@ export default class SurfingPlugin extends Plugin {
 				},
 			})
 		)
+	}
+
+	patchCanvasNode() {
+		const patchCanvas = () => {
+			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
+			const canvasLeaf = app.workspace.getLeavesOfType("canvas").first();
+			if (!canvasView) return false;
+
+			const tempNode = canvasView?.canvas.createLinkNode("", { x: "0", y: "0" });
+
+			console.log(tempNode);
+			// canvasView?.canvas.removeNode(tempNode);
+
+			const uninstaller = around(tempNode?.constructor.prototype, {
+				render(next) {
+					return function () {
+						next.call(this);
+						this.contentEl.empty();
+						// Create main web view frame that displays the website.
+						this.iframeEl = document.createElement("webview") as unknown as HTMLIFrameElement;
+						this.iframeEl.setAttribute("allowpopups", "");
+
+						// CSS classes makes frame fill the entire tab's content space.
+						this.iframeEl.addClass("wb-frame");
+						this.contentEl.addClass("wb-view-content");
+						this.contentEl.appendChild(this.iframeEl);
+
+						this.iframeEl.setAttribute("src", this.url);
+
+						this.iframeEl.addEventListener("dom-ready", (event: any) => {
+							// @ts-ignore
+							const webContents = remote.webContents.fromId(this.iframeEl.getWebContentsId());
+
+							// Open new browser tab if the web view requests it.
+							webContents.setWindowOpenHandler((event: any) => {
+								SurfingView.spawnWebBrowserView(true, { url: event.url });
+								return {
+									action: "allow",
+								}
+							});
+
+
+							webContents.on("context-menu", (event: any, params: any) => {
+								event.preventDefault();
+
+								const { Menu, MenuItem } = remote;
+								const menu = new Menu();
+								// Basic Menu For Webview
+								// TODO: Support adding different commands to the menu.
+								// Possible to use Obsidian Default API?
+								menu.append(
+									new MenuItem(
+										{
+											label: t('Open Current URL In External Browser'),
+											click: function () {
+												window.open(params.pageURL, "_blank");
+											}
+										}
+									)
+								);
+
+								menu.append(
+									new MenuItem(
+										{
+											label: 'Open Current URL In Surfing',
+											click: function () {
+												window.open(params.pageURL);
+											}
+										}
+									)
+								);
+
+								menu.popup(webContents);
+
+								setTimeout(() => {
+									menu.popup(webContents);
+								}, 0)
+							}, false);
+						});
+
+						this.iframeEl.addEventListener("will-navigate", (event: any) => {
+							const oldData = this.getData();
+							oldData.url = event.url;
+							this.setData(oldData);
+							canvasView.canvas.save();
+						});
+
+						this.iframeEl.addEventListener("did-navigate-in-page", (event: any) => {
+							const oldData = this.getData();
+							oldData.url = event.url;
+							this.setData(oldData);
+							canvasView.canvas.save();
+						});
+					}
+				},
+			});
+			this.register(uninstaller);
+			setTimeout(() => {
+				canvasView?.canvas.removeNode(canvasView.canvas.nodes.get(tempNode.id))
+				// canvasView.canvas.nodes.get(tempNode.id).destroy();
+			}, 10);
+			// canvasLeaf?.rebuildView();
+			console.log("Obsidian-Surfing: empty view patched");
+			return true;
+		}
+
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchCanvas()) {
+				const evt = app.workspace.on("layout-change", () => {
+					patchCanvas() && app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
 	}
 
 
