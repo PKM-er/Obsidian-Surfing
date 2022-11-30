@@ -45,6 +45,7 @@ export class SurfingView extends ItemView {
 						// @ts-ignore
 						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].view.navigate(state.url, false, true);
 						(app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]).rebuildView();
+						app.workspace.setActiveLeaf((app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]));
 						return;
 					}
 				}
@@ -54,6 +55,7 @@ export class SurfingView extends ItemView {
 						// @ts-ignore
 						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].view.navigate(state.url, false, true);
 						(app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]).rebuildView();
+						app.workspace.setActiveLeaf((app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]));
 						return;
 					}
 				}
