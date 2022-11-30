@@ -10,8 +10,7 @@ export class InPageSearchBar {
 
 	constructor(parent: Element, plugin: SurfingPlugin) {
 		this.plugin = plugin;
-		// CSS class removes the gradient at the right of the header bar.
-		parent.addClass("wb-page-search-bar");
+		// CSS class removes the gradient at the right of the header barr
 		// Remove default title from header bar.
 		// Use Obsidian API to remove the title.
 

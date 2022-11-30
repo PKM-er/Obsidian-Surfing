@@ -55,4 +55,7 @@ export default {
 	'Open With Surfing': 'Open With Surfing',
 	"When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.": "When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.",
 	'Jump to Opened Page': 'Jump to Opened Page',
+	"Open Quick Switcher": "Open Quick Switcher | Ctrl/CMD+O",
+	"Close Current Leaf": "Close Current Leaf | Ctrl/CMD+W",
+	"Create A New Note": "Create A New Note | Ctrl/CMD+N",
 };

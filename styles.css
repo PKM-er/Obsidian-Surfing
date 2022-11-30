@@ -66,14 +66,26 @@
 	margin-right: auto;
 }
 
-.wb-page-search-bar-container {
-	margin-left: auto;
-	margin-right: auto;
-}
-
 .wb-page-search-bar {
 	flex-direction: column-reverse;
 }
+
+.wb-page-search-bar .empty-state-container {
+	display: none;
+}
+
+.wb-search-bar-container {
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 16%;
+}
+
+.wb-page-search-bar-container {
+	/*margin-left: auto;*/
+	/*margin-right: auto;*/
+	/*margin-bottom: 29%;*/
+}
+
 
 .wb-page-search-bar-text {
 	text-align: center;
@@ -82,6 +94,49 @@
 	font-weight: bolder;
 	color: var(--color-purple);
 }
+
+.wb-create-btn, .wb-search-btn {
+	opacity: 0.4;
+	color: #9DA7D9;
+}
+
+.wb-close-btn {
+	opacity: 0.4;
+	color: #D99DA8;
+}
+
+.wb-icon-list-container button {
+	padding: 1px 6px;
+}
+
+.wb-create-btn:hover, .wb-search-btn:hover {
+	opacity: 1;
+}
+
+.wb-close-btn:hover {
+	opacity: 1;
+}
+
+
+.wb-close-btn:hover > button > .lucide-x-square {
+	color: #D99DA8;
+}
+
+.wb-close-btn > button > .lucide-x-square {
+	color: var(--color-red);
+}
+
+
+.wb-icon-list-container {
+	margin-right: auto;
+	margin-left: auto;
+	position: absolute;
+	bottom: 22%;
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+}
+
 
 .wb-btn-tip {
 	color: var(--color-base-60);

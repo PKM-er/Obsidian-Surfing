@@ -53,4 +53,7 @@ export default {
 	'Open With Surfing': '在 Surfing 中打开',
 	"When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.": "当在笔记中点击相同域名的 URL 时，跳转到相同的 Surfing 视图而不是打开新的 Surfing 视图。",
 	'Jump to Opened Page': '跳转到已打开的页面',
+	"Open Quick Switcher": "打开快速切换 | Ctrl/CMD+O",
+	"Close Current Leaf": "关闭当前的页面 | Ctrl/CMD+W",
+	"Create A New Note": "新建笔记 | Ctrl/CMD+N",
 };
