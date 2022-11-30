@@ -1,5 +1,5 @@
 import SurfingPlugin from "../surfingIndex";
-import { ButtonComponent, ItemView, setIcon } from "obsidian";
+import { ButtonComponent, ItemView } from "obsidian";
 import { t } from "src/translations/helper";
 
 export class SearchBarIconList {
