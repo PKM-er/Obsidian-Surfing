@@ -400,7 +400,7 @@ export class SurfingView extends ItemView {
 				this.menu.popup(webContents);
 			}
 
-			if (params.pageURL?.contains("bilibili")) {
+			if (params.pageURL?.contains("bilibili.com/")) {
 				this.menu.append(new MenuItem({
 					label: t('Copy Video Timestamp'), click: function () {
 						try {
