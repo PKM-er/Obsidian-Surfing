@@ -40,6 +40,7 @@ export default {
 	'Search all settings': '搜索设置',
 	'General': '常规选项',
 	'Search': '搜索选项',
+	'Theme': '主题选项',
 	'Always Show Custom Engines': '始终显示自定义引擎',
 	'Save Current Page As Markdown': '保存当前网页为 Markdown',
 	'Save As Markdown Path': '保存为 Markdown 路径',
@@ -57,5 +58,7 @@ export default {
 	"Open Quick Switcher": "打开快速切换 | Ctrl/CMD+O",
 	"Close Current Leaf": "关闭当前的页面 | Ctrl/CMD+W",
 	"Create A New Note": "新建笔记 | Ctrl/CMD+N",
-	'Show Other Search Engines When Searching': '搜索时显示其它搜索引擎'
+	'Show Other Search Engines When Searching': '搜索时显示其它搜索引擎',
+	"Random Icons From SevenYu's Art": "从 SevenYu Art 中挑选随机 Icon",
+	"Working On, Not Available Now": "正在建设中，当前不可用",
 };

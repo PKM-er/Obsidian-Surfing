@@ -93,7 +93,7 @@
 	margin-bottom: 20px;
 	font-size: 72px;
 	font-weight: bolder;
-	color: var(--color-purple);
+	color: var(--color-accent);
 }
 
 .wb-create-btn, .wb-search-btn {
@@ -132,7 +132,7 @@
 	margin-right: auto;
 	margin-left: auto;
 	position: absolute;
-	bottom: 22%;
+	bottom: 12%;
 	display: flex;
 	flex-direction: row;
 	gap: 10px;
@@ -144,7 +144,7 @@
 }
 
 .wb-btn:hover {
-	background: var(--color-purple) !important;
+	background: var(--color-accent) !important;
 
 }
 
@@ -243,7 +243,7 @@
 }
 
 .wb-setting-heading {
-	color: var(--color-purple);
+	color: var(--color-accent);
 }
 
 .wb-about-icon {
@@ -258,7 +258,7 @@
 
 .wb-about-text {
 	font-size: 16px;
-	color: var(--color-purple);
+	color: var(--color-accent);
 }
 
 .wb-about-card {
@@ -326,5 +326,32 @@
 }
 
 .theme-light .wb-search-suggest-item.is-selected .wb-search-suggestion-index {
+	color: var(--color-base-10);
+	opacity: 0.6;
+}
+
+.wb-search-suggestion-index {
+	opacity: 0.2;
+	font-size: 12px;
+	font-weight: bold;
+}
+
+input[type='text'].wb-search-bar:active, input[type='text'].wb-search-bar:focus, input[type='text'].wb-search-bar:focus-visible {
+	box-shadow: unset;
+}
+
+input[type='text'].wb-page-search-bar-input:active, input[type='text'].wb-page-search-bar-input:focus, input[type='text'].wb-page-search-bar-input:focus-visible {
+	box-shadow: unset;
+}
+
+.wb-theme-settings-working-on {
+	background-color: var(--color-accent);
+	flex-direction: column;
+	border-radius: var(--radius-l);
+	/* color: var(--color-base-10); */
+}
+
+.theme-light .wb-theme-settings-working-on .setting-item-name {
+	/*background-color: var(--color-accent);*/
 	color: var(--color-base-10);
 }

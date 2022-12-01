@@ -42,6 +42,7 @@ export default {
 	'Search all settings': 'Search all settings',
 	'General': 'General',
 	'Search': 'Search',
+	'Theme': 'Theme',
 	'Always Show Custom Engines': 'Always Show Custom Engines',
 	'Save Current Page As Markdown': 'Save Current Page As Markdown',
 	'Save As Markdown Path': 'Save As Markdown Path',
@@ -59,5 +60,7 @@ export default {
 	"Open Quick Switcher": "Open Quick Switcher | Ctrl/CMD+O",
 	"Close Current Leaf": "Close Current Leaf | Ctrl/CMD+W",
 	"Create A New Note": "Create A New Note | Ctrl/CMD+N",
-	'Show Other Search Engines When Searching': 'Show Other Search Engines When Searching'
+	'Show Other Search Engines When Searching': 'Show Other Search Engines When Searching',
+	"Random Icons From SevenYu's Art": "Random Icons From SevenYu's Art",
+	"Working On, Not Available Now": "Working On, Not Available Now",
 };

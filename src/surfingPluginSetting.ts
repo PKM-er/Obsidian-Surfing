@@ -11,6 +11,7 @@ import {
 import { t } from "./translations/helper";
 import { clipboard } from "electron";
 import SurfingPlugin from "./surfingIndex";
+import tr from "./translations/locale/tr";
 
 type settingSearchInfo = { containerEl: HTMLElement, name: string, description: string, options: SearchOptionInfo[], alias?: string }
 type TabContentInfo = { content: HTMLElement, heading: HTMLElement, navButton: HTMLElement }
@@ -28,6 +29,7 @@ export interface SurfingSettings {
 	openInSameTab: boolean;
 	highlightInSameTab: boolean;
 	openInObsidianWeb: boolean;
+	useCustomIcons: boolean;
 }
 
 export interface SearchEngine {
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	highlightInSameTab: false,
 	openInSameTab: false,
 	openInObsidianWeb: false,
+	useCustomIcons: false,
 }
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
@@ -86,6 +89,7 @@ export const SEARCH_ENGINES: SearchEngine[] = [
 const tabNameToTabIconId: Record<string, string> = {
 	General: 'chrome',
 	Search: 'search',
+	Theme: 'brush',
 };
 
 export class DropdownRecord {
@@ -142,6 +146,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		this.createTabAndContent('General', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateGeneralSettings(tabName, el));
 		this.createTabAndContent('Search', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateSearchSettings(tabName, el));
+		this.createTabAndContent('Theme', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateThemeSettings(tabName, el));
 
 		this.createSearchZeroState(settingsEl);
 	}
@@ -323,6 +328,10 @@ export class SurfingSettingTab extends PluginSettingTab {
 	private generateSearchSettings(tabName: string, wbContainerEl: HTMLElement): void {
 		this.addInpageSearch(tabName, wbContainerEl);
 		this.addSearchEngine(tabName, wbContainerEl);
+	}
+
+	private generateThemeSettings(tabName: string, wbContainerEl: HTMLElement): void {
+		this.addMyIcons(tabName, wbContainerEl);
 	}
 
 	// @ts-ignore
@@ -637,5 +646,30 @@ export class SurfingSettingTab extends PluginSettingTab {
 		bookmarkLetsContainerEl.createEl("a", { cls: 'wb-about-version', href: url, text: text });
 
 		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, "surfing");
+	}
+
+	private addMyIcons(tabName: string, wbContainerEl: HTMLElement) {
+		let settingName = t("Working On, Not Available Now");
+		let setting = new Setting(wbContainerEl)
+			.setName(settingName)
+
+		setting.settingEl.classList.add("wb-theme-settings-working-on")
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, "theme");
+
+		settingName = t("Random Icons From SevenYu's Art");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.useCustomIcons)
+					.setDisabled(true)
+					.onChange(async (value) => {
+						this.plugin.settings.useCustomIcons = value;
+						this.applySettingsUpdate();
+					});
+			})
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, "theme surfing");
 	}
 }

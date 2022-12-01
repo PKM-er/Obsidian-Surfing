@@ -4,6 +4,7 @@ import { t } from "src/translations/helper";
 import { SEARCH_ENGINES, SearchEngine } from "../../surfingPluginSetting";
 import { SurfingView } from "../../surfingView";
 import SurfingPlugin from "../../surfingIndex";
+import { getFinalUrl } from "../../utils/urltest";
 
 export class SearchEngineSuggester extends TextInputSuggest<string> {
 	private searchEngines: SearchEngine[];
@@ -18,7 +19,11 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 
 	getSuggestions(inputStr: string): string[] {
 		this.searchEnginesString = [];
-		this.searchEngines = [...SEARCH_ENGINES, ...this.plugin.settings.customSearchEngine];
+
+		const currentDefault = this.plugin.settings.defaultSearchEngine;
+		this.searchEngines = [...SEARCH_ENGINES, ...this.plugin.settings.customSearchEngine].sort(function (x, y) {
+			return x.name == currentDefault ? -1 : y.name == currentDefault ? 1 : 0;
+		});
 		this.searchEngines.forEach((item) => {
 			this.searchEnginesString.push(item.name);
 		})
@@ -37,12 +42,15 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 	selectSuggestion(item: string): void {
 		const currentInputValue: string = this.inputEl.value;
 
-		console.log(this.inputEl.value);
+		console.log("hellow");
+
 		if (/^\s{0,}$/.test(currentInputValue)) return;
 
 		const currentSearchEngine = this.searchEngines.find((engine) => engine.name === item);
 		const url = (currentSearchEngine ? currentSearchEngine.url : SEARCH_ENGINES[0].url);
 
-		SurfingView.spawnWebBrowserView(false, { url: url + currentInputValue });
+		let finalUrl = getFinalUrl(url, currentInputValue);
+
+		SurfingView.spawnWebBrowserView(false, { url: finalUrl });
 	}
 }

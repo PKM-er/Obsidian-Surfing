@@ -100,7 +100,6 @@ class Suggest<T> {
 		values.forEach((value, index) => {
 			const suggestionEl = this.containerEl.createDiv("suggestion-item");
 			this.owner.renderSuggestion(value, suggestionEl);
-			console.log(suggestionEl);
 			if (index < 10) {
 				suggestionEl.createEl("div", {
 					text: `${ Platform.isMacOS ? "CMD + " : "Ctrl + " }` + `${ index != 9 ? index + 1 : 0 }`,
@@ -163,7 +162,7 @@ export abstract class TextInputSuggest<T> implements ISuggestOwner<T> {
 		this.inputEl.addEventListener("blur", this.close.bind(this));
 		this.suggestEl.on(
 			"mousedown",
-			".suggestion-container",
+			".wb-search-suggestion-container",
 			(event: MouseEvent) => {
 				event.preventDefault();
 			}
@@ -174,7 +173,7 @@ export abstract class TextInputSuggest<T> implements ISuggestOwner<T> {
 		const inputStr = this.inputEl.value;
 		const suggestions = this.getSuggestions(inputStr);
 
-		if (!suggestions) {
+		if (!suggestions || (/^\s{0,}$/.test(inputStr))) {
 			this.close();
 			return;
 		}
