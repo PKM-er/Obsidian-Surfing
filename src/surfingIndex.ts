@@ -25,6 +25,7 @@ import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/urltest";
 import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
+import { SearchBarIconList } from "./component/SearchBarIconList";
 
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
@@ -90,12 +91,17 @@ export default class SurfingPlugin extends Plugin {
 			});
 		}
 		if (!currentView.contentEl.children[0].hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
-			const inPageSearchBar = new InPageSearchBar(currentView.contentEl.children[0], this);
-			if (currentView.contentEl.children[0].children[0]) {
-				(currentView.contentEl.children[0].children[0] as HTMLElement).style.opacity = "0.4";
-			}
+			const inPageContainerEl = (currentView.contentEl.children[0] as HTMLElement).createEl('div', {
+				cls: "wb-search-bar-container"
+			});
+			(currentView.contentEl.children[0] as HTMLElement)?.addClass("wb-page-search-bar");
+			const inPageSearchBar = new InPageSearchBar(inPageContainerEl, this);
+			new SearchBarIconList((currentView.contentEl.children[0] as HTMLElement), currentView, this);
+
+
 			inPageSearchBar.focus();
 			inPageSearchBar.addOnSearchBarEnterListener((url: string) => {
+				if (/^\s{0,}$/.test(url) || this.settings.showOtherSearchEngines) return;
 				SurfingView.spawnWebBrowserView(false, { url });
 			});
 		}
@@ -112,7 +118,9 @@ export default class SurfingPlugin extends Plugin {
 			currentView.headerEl.children[2].removeClass("web-browser-header-bar");
 		}
 		if (currentView.contentEl.children[0].hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
-			currentView.contentEl.children[0].children[1].detach();
+			currentView.contentEl.children[0].children[1]?.detach();
+			currentView.contentEl.children[0].children[1]?.empty();
+			currentView.contentEl.children[0].children[1]?.detach();
 			currentView.contentEl.children[0].removeClass("wb-page-search-bar");
 		}
 	}

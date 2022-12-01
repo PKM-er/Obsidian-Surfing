@@ -11,6 +11,7 @@ declare module "obsidian" {
 		plugins: {
 			getPlugin(name: string): any;
 		};
+		commands: any;
 		getTheme: () => string;
 	}
 
@@ -74,6 +75,11 @@ declare module "obsidian" {
 		constructor: (t: any, e: any, c: any) => any;
 	}
 }
+
+export interface ISuggestOwner<T> {
+	renderSuggestion(value: T, el: HTMLElement, index?: number): void;
+}
+
 
 interface tokenType {
 	end: {

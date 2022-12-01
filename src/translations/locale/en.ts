@@ -2,7 +2,7 @@
 
 export default {
 	// surfingPluginSetting.ts
-	"Search with": " Search with",
+	"Search with": " Search with ",
 	"or enter address": " or enter address",
 	'Default Search Engine': 'Default Search Engine',
 	'Set Custom Search Engine Url': 'Set Custom Search Engine Url',
@@ -24,7 +24,8 @@ export default {
 	'Copy Plain Text': 'Copy Plain Text',
 	'Copy Link to Highlight': 'Copy Link to Highlight',
 	'Copy Video Timestamp': 'Copy Video Time',
-	'Open URL In Obsidian Web From Other Software (Reload to take effect)': 'Open URL In Obsidian Web From Other Software (Reload to take effect)',
+	'Open URL In Obsidian Web From Other Software': 'Open URL In Obsidian Web From Other Software',
+	'(Reload to take effect)': '(Reload to take effect)',
 	"Copy BookmarkLets Success": "Copy BookmarkLets Success",
 	'Refresh Current Page': 'Refresh Current Page',
 	'Show Search Bar In Empty Page': 'Show Search Bar In Empty Page',
@@ -41,6 +42,7 @@ export default {
 	'Search all settings': 'Search all settings',
 	'General': 'General',
 	'Search': 'Search',
+	'Theme': 'Theme',
 	'Always Show Custom Engines': 'Always Show Custom Engines',
 	'Save Current Page As Markdown': 'Save Current Page As Markdown',
 	'Save As Markdown Path': 'Save As Markdown Path',
@@ -55,4 +57,10 @@ export default {
 	'Open With Surfing': 'Open With Surfing',
 	"When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.": "When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.",
 	'Jump to Opened Page': 'Jump to Opened Page',
+	"Open Quick Switcher": "Open Quick Switcher | Ctrl/CMD+O",
+	"Close Current Leaf": "Close Current Leaf | Ctrl/CMD+W",
+	"Create A New Note": "Create A New Note | Ctrl/CMD+N",
+	'Show Other Search Engines When Searching': 'Show Other Search Engines When Searching',
+	"Random Icons From SevenYu's Art": "Random Icons From SevenYu's Art",
+	"Working On, Not Available Now": "Working On, Not Available Now",
 };

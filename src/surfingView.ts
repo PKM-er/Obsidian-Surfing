@@ -45,6 +45,7 @@ export class SurfingView extends ItemView {
 						// @ts-ignore
 						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].view.navigate(state.url, false, true);
 						(app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]).rebuildView();
+						app.workspace.setActiveLeaf((app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]));
 						return;
 					}
 				}
@@ -54,6 +55,7 @@ export class SurfingView extends ItemView {
 						// @ts-ignore
 						app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].view.navigate(state.url, false, true);
 						(app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]).rebuildView();
+						app.workspace.setActiveLeaf((app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i]));
 						return;
 					}
 				}
@@ -486,6 +488,7 @@ export class SurfingView extends ItemView {
 			}
 		}
 
+		// TODO: move this to utils.ts
 		// Support both http:// and https://
 		// TODO: ?Should we support Localhost?
 		// And the before one is : /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi; which will only match `blabla.blabla`
@@ -501,14 +504,13 @@ export class SurfingView extends ItemView {
 			if (!(first7 === "http://" || first7 === "file://" || first8 === "https://")) {
 				url = "https://" + url;
 			}
-		} else if ((!(url.startsWith("file://") || (/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url)))) {
+		} else if ((!(url.startsWith("file://") || (/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url))) || !(/^(https?|file):\/\//g.test(url))) {
 			// If url is not a valid FILE url, search it with search engine.
 			const allSearchEngine = [...SEARCH_ENGINES, ...this.plugin.settings.customSearchEngine];
 			const currentSearchEngine = allSearchEngine.find((engine) => engine.name === this.plugin.settings.defaultSearchEngine);
 			// @ts-ignore
 			url = (currentSearchEngine ? currentSearchEngine.url : SEARCH_ENGINES[0].url) + url;
 		}
-
 
 		this.currentUrl = url;
 
