@@ -63,4 +63,5 @@ export default {
 	'Show Other Search Engines When Searching': 'Show Other Search Engines When Searching',
 	"Random Icons From Default Art": "Random Icons From Default Art",
 	"Working On, Not Available Now": "Working On, Not Available Now",
+    "Toggle Dark Mode": "Toggle Dark Mode"
 };

@@ -318,6 +318,21 @@ export default class SurfingPlugin extends Plugin {
 			});
 		})
 
+        this.addCommand({
+            id: 'toggle dark mode',
+            name: t('Toggle Dark Mode'),
+            callback: async ()=>{
+                this.settings.darkMode = !this.settings.darkMode;
+                await this.saveSettings()
+                const webbrowserView = this.app.workspace.getActiveViewOfType(SurfingView);
+				if (webbrowserView) {
+					// If checking is true, we're simply "checking" if the command can be run.
+					// If checking is false, then we want to actually perform the operation.
+						webbrowserView.refresh();
+
+				}
+            }
+        })
 
 	}
 
