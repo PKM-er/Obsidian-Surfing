@@ -1,5 +1,3 @@
-import { SEARCH_ENGINES } from "../surfingPluginSetting";
-
 export const checkIfWebBrowserAvailable = (url: string) => {
 	return url.startsWith("http://") || url.startsWith("https://") || (url.startsWith("file://") && /\.htm(l)?/g.test(url))
 }
@@ -28,7 +26,7 @@ export const getFinalUrl = (url: string, value: string) => {
 		tempValue = url + tempValue;
 	}
 
-	if (!(/^(https?|file)\:\/\//g.test(tempValue))) tempValue = url + tempValue;
+	if (!(/^(https?|file):\/\//g.test(tempValue))) tempValue = url + tempValue;
 
 	return tempValue;
 }

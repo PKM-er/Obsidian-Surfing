@@ -49,7 +49,7 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 		const currentSearchEngine = this.searchEngines.find((engine) => engine.name === item);
 		const url = (currentSearchEngine ? currentSearchEngine.url : SEARCH_ENGINES[0].url);
 
-		let finalUrl = getFinalUrl(url, currentInputValue);
+		const finalUrl = getFinalUrl(url, currentInputValue);
 
 		SurfingView.spawnWebBrowserView(false, { url: finalUrl });
 	}

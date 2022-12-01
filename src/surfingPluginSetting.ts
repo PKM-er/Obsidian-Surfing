@@ -11,7 +11,6 @@ import {
 import { t } from "./translations/helper";
 import { clipboard } from "electron";
 import SurfingPlugin from "./surfingIndex";
-import tr from "./translations/locale/tr";
 
 type settingSearchInfo = { containerEl: HTMLElement, name: string, description: string, options: SearchOptionInfo[], alias?: string }
 type TabContentInfo = { content: HTMLElement, heading: HTMLElement, navButton: HTMLElement }
