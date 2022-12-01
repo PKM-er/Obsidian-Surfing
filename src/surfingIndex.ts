@@ -101,6 +101,7 @@ export default class SurfingPlugin extends Plugin {
 
 			inPageSearchBar.focus();
 			inPageSearchBar.addOnSearchBarEnterListener((url: string) => {
+				if (/^\s{0,}$/.test(url) || this.settings.showOtherSearchEngines) return;
 				SurfingView.spawnWebBrowserView(false, { url });
 			});
 		}

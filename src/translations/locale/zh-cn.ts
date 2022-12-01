@@ -22,7 +22,8 @@ export default {
 	'Copy Plain Text': '复制纯文本',
 	'Copy Link to Highlight': '复制指向突出显示的链接',
 	'Copy Video Timestamp': '复制视频时间戳',
-	'Open URL In Obsidian Web From Other Software (Reload to take effect)': '从别的软件在 Obsidian Web 中打开网址 （重启 Ob 以生效）',
+	'Open URL In Obsidian Web From Other Software': '从别的软件在 Obsidian Web 中打开网址',
+	'(Reload to take effect)': '（重启 Ob 以生效）',
 	"Copy BookmarkLets Success": '复制 BookmarkLets 成功',
 	'Refresh Current Page': '刷新当前页面',
 	'Show Search Bar In Empty Page': '在空白页面中显示搜索栏',
@@ -56,4 +57,5 @@ export default {
 	"Open Quick Switcher": "打开快速切换 | Ctrl/CMD+O",
 	"Close Current Leaf": "关闭当前的页面 | Ctrl/CMD+W",
 	"Create A New Note": "新建笔记 | Ctrl/CMD+N",
+	'Show Other Search Engines When Searching': '搜索时显示其它搜索引擎'
 };

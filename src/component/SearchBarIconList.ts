@@ -24,9 +24,6 @@ export class SearchBarIconList {
 			cls: "wb-icon-list-container"
 		});
 
-		this.closeBtnEl = this.iconListEl.createEl("div", {
-			cls: "wb-close-btn"
-		})
 
 		this.createBtnEl = this.iconListEl.createEl("div", {
 			cls: "wb-create-btn"
@@ -34,6 +31,10 @@ export class SearchBarIconList {
 
 		this.searchBtnEl = this.iconListEl.createEl("div", {
 			cls: "wb-search-btn"
+		})
+
+		this.closeBtnEl = this.iconListEl.createEl("div", {
+			cls: "wb-close-btn"
 		})
 
 

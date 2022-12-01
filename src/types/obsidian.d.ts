@@ -76,6 +76,11 @@ declare module "obsidian" {
 	}
 }
 
+export interface ISuggestOwner<T> {
+	renderSuggestion(value: T, el: HTMLElement, index?: number): void;
+}
+
+
 interface tokenType {
 	end: {
 		line: number,

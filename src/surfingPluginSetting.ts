@@ -1,6 +1,6 @@
 import {
 	App,
-	DropdownComponent,
+	DropdownComponent, ItemView,
 	Notice,
 	Platform,
 	PluginSettingTab,
@@ -20,6 +20,7 @@ export interface SurfingSettings {
 	defaultSearchEngine: string;
 	customSearchEngine: SearchEngine[];
 	alwaysShowCustomSearch: boolean;
+	showOtherSearchEngines: boolean;
 	showSearchBarInPage: boolean;
 	customHighlightFormat: boolean;
 	markdownPath: string;
@@ -29,7 +30,7 @@ export interface SurfingSettings {
 	openInObsidianWeb: boolean;
 }
 
-interface SearchEngine {
+export interface SearchEngine {
 	name: string;
 	url: string;
 }
@@ -41,6 +42,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 		url: 'https://duckduckgo.com/?q=',
 	}],
 	alwaysShowCustomSearch: false,
+	showOtherSearchEngines: false,
 	showSearchBarInPage: false,
 	markdownPath: "/",
 	customHighlightFormat: false,
@@ -388,6 +390,20 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 
+		settingName = t('Show Other Search Engines When Searching') + " " + t('(Reload to take effect)');
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.showOtherSearchEngines)
+					.onChange(async (value) => {
+						this.plugin.settings.showOtherSearchEngines = value;
+						this.applySettingsUpdate();
+					});
+			})
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
+
 		settingName = t('Always Show Custom Engines');
 		setting = new Setting(wbContainerEl)
 			.setName(settingName)
@@ -566,7 +582,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 	}
 
 	private addOpenInObsidianWeb(tabName: string, wbContainerEl: HTMLElement) {
-		const settingName = t('Open URL In Obsidian Web From Other Software (Reload to take effect)');
+		const settingName = t('Open URL In Obsidian Web From Other Software') + " " + t('(Reload to take effect)');
 		const setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {

@@ -1,5 +1,6 @@
 import SurfingPlugin from "../surfingIndex";
 import { t } from "../translations/helper";
+import { SearchEngineSuggester } from "./suggester/searchSuggester";
 
 export class InPageSearchBar {
 	plugin: SurfingPlugin;
@@ -7,6 +8,7 @@ export class InPageSearchBar {
 	private SearchBarInputContainerEl: HTMLElement;
 	private inPageSearchBarContainerEl: HTMLDivElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>;
+	private searchEnginesSuggester: SearchEngineSuggester;
 
 	constructor(parent: Element, plugin: SurfingPlugin) {
 		this.plugin = plugin;
@@ -61,6 +63,8 @@ export class InPageSearchBar {
 		this.inPageSearchBarInputEl.addEventListener("focusout", (event: FocusEvent) => {
 			window.getSelection()?.removeAllRanges();
 		})
+
+		if (this.plugin.settings.showOtherSearchEngines) this.searchEnginesSuggester = new SearchEngineSuggester(app, this.plugin, this.inPageSearchBarInputEl);
 	}
 
 	addOnSearchBarEnterListener(listener: (url: string) => void) {
