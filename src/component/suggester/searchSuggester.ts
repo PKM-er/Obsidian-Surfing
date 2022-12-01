@@ -1,5 +1,5 @@
 import { TextInputSuggest } from "./suggest";
-import type { App, TFile } from "obsidian";
+import type { App } from "obsidian";
 import { t } from "src/translations/helper";
 import { SEARCH_ENGINES, SearchEngine } from "../../surfingPluginSetting";
 import { SurfingView } from "../../surfingView";

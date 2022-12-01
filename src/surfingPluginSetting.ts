@@ -1,6 +1,6 @@
 import {
 	App,
-	DropdownComponent, ItemView,
+	DropdownComponent,
 	Notice,
 	Platform,
 	PluginSettingTab,
