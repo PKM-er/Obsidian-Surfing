@@ -61,6 +61,6 @@ export default {
 	"Close Current Leaf": "Close Current Leaf | Ctrl/CMD+W",
 	"Create A New Note": "Create A New Note | Ctrl/CMD+N",
 	'Show Other Search Engines When Searching': 'Show Other Search Engines When Searching',
-	"Random Icons From SevenYu's Art": "Random Icons From SevenYu's Art",
+	"Random Icons From Default Art": "Random Icons From Default Art",
 	"Working On, Not Available Now": "Working On, Not Available Now",
 };

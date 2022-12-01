@@ -59,6 +59,6 @@ export default {
 	"Close Current Leaf": "关闭当前的页面 | Ctrl/CMD+W",
 	"Create A New Note": "新建笔记 | Ctrl/CMD+N",
 	'Show Other Search Engines When Searching': '搜索时显示其它搜索引擎',
-	"Random Icons From SevenYu's Art": "从 SevenYu Art 中挑选随机 Icon",
+	"Random Icons From Default Art": "从默认的 Art 中挑选随机 Icon",
 	"Working On, Not Available Now": "正在建设中，当前不可用",
 };

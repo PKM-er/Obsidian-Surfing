@@ -656,7 +656,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, "theme");
 
-		settingName = t("Random Icons From SevenYu's Art");
+		settingName = t("Random Icons From Default Art");
 		setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
