@@ -422,7 +422,7 @@ export class SurfingView extends ItemView {
 											var timeStr= "";
 											var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
 											var pageStr = "";
-											if(typeof pageStrMatch === "object" && pageStrMatch.length > 0){
+											if(typeof pageStrMatch === "object" && pageStrMatch?.length > 0){
 											    pageStr = '&' + pageStrMatch[0];
 											}else if(typeof pageStrMatch === "string") {
 											    pageStr = '&' + pageStrMatch;
