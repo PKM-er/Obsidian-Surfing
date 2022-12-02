@@ -15,6 +15,7 @@ import SurfingPlugin from "./surfingIndex";
 import { t } from "./translations/helper";
 import searchBox from "./component/searchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
+import { OmniSearchContainer } from "./component/OmniSearchContainer";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
@@ -28,6 +29,7 @@ export class SurfingView extends ItemView {
 	private favicon: HTMLImageElement;
 	private frame: HTMLIFrameElement;
 	private menu: any;
+	private searchContainer: OmniSearchContainer;
 
 	constructor(leaf: WorkspaceLeaf, plugin: SurfingPlugin) {
 		super(leaf);
@@ -134,6 +136,9 @@ export class SurfingView extends ItemView {
 		// CSS classes makes frame fill the entire tab's content space.
 		this.frame.addClass("wb-frame");
 		this.contentEl.addClass("wb-view-content");
+		this.searchContainer = new OmniSearchContainer(this.leaf, this.plugin);
+		this.searchContainer.onload();
+
 		this.contentEl.appendChild(this.frame);
 
 		this.headerBar.addOnSearchBarEnterListener((url: string) => {
@@ -178,7 +183,7 @@ export class SurfingView extends ItemView {
 								opacity: .8;
 							}
 							
-							video{
+							video, canvas {
 								filter: invert(110%) hue-rotate(180deg);
 								opacity: 1;
 							}
@@ -255,6 +260,7 @@ export class SurfingView extends ItemView {
 			this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
 			this.currentTitle = event.title;
 
+			this.searchContainer.update("测试");
 		});
 
 		this.frame.addEventListener("will-navigate", (event: any) => {
@@ -515,6 +521,7 @@ export class SurfingView extends ItemView {
 		this.currentUrl = url;
 
 		this.headerBar.setSearchBarUrl(url);
+
 		if (updateWebView) {
 			this.frame.setAttribute("src", url);
 		}

@@ -355,3 +355,42 @@ input[type='text'].wb-page-search-bar-input:active, input[type='text'].wb-page-s
 	/*background-color: var(--color-accent);*/
 	color: var(--color-base-10);
 }
+
+.wb-omni-box {
+	position: absolute;
+	right: 40px;
+	top: 30%;
+	width: 30%;
+	height: 40%;
+	overflow: auto;
+	background-color: var(--color-base-10);
+	border-radius: var(--radius-m);
+}
+
+.wb-omni-item-path {
+	margin: var(--size-2-3) var(--size-2-2);
+	text-emphasis: inherit;
+	overflow-x: hidden;
+	padding: var(--size-2-1);
+	border-radius: var(--radius-s);
+
+}
+
+.wb-omni-item {
+	margin: var(--size-2-3);
+	background-color: var(--color-base-20);
+	padding: var(--size-2-1);
+	border: var(--color-base-30) 1px solid;
+	border-radius: var(--radius-s);
+}
+
+.wb-omni-item-content-list {
+	margin: var(--size-2-2) var(--size-2-1);
+	gap: var(--size-2-1);
+	background-color: var(--color-base-10);
+	border-radius: var(--radius-s);
+}
+
+.wb-content-list-text {
+	padding: var(--size-2-2) var(--size-2-1);
+}
