@@ -358,13 +358,26 @@ input[type='text'].wb-page-search-bar-input:active, input[type='text'].wb-page-s
 
 .wb-omni-box {
 	position: absolute;
-	right: 40px;
-	top: 30%;
+	right: var(--size-4-9);
+	top: var(--size-4-18);
 	width: 30%;
-	height: 40%;
+	height: fit-content;
+	max-height: 40%;
 	overflow: auto;
-	background-color: var(--color-base-10);
 	border-radius: var(--radius-m);
+	padding: var(--size-4-4);
+}
+
+.wb-omni-box::-webkit-scrollbar {
+	display: none; /* Safari and Chrome */
+}
+
+.theme-light .wb-omni-box {
+	background-color: var(--color-base-10);
+}
+
+.theme-dark .wb-omni-box {
+	background-color: var(--color-base-30);
 }
 
 .wb-omni-item-path {
@@ -373,24 +386,50 @@ input[type='text'].wb-page-search-bar-input:active, input[type='text'].wb-page-s
 	overflow-x: hidden;
 	padding: var(--size-2-1);
 	border-radius: var(--radius-s);
+}
 
+.theme-light .wb-omni-item-path {
+	color: var(--color-base-20);
 }
 
 .wb-omni-item {
 	margin: var(--size-2-3);
-	background-color: var(--color-base-20);
+	background-color: var(--color-accent);
 	padding: var(--size-2-1);
-	border: var(--color-base-30) 1px solid;
+	border: var(--color-accent) 1px solid;
 	border-radius: var(--radius-s);
 }
 
 .wb-omni-item-content-list {
 	margin: var(--size-2-2) var(--size-2-1);
 	gap: var(--size-2-1);
+	border-radius: var(--radius-m);
+}
+
+.theme-light .wb-omni-item-content-list {
 	background-color: var(--color-base-10);
-	border-radius: var(--radius-s);
+}
+
+.theme-dark .wb-omni-item-content-list {
+	background-color: var(--color-base-30);
 }
 
 .wb-content-list-text {
 	padding: var(--size-2-2) var(--size-2-1);
+	line-height: var(--size-4-5);
+	background-color: var(--color-base-10);
+	border: var(--color-accent) 1px solid;
+	width: initial;
+	overflow-x: hidden;
+	border-radius: var(--radius-m);
+	margin-bottom: var(--size-4-3);
+}
+
+.theme-light .wb-content-list-text {
+	background-color: var(--color-base-20);
+	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
+}
+
+.theme-dark .wb-content-list-text {
+	background-color: var(--color-base-30);
 }

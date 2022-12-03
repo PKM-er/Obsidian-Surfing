@@ -1,5 +1,6 @@
-import { TFile } from "obsidian";
+import { MarkdownRenderer, TFile } from "obsidian";
 import { SearchMatchApi } from "./OmniSearchContainer";
+import { SplitContent } from "../utils/splitContent";
 
 export class OmniSearchItem {
 	private parent: HTMLElement;
@@ -29,14 +30,17 @@ export class OmniSearchItem {
 		const file = app.vault.getAbstractFileByPath(this.path);
 		let content = "";
 		if (file instanceof TFile) content = await app.vault.cachedRead(file);
+		if (!file) return;
+
+		const contentSearch = new SplitContent(content);
 
 
 		if (this.matches.length > 0) {
 			this.matches.forEach((word: SearchMatchApi) => {
-				itemListEl.createEl("div", {
+				const textEl = itemListEl.createEl("div", {
 					cls: "wb-content-list-text",
-					text: content.slice(word.offset > 20 ? word.offset - 20 : word.offset, word.offset + 20),
 				})
+				textEl.innerHTML = contentSearch.search(word.offset, true);
 			})
 		}
 	}

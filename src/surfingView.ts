@@ -257,10 +257,9 @@ export class SurfingView extends ItemView {
 		});
 
 		this.frame.addEventListener("page-title-updated", (event: any) => {
+			this.updateSearchBox();
 			this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
 			this.currentTitle = event.title;
-
-			this.searchContainer.update("测试");
 		});
 
 		this.frame.addEventListener("will-navigate", (event: any) => {
@@ -295,6 +294,28 @@ export class SurfingView extends ItemView {
 
 	async setState(state: WebBrowserViewState, result: ViewStateResult) {
 		this.navigate(state.url, false);
+	}
+
+	updateSearchBox() {
+		const searchEngines = [...SEARCH_ENGINES, ...this.plugin.settings.customSearchEngine];
+		const regex = /^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/?\n]+)/g;
+		const currentUrl = this.currentUrl?.match(regex)?.[0];
+		if (!currentUrl) return;
+		const currentSearchEngine = searchEngines.find((engine) => engine.url.startsWith(currentUrl));
+		if (!currentSearchEngine) return;
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+
+		try {
+			webContents.executeJavaScript(`
+											document.querySelector('input')?.value
+										`, true).then((result: any) => {
+				this.searchContainer.update(result.toLowerCase());
+				console.log(result);
+			});
+		} catch (err) {
+			console.error('Failed to copy: ', err);
+		}
 	}
 
 	registerContextMenuInWebcontents() {

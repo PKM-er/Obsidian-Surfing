@@ -42,8 +42,6 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 	selectSuggestion(item: string): void {
 		const currentInputValue: string = this.inputEl.value;
 
-		console.log("hellow");
-
 		if (/^\s{0,}$/.test(currentInputValue)) return;
 
 		const currentSearchEngine = this.searchEngines.find((engine) => engine.name === item);

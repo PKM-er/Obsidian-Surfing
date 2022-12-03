@@ -18,7 +18,9 @@ export type SearchMatchApi = {
 export class OmniSearchContainer {
 	private leaf: WorkspaceLeaf;
 	private plugin: SurfingPlugin;
-	private wbOmniSearchBoxEl: HTMLElement;
+	private wbOmniSearchCtnEl: HTMLElement;
+	private query: string;
+	private result: ResultNoteApi[];
 
 	constructor(leaf: WorkspaceLeaf, plugin: SurfingPlugin) {
 		this.plugin = plugin;
@@ -26,35 +28,60 @@ export class OmniSearchContainer {
 	}
 
 	onload() {
-		this.wbOmniSearchBoxEl = this.leaf.view.contentEl.createEl("div", {
+		this.wbOmniSearchCtnEl = this.leaf.view.contentEl.createEl("div", {
 			cls: "wb-omni-box"
 		})
+		this.hide();
 	}
 
 	hide() {
-		if (this.wbOmniSearchBoxEl.isShown()) this.wbOmniSearchBoxEl.hide();
+		if (this.wbOmniSearchCtnEl.isShown()) this.wbOmniSearchCtnEl.hide();
 	}
 
 	show() {
-		if (!this.wbOmniSearchBoxEl.isShown()) this.wbOmniSearchBoxEl.show();
+		if (!this.wbOmniSearchCtnEl.isShown()) this.wbOmniSearchCtnEl.show();
+	}
+
+	notFound() {
+		this.wbOmniSearchCtnEl.empty();
+		this.wbOmniSearchCtnEl.createEl("div", {
+			text: "No results found",
+			cls: "wb-omni-item-notfound"
+		})
 	}
 
 	public async update(query: string) {
-		this.wbOmniSearchBoxEl.empty();
+		if (this.query === query) return;
+
+		this.wbOmniSearchCtnEl.empty();
+		this.query = query;
+
+		console.log(query);
 
 		// @ts-ignore
-		const result = await omnisearch.search(query);
+		const result = await omnisearch.search(this.query);
+		// @ts-ignore
+		if (this.result !== result) this.result = result;
 
-		console.log(result);
-		if (result.length > 0) {
-			result.forEach((item: ResultNoteApi) => {
-				(new OmniSearchItem(this.wbOmniSearchBoxEl, item.path, item.foundWords, item.matches)).onload();
+		if (!this.result || this.result?.length === 0) {
+			this.notFound();
+			return;
+		}
+
+		if (this.result.length > 0) {
+			if (!this.result[0].foundWords.find(word => word === this.query)) {
+				this.notFound();
+				return;
+			}
+			this.show();
+			this.result.forEach((item: ResultNoteApi) => {
+				(new OmniSearchItem(this.wbOmniSearchCtnEl, item.path, item.foundWords, item.matches)).onload();
 			})
 		}
 	}
 
 	onunload() {
-		this.wbOmniSearchBoxEl.empty();
-		this.wbOmniSearchBoxEl.detach();
+		this.wbOmniSearchCtnEl.empty();
+		this.wbOmniSearchCtnEl.detach();
 	}
 }
