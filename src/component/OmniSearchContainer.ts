@@ -50,20 +50,15 @@ export class OmniSearchContainer {
 		})
 	}
 
-	public async update(query: string) {
-		if (this.query === query) return;
+	// Tick current search box so that make it run again when Obsidian Reload
+	tick(result: ResultNoteApi[]) {
+		if (this.result !== result) this.result = result;
 
-		this.wbOmniSearchCtnEl.empty();
-		this.query = query;
-
-		console.log(query);
-
-		// @ts-ignore
-		const result = await omnisearch.search(this.query);
 		// @ts-ignore
 		if (this.result !== result) this.result = result;
 
 		if (!this.result || this.result?.length === 0) {
+			this.show();
 			this.notFound();
 			return;
 		}
@@ -77,6 +72,28 @@ export class OmniSearchContainer {
 			this.result.forEach((item: ResultNoteApi) => {
 				(new OmniSearchItem(this.wbOmniSearchCtnEl, item.path, item.foundWords, item.matches)).onload();
 			})
+		}
+	}
+
+	public async update(query: string) {
+		if (this.query === query) return;
+
+		this.wbOmniSearchCtnEl.empty();
+		this.query = query;
+
+		// @ts-ignore
+		const result = await omnisearch.search(this.query);
+
+		this.tick(result);
+
+		console.log(result);
+
+		if (!result || result?.length === 0) {
+			setTimeout(async () => {
+				// @ts-ignore
+				const result = await omnisearch.search(this.query);
+				this.tick(result);
+			}, 3000);
 		}
 	}
 

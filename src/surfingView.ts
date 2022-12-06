@@ -132,22 +132,23 @@ export class SurfingView extends ItemView {
 		// Create main web view frame that displays the website.
 		this.frame = document.createElement("webview") as unknown as HTMLIFrameElement;
 		this.frame.setAttribute("allowpopups", "");
+		this.searchContainer = new OmniSearchContainer(this.leaf, this.plugin);
 
 		// CSS classes makes frame fill the entire tab's content space.
 		this.frame.addClass("wb-frame");
 		this.contentEl.addClass("wb-view-content");
-		this.searchContainer = new OmniSearchContainer(this.leaf, this.plugin);
-		this.searchContainer.onload();
-
 		this.contentEl.appendChild(this.frame);
 
 		this.headerBar.addOnSearchBarEnterListener((url: string) => {
 			this.navigate(url);
 		});
 
+		this.searchContainer.onload();
+
 		this.frame.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
@@ -298,7 +299,8 @@ export class SurfingView extends ItemView {
 
 	updateSearchBox() {
 		const searchEngines = [...SEARCH_ENGINES, ...this.plugin.settings.customSearchEngine];
-		const regex = /^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/?\n]+)/g;
+		// @ts-ignore
+		const regex = /^(?:https?:\/\/)?(?:[^@/\n]+@)?(?:www\.)?([^:/?\n]+)/g;
 		const currentUrl = this.currentUrl?.match(regex)?.[0];
 		if (!currentUrl) return;
 		const currentSearchEngine = searchEngines.find((engine) => engine.url.startsWith(currentUrl));

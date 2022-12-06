@@ -557,7 +557,7 @@ export default class SurfingPlugin extends Plugin {
 				setActiveLeaf: (next) => {
 					return function (leaf: WorkspaceLeaf, params?: any) {
 
-						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
+						if (leaf?.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
 							leaf.setViewState({
 								type: WEB_BROWSER_IFRAME_VIEW_ID,
 								active: true,
@@ -567,7 +567,7 @@ export default class SurfingPlugin extends Plugin {
 							});
 							return;
 						}
-						if (leaf.view instanceof SurfingIframeView && leaf?.getRoot()?.type === "split") {
+						if (leaf?.view instanceof SurfingIframeView && leaf?.getRoot()?.type === "split") {
 							leaf.setViewState({
 								type: WEB_BROWSER_VIEW_ID,
 								active: true,

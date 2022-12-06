@@ -1,5 +1,5 @@
-import { MarkdownRenderer, TFile } from "obsidian";
-import { SearchMatchApi } from "./OmniSearchContainer";
+import { TFile } from "obsidian";
+import type { SearchMatchApi } from "./OmniSearchContainer";
 import { SplitContent } from "../utils/splitContent";
 
 export class OmniSearchItem {
