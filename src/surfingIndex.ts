@@ -66,6 +66,7 @@ export default class SurfingPlugin extends Plugin {
 		this.patchMarkdownPreviewRenderer();
 		this.patchWorkspaceLeaf();
 		this.patchCanvasNode();
+		this.patchCanvas();
 	}
 
 	onunload() {
@@ -538,7 +539,7 @@ export default class SurfingPlugin extends Plugin {
 				setDimension(old) {
 					return async function (dimension: any) {
 						await old.call(this, dimension);
-						if (dimension === null && (this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
+						if (dimension === null && (this.view.contentEl.querySelector(".wb-view-content") || this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
 							app.workspace.setActiveLeaf(this);
 						}
 					}
@@ -550,7 +551,8 @@ export default class SurfingPlugin extends Plugin {
 			around(Workspace.prototype, {
 				setActiveLeaf(next) {
 					return function (leaf: WorkspaceLeaf, params?: any) {
-
+						if (leaf.view.contentEl.querySelector(".wb-view-content") && leaf.getRoot()?.type === "floating") leaf?.rebuildView();
+						if (leaf.view.contentEl.querySelector(".canvas-link") && leaf.getRoot()?.type === "split") leaf?.rebuildView();
 						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
 							leaf.setViewState({
 								type: WEB_BROWSER_IFRAME_VIEW_ID,
@@ -586,21 +588,29 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	patchCanvasNode() {
-		const patchCanvas = () => {
+		const patchUrlNode = () => {
 			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
-			const canvasLeaf = app.workspace.getLeavesOfType("canvas").first();
+
 			if (!canvasView) return false;
+			const findNode = (map) => {
+				for (const [, value] of map) {
+					if (value.url !== undefined) {
+						return value;
+					}
+				}
+				return false;
+			};
 
-			const tempNode = canvasView?.canvas.createLinkNode("", { x: "0", y: "0" });
-
-			console.log(tempNode);
-			// canvasView?.canvas.removeNode(tempNode);
+			const tempNode = findNode(canvasView.canvas.nodes);
+			if (!tempNode) return false;
 
 			const uninstaller = around(tempNode?.constructor.prototype, {
 				render(next) {
 					return function () {
 						next.call(this);
+						if (this.canvas.view.leaf.getRoot().type === "floating") return;
 						this.contentEl.empty();
+
 						// Create main web view frame that displays the website.
 						this.iframeEl = document.createElement("webview") as unknown as HTMLIFrameElement;
 						this.iframeEl.setAttribute("allowpopups", "");
@@ -680,19 +690,50 @@ export default class SurfingPlugin extends Plugin {
 				},
 			});
 			this.register(uninstaller);
-			setTimeout(() => {
-				canvasView?.canvas.removeNode(canvasView.canvas.nodes.get(tempNode.id))
-				// canvasView.canvas.nodes.get(tempNode.id).destroy();
-			}, 10);
-			// canvasLeaf?.rebuildView();
-			console.log("Obsidian-Surfing: empty view patched");
+
+			tempNode.render();
+			console.log("Obsidian-Surfing: canvas view url node patched");
 			return true;
 		}
 
 		this.app.workspace.onLayoutReady(() => {
-			if (!patchCanvas()) {
+			if (!patchUrlNode()) {
 				const evt = app.workspace.on("layout-change", () => {
-					patchCanvas() && app.workspace.offref(evt);
+					patchUrlNode() && app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
+	}
+
+	patchCanvas() {
+		const patchCanvasSelect = () => {
+			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
+			if (!canvasView) return false;
+
+			const patchCanvasView = canvasView.canvas.constructor;
+			const uninstaller = around(patchCanvasView.prototype, {
+				selectOnly: (next) =>
+					function (e: any) {
+						next.call(this, e);
+						if (e.canvas.view.leaf.getRoot().type === "floating") return;
+						if (e.url !== undefined && !e.contentEl.classList.contains("wb-view-content")) {
+							setTimeout(() => {
+								e.render();
+							}, 0);
+						}
+					},
+			});
+			this.register(uninstaller);
+
+			console.log("Obsidian-Surfing: canvas view patched");
+			return true;
+		}
+
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchCanvasSelect()) {
+				const evt = app.workspace.on("layout-change", () => {
+					patchCanvasSelect() && app.workspace.offref(evt);
 				});
 				this.registerEvent(evt);
 			}
