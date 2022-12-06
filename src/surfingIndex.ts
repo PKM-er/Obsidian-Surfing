@@ -25,6 +25,7 @@ import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/urltest";
 import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
+// @ts-ignore
 import { remote } from "electron";
 
 export default class SurfingPlugin extends Plugin {
@@ -592,7 +593,7 @@ export default class SurfingPlugin extends Plugin {
 			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
 
 			if (!canvasView) return false;
-			const findNode = (map) => {
+			const findNode = (map: any) => {
 				for (const [, value] of map) {
 					if (value.url !== undefined) {
 						return value;
