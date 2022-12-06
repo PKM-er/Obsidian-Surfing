@@ -26,6 +26,9 @@ import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/urltest";
 import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
 import { SearchBarIconList } from "./component/SearchBarIconList";
+// @ts-ignore
+import { remote } from "electron";
+
 
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
@@ -65,6 +68,8 @@ export default class SurfingPlugin extends Plugin {
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
 		this.patchWorkspaceLeaf();
+		this.patchCanvasNode();
+		this.patchCanvas();
 	}
 
 	onunload() {
@@ -544,7 +549,7 @@ export default class SurfingPlugin extends Plugin {
 				setDimension: (old) => {
 					return async function (dimension: any) {
 						await old.call(this, dimension);
-						if (dimension === null && (this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
+						if (dimension === null && (this.view.contentEl.querySelector(".wb-view-content") || this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
 							app.workspace.setActiveLeaf(this);
 						}
 					}
@@ -556,8 +561,10 @@ export default class SurfingPlugin extends Plugin {
 			around(Workspace.prototype, {
 				setActiveLeaf: (next) => {
 					return function (leaf: WorkspaceLeaf, params?: any) {
+						if (leaf.view.contentEl.querySelector(".wb-view-content") && leaf.getRoot()?.type === "floating") leaf?.rebuildView();
+						if (leaf.view.contentEl.querySelector(".canvas-link") && leaf.getRoot()?.type === "split") leaf?.rebuildView();
+						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
 
-						if (leaf?.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
 							leaf.setViewState({
 								type: WEB_BROWSER_IFRAME_VIEW_ID,
 								active: true,
@@ -589,6 +596,159 @@ export default class SurfingPlugin extends Plugin {
 				},
 			})
 		)
+	}
+
+	patchCanvasNode() {
+		const patchUrlNode = () => {
+			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
+
+			if (!canvasView) return false;
+			const findNode = (map: any) => {
+				for (const [, value] of map) {
+					if (value.url !== undefined) {
+						return value;
+					}
+				}
+				return false;
+			};
+
+			const tempNode = findNode(canvasView.canvas.nodes);
+			if (!tempNode) return false;
+
+			const uninstaller = around(tempNode?.constructor.prototype, {
+				render(next) {
+					return function () {
+						next.call(this);
+						if (this.canvas.view.leaf.getRoot().type === "floating") return;
+						this.contentEl.empty();
+
+						// Create main web view frame that displays the website.
+						this.iframeEl = document.createElement("webview") as unknown as HTMLIFrameElement;
+						this.iframeEl.setAttribute("allowpopups", "");
+
+						// CSS classes makes frame fill the entire tab's content space.
+						this.iframeEl.addClass("wb-frame");
+						this.contentEl.addClass("wb-view-content");
+						this.contentEl.appendChild(this.iframeEl);
+
+						this.iframeEl.setAttribute("src", this.url);
+
+						this.iframeEl.addEventListener("dom-ready", (event: any) => {
+							// @ts-ignore
+							const webContents = remote.webContents.fromId(this.iframeEl.getWebContentsId());
+
+							// Open new browser tab if the web view requests it.
+							webContents.setWindowOpenHandler((event: any) => {
+								SurfingView.spawnWebBrowserView(true, { url: event.url });
+								return {
+									action: "allow",
+								}
+							});
+
+
+							webContents.on("context-menu", (event: any, params: any) => {
+								event.preventDefault();
+
+								const { Menu, MenuItem } = remote;
+								const menu = new Menu();
+								// Basic Menu For Webview
+								// TODO: Support adding different commands to the menu.
+								// Possible to use Obsidian Default API?
+								menu.append(
+									new MenuItem(
+										{
+											label: t('Open Current URL In External Browser'),
+											click: function () {
+												window.open(params.pageURL, "_blank");
+											}
+										}
+									)
+								);
+
+								menu.append(
+									new MenuItem(
+										{
+											label: 'Open Current URL In Surfing',
+											click: function () {
+												window.open(params.pageURL);
+											}
+										}
+									)
+								);
+
+								menu.popup(webContents);
+
+								setTimeout(() => {
+									menu.popup(webContents);
+								}, 0)
+							}, false);
+						});
+
+						this.iframeEl.addEventListener("will-navigate", (event: any) => {
+							const oldData = this.getData();
+							oldData.url = event.url;
+							this.setData(oldData);
+							canvasView.canvas.save();
+						});
+
+						this.iframeEl.addEventListener("did-navigate-in-page", (event: any) => {
+							const oldData = this.getData();
+							oldData.url = event.url;
+							this.setData(oldData);
+							canvasView.canvas.save();
+						});
+					}
+				},
+			});
+			this.register(uninstaller);
+
+			tempNode.render();
+			console.log("Obsidian-Surfing: canvas view url node patched");
+			return true;
+		}
+
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchUrlNode()) {
+				const evt = app.workspace.on("layout-change", () => {
+					patchUrlNode() && app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
+	}
+
+	patchCanvas() {
+		const patchCanvasSelect = () => {
+			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
+			if (!canvasView) return false;
+
+			const patchCanvasView = canvasView.canvas.constructor;
+			const uninstaller = around(patchCanvasView.prototype, {
+				selectOnly: (next) =>
+					function (e: any) {
+						next.call(this, e);
+						if (e.canvas.view.leaf.getRoot().type === "floating") return;
+						if (e.url !== undefined && !e.contentEl.classList.contains("wb-view-content")) {
+							setTimeout(() => {
+								e.render();
+							}, 0);
+						}
+					},
+			});
+			this.register(uninstaller);
+
+			console.log("Obsidian-Surfing: canvas view patched");
+			return true;
+		}
+
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchCanvasSelect()) {
+				const evt = app.workspace.on("layout-change", () => {
+					patchCanvasSelect() && app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
 	}
 
 	async loadSettings() {
