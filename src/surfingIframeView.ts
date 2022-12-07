@@ -1,6 +1,6 @@
 import { ItemView, ViewStateResult, WorkspaceLeaf } from "obsidian";
 import SurfingPlugin from "./surfingIndex";
-import { HeaderBar } from "./component/headerBar";
+import { HeaderBar } from "./component/HeaderBar";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
 import { t } from "./translations/helper";
 

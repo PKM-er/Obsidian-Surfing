@@ -8,12 +8,12 @@ import {
 	ViewStateResult,
 	WorkspaceLeaf
 } from "obsidian";
-import { HeaderBar } from "./component/headerBar";
+import { HeaderBar } from "./component/HeaderBar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
 import SurfingPlugin from "./surfingIndex";
 import { t } from "./translations/helper";
-import searchBox from "./component/searchBox";
+import searchBox from "./component/SearchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
 import { OmniSearchContainer } from "./component/OmniSearchContainer";
 

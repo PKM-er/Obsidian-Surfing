@@ -15,7 +15,7 @@ import {
 	Workspace,
 	WorkspaceLeaf,
 } from "obsidian";
-import { HeaderBar } from "./component/headerBar";
+import { HeaderBar } from "./component/HeaderBar";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "./surfingView";
 import { HTML_FILE_EXTENSIONS, SurfingFileView, WEB_BROWSER_FILE_VIEW_ID } from "./surfingFileView";
 import { t } from "./translations/helper";
@@ -25,9 +25,10 @@ import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/urltest";
 import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
-import { SearchBarIconList } from "./component/SearchBarIconList";
+import { InPageIconList } from "./component/InPageIconList";
 // @ts-ignore
 import { clipboard, remote } from "electron";
+import { InPageHeaderBar } from "./component/InPageHeaderBar";
 
 
 export default class SurfingPlugin extends Plugin {
@@ -101,7 +102,7 @@ export default class SurfingPlugin extends Plugin {
 			});
 			(currentView.contentEl.children[0] as HTMLElement)?.addClass("wb-page-search-bar");
 			const inPageSearchBar = new InPageSearchBar(inPageContainerEl, this);
-			new SearchBarIconList((currentView.contentEl.children[0] as HTMLElement), currentView, this);
+			new InPageIconList((currentView.contentEl.children[0] as HTMLElement), currentView, this);
 
 
 			inPageSearchBar.focus();
@@ -626,6 +627,22 @@ export default class SurfingPlugin extends Plugin {
 
 						this.contentEl.empty();
 
+						const searchBarEl = new InPageHeaderBar(this, this.url);
+						searchBarEl.onload();
+						searchBarEl.addOnSearchBarEnterListener((url: string) => {
+							this.iframeEl.setAttribute("src", url);
+							searchBarEl.setSearchBarUrl(url);
+
+							const oldData = this.getData();
+							if (oldData.url === url) return;
+							oldData.url = url;
+							this.setData(oldData);
+							this.canvas.requestSave();
+
+							this.render();
+						});
+						searchBarEl.setSearchBarUrl(this.url);
+
 						// Create main web view frame that displays the website.
 						this.iframeEl = document.createElement("webview") as unknown as HTMLIFrameElement;
 						this.iframeEl.setAttribute("allowpopups", "");
@@ -636,6 +653,7 @@ export default class SurfingPlugin extends Plugin {
 						this.contentEl.appendChild(this.iframeEl);
 
 						this.iframeEl.setAttribute("src", this.url);
+						this.placeholderEl.innerText = this.url;
 
 						this.iframeEl.addEventListener("dom-ready", (event: any) => {
 							// @ts-ignore
@@ -792,7 +810,7 @@ export default class SurfingPlugin extends Plugin {
 								webContents.stop();
 								return;
 							}
-							console.log(event);
+							if (oldData.url === event.url) return;
 							oldData.url = event.url;
 							this.setData(oldData);
 							this.canvas.requestSave();
