@@ -6,7 +6,7 @@ import {
 	MarkdownPreviewRenderer,
 	MarkdownPreviewRendererStatic,
 	MarkdownView,
-	Menu,
+	Menu, moment,
 	Notice,
 	Plugin, requireApiVersion,
 	setIcon,
@@ -27,7 +27,7 @@ import { checkIfWebBrowserAvailable } from "./utils/urltest";
 import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
 import { SearchBarIconList } from "./component/SearchBarIconList";
 // @ts-ignore
-import { remote } from "electron";
+import { clipboard, remote } from "electron";
 
 
 export default class SurfingPlugin extends Plugin {
@@ -619,7 +619,11 @@ export default class SurfingPlugin extends Plugin {
 				render(next) {
 					return function () {
 						next.call(this);
+
+						// TODO: Move this with surfing view's constructor to prevent multiple htmlelement
 						if (this.canvas.view.leaf.getRoot().type === "floating") return;
+						if (this.canvas.isDragging) return;
+
 						this.contentEl.empty();
 
 						// Create main web view frame that displays the website.
@@ -676,10 +680,99 @@ export default class SurfingPlugin extends Plugin {
 									)
 								);
 
-								menu.popup(webContents);
+								if (params.selectionText) {
+									const pluginSettings = app.plugins.getPlugin("surfing").settings;
+
+									menu.append(new MenuItem({ type: 'separator' }));
+									menu.append(new MenuItem({
+										label: t('Search Text'), click: function () {
+											try {
+												SurfingView.spawnWebBrowserView(true, { url: params.selectionText });
+												console.log('Page URL copied to clipboard');
+											} catch (err) {
+												console.error('Failed to copy: ', err);
+											}
+										}
+									}));
+									menu.append(new MenuItem({ type: 'separator' }));
+									menu.append(new MenuItem({
+										label: t('Copy Plain Text'), click: function () {
+											try {
+												webContents.copy();
+												console.log('Page URL copied to clipboard');
+											} catch (err) {
+												console.error('Failed to copy: ', err);
+											}
+										}
+									}));
+									const highlightFormat = pluginSettings.highlightFormat;
+									menu.append(new MenuItem({
+										label: t('Copy Link to Highlight'), click: function () {
+											try {
+												// eslint-disable-next-line no-useless-escape
+												const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
+												const selectionText = params.selectionText;
+												let link = "";
+												if (highlightFormat.contains("{TIME")) {
+													// eslint-disable-next-line no-useless-escape
+													const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+													if (timeString) {
+														// eslint-disable-next-line no-useless-escape
+														const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
+														link = highlightFormat.replace(timeString, momentTime);
+													}
+												}
+												link = (link != "" ? link : highlightFormat).replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText);
+												clipboard.writeText(link);
+												console.log('Link URL copied to clipboard');
+											} catch (err) {
+												console.error('Failed to copy: ', err);
+											}
+										}
+									}));
+
+									menu.popup(webContents);
+								}
+
+								if (params.pageURL?.contains("bilibili.com/")) {
+									menu.append(new MenuItem({
+										label: t('Copy Video Timestamp'), click: function () {
+											try {
+												webContents.executeJavaScript(`
+											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
+											var timeYMSArr=time.split(':');
+											var joinTimeStr='00h00m00s';
+											if(timeYMSArr.length===3){
+												 joinTimeStr=timeYMSArr[0]+'h'+timeYMSArr[1]+'m'+timeYMSArr[2]+'s';
+											}else if(timeYMSArr.length===2){
+												 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
+											}
+											var timeStr= "";
+											var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
+											var pageStr = "";
+											if(typeof pageStrMatch === "object" && pageStrMatch?.length > 0){
+											    pageStr = '&' + pageStrMatch[0];
+											}else if(typeof pageStrMatch === "string") {
+											    pageStr = '&' + pageStrMatch;
+											}
+											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
+										`, true).then((result: any) => {
+													clipboard.writeText("[" + result.split('?t=')[1].replace(/&p=[1-9]{1,}/g, "") + "](" + result + ")"); // Will be the JSON object from the fetch call
+												});
+												console.log('Page URL copied to clipboard');
+											} catch (err) {
+												console.error('Failed to copy: ', err);
+											}
+										}
+									}));
+								}
 
 								setTimeout(() => {
 									menu.popup(webContents);
+									// Dirty workaround for showing the menu, when currentUrl is not the same as the url of the webview
+									if (this.url !== params.pageURL && !params.selectionText) {
+										menu.popup(webContents);
+									}
 								}, 0)
 							}, false);
 						});
@@ -688,14 +781,21 @@ export default class SurfingPlugin extends Plugin {
 							const oldData = this.getData();
 							oldData.url = event.url;
 							this.setData(oldData);
-							canvasView.canvas.save();
+							this.canvas.requestSave();
 						});
 
 						this.iframeEl.addEventListener("did-navigate-in-page", (event: any) => {
 							const oldData = this.getData();
+							if (event.url.contains("contacts.google.com/widget") || (this.canvas.isDragging && oldData.url === event.url)) {
+								// @ts-ignore
+								const webContents = remote.webContents.fromId(this.iframeEl.getWebContentsId());
+								webContents.stop();
+								return;
+							}
+							console.log(event);
 							oldData.url = event.url;
 							this.setData(oldData);
-							canvasView.canvas.save();
+							this.canvas.requestSave();
 						});
 					}
 				},

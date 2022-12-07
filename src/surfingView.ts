@@ -312,7 +312,7 @@ export class SurfingView extends ItemView {
 			webContents.executeJavaScript(`
 											document.querySelector('input')?.value
 										`, true).then((result: any) => {
-				this.searchContainer.update(result.toLowerCase());
+				this.searchContainer.update(result?.toLowerCase());
 				console.log(result);
 			});
 		} catch (err) {
