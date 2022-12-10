@@ -77,6 +77,47 @@ declare module "obsidian" {
 	}
 }
 
+export type Side = 'top' | 'right' | 'bottom' | 'left';
+
+export interface CanvasData {
+	nodes: (CanvasFileData | CanvasTextData | CanvasLinkData)[];
+	edges: CanvasEdgeData[];
+}
+
+export interface CanvasNodeData {
+	id: string;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	color: string;
+}
+
+export interface CanvasEdgeData {
+	id: string;
+	fromNode: string;
+	fromSide: Side;
+	toNode: string;
+	toSide: Side;
+	color: string;
+	label: string;
+}
+
+export interface CanvasFileData extends CanvasNodeData {
+	type: 'file';
+	file: string;
+}
+
+export interface CanvasTextData extends CanvasNodeData {
+	type: 'text';
+	text: string;
+}
+
+export interface CanvasLinkData extends CanvasNodeData {
+	type: 'link';
+	url: string;
+}
+
 export interface ISuggestOwner<T> {
 	renderSuggestion(value: T, el: HTMLElement, index?: number): void;
 }

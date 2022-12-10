@@ -15,8 +15,6 @@ export class InPageHeaderBar {
 	onload() {
 		const pluginSettings = app.plugins.getPlugin("surfing").settings;
 
-		console.log("InPageHeaderBar onload");
-
 		this.searchBar = this.node?.contentEl.createEl("input", {
 			type: "text",
 			placeholder: t("Search with") + pluginSettings.defaultSearchEngine + t("or enter address"),

@@ -29,6 +29,8 @@ export interface SurfingSettings {
 	highlightInSameTab: boolean;
 	openInObsidianWeb: boolean;
 	useCustomIcons: boolean;
+	useWebview: boolean;
+	useIconList: boolean;
 }
 
 export interface SearchEngine {
@@ -52,6 +54,8 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	openInSameTab: false,
 	openInObsidianWeb: false,
 	useCustomIcons: false,
+	useWebview: false,
+	useIconList: true,
 }
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
@@ -320,6 +324,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addOpenInSameTab(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
 		this.addMarkdownPath(tabName, wbContainerEl);
+		this.addReplaceIframeInCanvas(tabName, wbContainerEl);
 		this.addOpenInObsidianWeb(tabName, wbContainerEl);
 		this.addAboutInfo(tabName, wbContainerEl);
 	}
@@ -330,6 +335,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 	}
 
 	private generateThemeSettings(tabName: string, wbContainerEl: HTMLElement): void {
+		this.useIconList(tabName, wbContainerEl);
 		this.addMyIcons(tabName, wbContainerEl);
 	}
 
@@ -589,6 +595,22 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 	}
 
+	private addReplaceIframeInCanvas(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = t('[Experimental] Replace Iframe In Canvas') + t('(Reload to take effect)');
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.useWebview)
+					.onChange(async (value) => {
+						this.plugin.settings.useWebview = value;
+						this.applySettingsUpdate();
+					});
+			});
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
+	}
+
 	private addOpenInObsidianWeb(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t('Open URL In Obsidian Web From Other Software') + " " + t('(Reload to take effect)');
 		const setting = new Setting(wbContainerEl)
@@ -645,6 +667,23 @@ export class SurfingSettingTab extends PluginSettingTab {
 		bookmarkLetsContainerEl.createEl("a", { cls: 'wb-about-version', href: url, text: text });
 
 		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, "surfing");
+	}
+
+	// TODO: Refresh all empty view.
+	private useIconList(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = t('Use icon list to replace defult text actions in empty view') + t('(Reload to take effect)');
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.useIconList)
+					.onChange(async (value) => {
+						this.plugin.settings.useIconList = value;
+						this.applySettingsUpdate();
+					});
+			});
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 	}
 
 	private addMyIcons(tabName: string, wbContainerEl: HTMLElement) {

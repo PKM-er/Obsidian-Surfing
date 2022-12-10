@@ -70,9 +70,14 @@
 	flex-direction: column-reverse;
 }
 
-.wb-page-search-bar .empty-state-container {
+.wb-page-search-bar .wb-empty-actions {
 	display: none;
 }
+
+.wb-page-search-bar .empty-state-container {
+	padding-top: 100px;
+}
+
 
 .wb-search-bar-container {
 	margin-left: auto;

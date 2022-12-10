@@ -119,7 +119,6 @@ export class SurfingView extends ItemView {
 		// Allow views to replace this views.
 		this.navigation = true;
 
-		this.contentEl.empty();
 
 		// Create search bar in the header bar.
 		this.headerBar = new HeaderBar(this.headerEl.children[2], this.plugin);
@@ -128,6 +127,8 @@ export class SurfingView extends ItemView {
 		this.favicon = document.createElement("img") as HTMLImageElement;
 		this.favicon.width = 16;
 		this.favicon.height = 16;
+
+		this.contentEl.empty();
 
 		// Create main web view frame that displays the website.
 		this.frame = document.createElement("webview") as unknown as HTMLIFrameElement;

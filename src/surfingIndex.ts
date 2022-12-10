@@ -6,7 +6,7 @@ import {
 	MarkdownPreviewRenderer,
 	MarkdownPreviewRendererStatic,
 	MarkdownView,
-	Menu, moment,
+	Menu,
 	Notice,
 	Plugin, requireApiVersion,
 	setIcon,
@@ -26,9 +26,7 @@ import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/urltest";
 import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
 import { InPageIconList } from "./component/InPageIconList";
-// @ts-ignore
-import { clipboard, remote } from "electron";
-import { InPageHeaderBar } from "./component/InPageHeaderBar";
+import { InNodeWebView } from "./component/InNodeWebView";
 
 
 export default class SurfingPlugin extends Plugin {
@@ -54,6 +52,7 @@ export default class SurfingPlugin extends Plugin {
 		this.updateEmptyLeaves(false);
 		this.registerContextMenu();
 		this.registerCustomURI();
+
 		this.patchMarkdownView();
 		this.patchWindowOpen();
 		this.patchMarkdownView();
@@ -69,8 +68,10 @@ export default class SurfingPlugin extends Plugin {
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
 		this.patchWorkspaceLeaf();
-		this.patchCanvasNode();
-		this.patchCanvas();
+		if (requireApiVersion("1.1.0") && this.settings.useWebview) {
+			this.patchCanvasNode();
+			this.patchCanvas();
+		}
 	}
 
 	onunload() {
@@ -80,6 +81,9 @@ export default class SurfingPlugin extends Plugin {
 		// Clean up header bar added to "New tab" views when plugin is disabled.
 		// Using Obsidian getViewType
 		this.updateEmptyLeaves(true);
+
+		// Refresh all Canvas to make sure they don't contain webview anymore.
+		if (requireApiVersion("1.1.0") && this.settings.useWebview) this.refreshAllRelatedView();
 	}
 
 	// Add header bar to empty view.
@@ -96,13 +100,22 @@ export default class SurfingPlugin extends Plugin {
 				SurfingView.spawnWebBrowserView(false, { url });
 			});
 		}
-		if (!currentView.contentEl.children[0].hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
-			const inPageContainerEl = (currentView.contentEl.children[0] as HTMLElement).createEl('div', {
+
+		const emptyStateEl = (currentView.contentEl.children[0] as HTMLElement).hasClass("empty-state") ? currentView.contentEl.children[0] as HTMLElement : null;
+		if (!emptyStateEl) return;
+		if (!emptyStateEl.hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
+			const inPageContainerEl = emptyStateEl.createEl('div', {
 				cls: "wb-search-bar-container"
 			});
-			(currentView.contentEl.children[0] as HTMLElement)?.addClass("wb-page-search-bar");
+			emptyStateEl?.addClass("wb-page-search-bar");
+
 			const inPageSearchBar = new InPageSearchBar(inPageContainerEl, this);
-			new InPageIconList((currentView.contentEl.children[0] as HTMLElement), currentView, this);
+			if (this.settings.useIconList) {
+				new InPageIconList(emptyStateEl, currentView, this);
+				const emptyActionsEl = emptyStateEl.querySelector(".empty-state-container");
+
+				if (emptyActionsEl) emptyActionsEl.addClass("wb-empty-actions");
+			}
 
 
 			inPageSearchBar.focus();
@@ -116,18 +129,27 @@ export default class SurfingPlugin extends Plugin {
 	// Clean up header bar added to empty views when plugin is disabled.
 	private removeHeaderAndSearchBar(currentView: ItemView) {
 		if (!currentView) return;
+
 		// Check if new leaf's view is empty, else return.
 		if (currentView.getViewType() != "empty") return;
+
 		// Check if the "New tab" view has already been processed and has a header bar already.
-		if (currentView.headerEl.children[2].hasClass("web-browser-header-bar")) {
+		if (currentView.headerEl.children[2].hasClass("wb-header-bar")) {
 			currentView.headerEl.children[2].empty();
-			currentView.headerEl.children[2].removeClass("web-browser-header-bar");
+			currentView.headerEl.children[2].removeClass("wb-header-bar");
 		}
+
+		// Remove in page search bar
 		if (currentView.contentEl.children[0].hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
 			currentView.contentEl.children[0].children[1]?.detach();
 			currentView.contentEl.children[0].children[1]?.empty();
 			currentView.contentEl.children[0].children[1]?.detach();
 			currentView.contentEl.children[0].removeClass("wb-page-search-bar");
+		}
+
+		// Remove config icon
+		if (currentView.contentEl.children[1]?.hasClass("surfing-settings-icon")) {
+			currentView.contentEl.children[1]?.detach();
 		}
 	}
 
@@ -430,9 +452,10 @@ export default class SurfingPlugin extends Plugin {
 						return next(url, target, features);
 					}
 
-					if (urlString && !target && !features) {
-						SurfingView.spawnWebBrowserView(true, { url: urlString });
-					}
+					// if (urlString && !target && !features) {
+					// 	console.log("Obsidian-Surfing: open url in web browser view");
+					// 	SurfingView.spawnWebBrowserView(true, { url: urlString });
+					// }
 
 					return null;
 
@@ -474,11 +497,11 @@ export default class SurfingPlugin extends Plugin {
 		this.register(uninstaller);
 	}
 
-
 	private patchEmptyView() {
 		const patchEmptyView = () => {
-			const view = app.workspace.getLeavesOfType("empty").first()?.view;
 			const leaf = app.workspace.getLeavesOfType("empty").first();
+			const view = leaf?.view;
+
 			if (!view) return false;
 
 			const EmptyView = view.constructor;
@@ -520,7 +543,8 @@ export default class SurfingPlugin extends Plugin {
 
 	}
 
-	patchWorkspaceLeaf() {
+	// Used to make leaf contains webview should not cause Obsidian crashed.
+	private patchWorkspaceLeaf() {
 		this.register(
 			around(WorkspaceLeaf.prototype, {
 				setViewState: (next) => {
@@ -534,7 +558,7 @@ export default class SurfingPlugin extends Plugin {
 								}
 							}, ...rest);
 						}
-						// console.log("Obsidian-Surfing: setViewState", state);
+
 						if (this.getRoot()?.type === "split" && state.type === WEB_BROWSER_IFRAME_VIEW_ID) {
 							return next.call(this, {
 								type: WEB_BROWSER_VIEW_ID,
@@ -550,7 +574,7 @@ export default class SurfingPlugin extends Plugin {
 				setDimension: (old) => {
 					return async function (dimension: any) {
 						await old.call(this, dimension);
-						if (dimension === null && (this.view.contentEl.querySelector(".wb-view-content") || this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
+						if (dimension === null && (this.view.contentEl?.querySelector(".wb-view-content") || this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
 							app.workspace.setActiveLeaf(this);
 						}
 					}
@@ -562,10 +586,12 @@ export default class SurfingPlugin extends Plugin {
 			around(Workspace.prototype, {
 				setActiveLeaf: (next) => {
 					return function (leaf: WorkspaceLeaf, params?: any) {
-						if (leaf.view.contentEl.querySelector(".wb-view-content") && leaf.getRoot()?.type === "floating") leaf?.rebuildView();
-						if (leaf.view.contentEl.querySelector(".canvas-link") && leaf.getRoot()?.type === "split") leaf?.rebuildView();
-						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
+						const setting = app.plugins.getPlugin("surfing").settings;
 
+						if (leaf.view?.getViewType() === "canvas" && leaf.view.contentEl?.querySelector(".wb-view-content") && leaf.getRoot()?.type === "floating" && setting.useWebview) leaf?.rebuildView();
+						if (leaf.view?.getViewType() === "canvas" && leaf.view.contentEl?.querySelector(".canvas-link") && leaf.getRoot()?.type === "split" && setting.useWebview) leaf?.rebuildView();
+
+						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
 							leaf.setViewState({
 								type: WEB_BROWSER_IFRAME_VIEW_ID,
 								active: true,
@@ -599,7 +625,8 @@ export default class SurfingPlugin extends Plugin {
 		)
 	}
 
-	patchCanvasNode() {
+	// Used for patching Obsidian canvas before its api released.
+	private patchCanvasNode() {
 		const patchUrlNode = () => {
 			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
 
@@ -625,196 +652,7 @@ export default class SurfingPlugin extends Plugin {
 						if (this.canvas.view.leaf.getRoot().type === "floating") return;
 						if (this.canvas.isDragging) return;
 
-						this.contentEl.empty();
-
-						const searchBarEl = new InPageHeaderBar(this, this.url);
-						searchBarEl.onload();
-						searchBarEl.addOnSearchBarEnterListener((url: string) => {
-							this.iframeEl.setAttribute("src", url);
-							searchBarEl.setSearchBarUrl(url);
-
-							const oldData = this.getData();
-							if (oldData.url === url) return;
-							oldData.url = url;
-							this.setData(oldData);
-							this.canvas.requestSave();
-
-							this.render();
-						});
-						searchBarEl.setSearchBarUrl(this.url);
-
-						// Create main web view frame that displays the website.
-						this.iframeEl = document.createElement("webview") as unknown as HTMLIFrameElement;
-						this.iframeEl.setAttribute("allowpopups", "");
-
-						// CSS classes makes frame fill the entire tab's content space.
-						this.iframeEl.addClass("wb-frame");
-						this.contentEl.addClass("wb-view-content");
-						this.contentEl.appendChild(this.iframeEl);
-
-						this.iframeEl.setAttribute("src", this.url);
-						this.placeholderEl.innerText = this.url;
-
-						this.iframeEl.addEventListener("dom-ready", (event: any) => {
-							// @ts-ignore
-							const webContents = remote.webContents.fromId(this.iframeEl.getWebContentsId());
-
-							// Open new browser tab if the web view requests it.
-							webContents.setWindowOpenHandler((event: any) => {
-								SurfingView.spawnWebBrowserView(true, { url: event.url });
-								return {
-									action: "allow",
-								}
-							});
-
-
-							webContents.on("context-menu", (event: any, params: any) => {
-								event.preventDefault();
-
-								const { Menu, MenuItem } = remote;
-								const menu = new Menu();
-								// Basic Menu For Webview
-								// TODO: Support adding different commands to the menu.
-								// Possible to use Obsidian Default API?
-								menu.append(
-									new MenuItem(
-										{
-											label: t('Open Current URL In External Browser'),
-											click: function () {
-												window.open(params.pageURL, "_blank");
-											}
-										}
-									)
-								);
-
-								menu.append(
-									new MenuItem(
-										{
-											label: 'Open Current URL In Surfing',
-											click: function () {
-												window.open(params.pageURL);
-											}
-										}
-									)
-								);
-
-								if (params.selectionText) {
-									const pluginSettings = app.plugins.getPlugin("surfing").settings;
-
-									menu.append(new MenuItem({ type: 'separator' }));
-									menu.append(new MenuItem({
-										label: t('Search Text'), click: function () {
-											try {
-												SurfingView.spawnWebBrowserView(true, { url: params.selectionText });
-												console.log('Page URL copied to clipboard');
-											} catch (err) {
-												console.error('Failed to copy: ', err);
-											}
-										}
-									}));
-									menu.append(new MenuItem({ type: 'separator' }));
-									menu.append(new MenuItem({
-										label: t('Copy Plain Text'), click: function () {
-											try {
-												webContents.copy();
-												console.log('Page URL copied to clipboard');
-											} catch (err) {
-												console.error('Failed to copy: ', err);
-											}
-										}
-									}));
-									const highlightFormat = pluginSettings.highlightFormat;
-									menu.append(new MenuItem({
-										label: t('Copy Link to Highlight'), click: function () {
-											try {
-												// eslint-disable-next-line no-useless-escape
-												const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
-												const selectionText = params.selectionText;
-												let link = "";
-												if (highlightFormat.contains("{TIME")) {
-													// eslint-disable-next-line no-useless-escape
-													const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
-													if (timeString) {
-														// eslint-disable-next-line no-useless-escape
-														const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
-														link = highlightFormat.replace(timeString, momentTime);
-													}
-												}
-												link = (link != "" ? link : highlightFormat).replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText);
-												clipboard.writeText(link);
-												console.log('Link URL copied to clipboard');
-											} catch (err) {
-												console.error('Failed to copy: ', err);
-											}
-										}
-									}));
-
-									menu.popup(webContents);
-								}
-
-								if (params.pageURL?.contains("bilibili.com/")) {
-									menu.append(new MenuItem({
-										label: t('Copy Video Timestamp'), click: function () {
-											try {
-												webContents.executeJavaScript(`
-											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
-											var timeYMSArr=time.split(':');
-											var joinTimeStr='00h00m00s';
-											if(timeYMSArr.length===3){
-												 joinTimeStr=timeYMSArr[0]+'h'+timeYMSArr[1]+'m'+timeYMSArr[2]+'s';
-											}else if(timeYMSArr.length===2){
-												 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
-											}
-											var timeStr= "";
-											var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
-											var pageStr = "";
-											if(typeof pageStrMatch === "object" && pageStrMatch?.length > 0){
-											    pageStr = '&' + pageStrMatch[0];
-											}else if(typeof pageStrMatch === "string") {
-											    pageStr = '&' + pageStrMatch;
-											}
-											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
-										`, true).then((result: any) => {
-													clipboard.writeText("[" + result.split('?t=')[1].replace(/&p=[1-9]{1,}/g, "") + "](" + result + ")"); // Will be the JSON object from the fetch call
-												});
-												console.log('Page URL copied to clipboard');
-											} catch (err) {
-												console.error('Failed to copy: ', err);
-											}
-										}
-									}));
-								}
-
-								setTimeout(() => {
-									menu.popup(webContents);
-									// Dirty workaround for showing the menu, when currentUrl is not the same as the url of the webview
-									if (this.url !== params.pageURL && !params.selectionText) {
-										menu.popup(webContents);
-									}
-								}, 0)
-							}, false);
-						});
-
-						this.iframeEl.addEventListener("will-navigate", (event: any) => {
-							const oldData = this.getData();
-							oldData.url = event.url;
-							this.setData(oldData);
-							this.canvas.requestSave();
-						});
-
-						this.iframeEl.addEventListener("did-navigate-in-page", (event: any) => {
-							const oldData = this.getData();
-							if (event.url.contains("contacts.google.com/widget") || (this.canvas.isDragging && oldData.url === event.url)) {
-								// @ts-ignore
-								const webContents = remote.webContents.fromId(this.iframeEl.getWebContentsId());
-								webContents.stop();
-								return;
-							}
-							if (oldData.url === event.url) return;
-							oldData.url = event.url;
-							this.setData(oldData);
-							this.canvas.requestSave();
-						});
+						new InNodeWebView(this).onload();
 					}
 				},
 			});
@@ -835,7 +673,8 @@ export default class SurfingPlugin extends Plugin {
 		});
 	}
 
-	patchCanvas() {
+	// Used for patching Obsidian canvas before its api released.
+	private patchCanvas() {
 		const patchCanvasSelect = () => {
 			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
 			if (!canvasView) return false;
@@ -867,6 +706,12 @@ export default class SurfingPlugin extends Plugin {
 				this.registerEvent(evt);
 			}
 		});
+	}
+
+	private refreshAllRelatedView() {
+		for (const leaf of app.workspace.getLeavesOfType("canvas")) {
+			if (leaf) leaf.rebuildView();
+		}
 	}
 
 	async loadSettings() {
