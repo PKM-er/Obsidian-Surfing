@@ -28,6 +28,7 @@ import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeVi
 import { InPageIconList } from "./component/InPageIconList";
 import { InNodeWebView } from "./component/InNodeWebView";
 import { BookMarkBar } from "./component/bookmark/BookMarkBar";
+import { SurfingBookmarkManagerView, WEB_BROWSER_BOOKMARK_MANAGER_ID } from './surfingBookmarkManager'
 
 
 export default class SurfingPlugin extends Plugin {
@@ -43,6 +44,8 @@ export default class SurfingPlugin extends Plugin {
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
 		this.registerView(WEB_BROWSER_IFRAME_VIEW_ID, (leaf) => new SurfingIframeView(leaf, this));
+		this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this))
+
 
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
@@ -73,7 +76,9 @@ export default class SurfingPlugin extends Plugin {
 			this.patchCanvasNode();
 			this.patchCanvas();
 		}
+		this.registerRibbon();
 	}
+
 
 	onunload() {
 		this.app.workspace.detachLeavesOfType(WEB_BROWSER_VIEW_ID);
@@ -85,6 +90,15 @@ export default class SurfingPlugin extends Plugin {
 
 		// Refresh all Canvas to make sure they don't contain webview anymore.
 		if (requireApiVersion("1.1.0") && this.settings.useWebview) this.refreshAllRelatedView();
+	}
+
+	private registerRibbon() {
+		this.addRibbonIcon('dice', WEB_BROWSER_BOOKMARK_MANAGER_ID, async () => {
+			const workspace = this.app.workspace
+			workspace.detachLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID)
+			await workspace.getLeaf(false).setViewState({ type: WEB_BROWSER_BOOKMARK_MANAGER_ID })
+			workspace.revealLeaf(workspace.getLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID)[0])
+		})
 	}
 
 	// Add header bar to empty view.
