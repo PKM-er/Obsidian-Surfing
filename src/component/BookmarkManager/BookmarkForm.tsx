@@ -89,7 +89,6 @@ export function BookmarkForm(props: Props) {
 		texts: string[],
 		selectedOptions?: DefaultOptionType[]
 	): ReactNode => {
-		console.log(texts);
 		if (!selectedOptions || !texts[0]) return null;
 		return texts.map((text, i) => {
 			const option = selectedOptions[i];
@@ -121,16 +120,21 @@ export function BookmarkForm(props: Props) {
 		changedFields: FieldData[],
 		allFields: FieldData[]
 	) => {
-		console.log(changedFields, allFields);
 		// 获取当前表单中的url字段
 		const urlField = allFields.find((f: any) => f.name[0] === "url");
+		const nameField = allFields.find((f: any) => f.name[0] === "name");
 
-		if (urlField && isValidURL(urlField.value)) {
-			const { name, description } = await fetchWebTitleAndDescription(
-				urlField.value
-			);
-			form.setFieldValue("name", name);
-			form.setFieldValue("description", description);
+		if (!nameField?.value && urlField && isValidURL(urlField.value)) {
+			try {
+				const { title, description } =
+					await fetchWebTitleAndDescription(urlField.value);
+				if (title && description) {
+					form.setFieldValue("name", title);
+					form.setFieldValue("description", description);
+				}
+			} catch (err) {
+				console.log(err);
+			}
 		}
 	};
 	// 定义表单提交的处理函数
@@ -174,7 +178,10 @@ export function BookmarkForm(props: Props) {
 				label="Name"
 				name="name"
 				rules={ [
-					{ required: true, message: "Please input bookmark name!" },
+					{
+						required: true,
+						message: "Please input bookmark name!",
+					},
 				] }
 				initialValue={ props.bookmark.name }
 				shouldUpdate
@@ -186,7 +193,11 @@ export function BookmarkForm(props: Props) {
 				name="url"
 				initialValue={ props.bookmark.url }
 				rules={ [
-					{ required: true, message: "Please input bookmark url!" },
+					{
+						type: "url",
+						required: true,
+						message: "Please input bookmark url!",
+					},
 				] }
 				shouldUpdate
 			>

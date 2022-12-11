@@ -44,7 +44,7 @@ export default class SurfingPlugin extends Plugin {
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
 		this.registerView(WEB_BROWSER_IFRAME_VIEW_ID, (leaf) => new SurfingIframeView(leaf, this));
-		this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this))
+		this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this));
 
 
 		try {
