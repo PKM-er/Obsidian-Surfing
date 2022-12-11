@@ -10,6 +10,7 @@ declare module "obsidian" {
 	interface App {
 		plugins: {
 			getPlugin(name: string): any;
+			enabledPlugins: Set<string>;
 		};
 		commands: any;
 		getTheme: () => string;

@@ -27,6 +27,7 @@ import { checkIfWebBrowserAvailable } from "./utils/urltest";
 import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
 import { InPageIconList } from "./component/InPageIconList";
 import { InNodeWebView } from "./component/InNodeWebView";
+import { BookMarkBar } from "./component/bookmark/BookMarkBar";
 
 
 export default class SurfingPlugin extends Plugin {
@@ -509,6 +510,10 @@ export default class SurfingPlugin extends Plugin {
 				around(EmptyView.prototype, {
 					onOpen: (next) =>
 						function (...args: any) {
+							if (!this.contentEl.querySelector(".wb-bookmark-bar")) {
+								this.contentEl.classList.add("mod-wb-bookmark-bar");
+								new BookMarkBar(this, this.plugin).onload();
+							}
 							if (!this.contentEl.querySelector('.surfing-settings-icon')) {
 								const iconEl = this.contentEl.createDiv({
 									cls: 'surfing-settings-icon'

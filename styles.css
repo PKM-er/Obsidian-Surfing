@@ -78,7 +78,6 @@
 	padding-top: 100px;
 }
 
-
 .wb-search-bar-container {
 	margin-left: auto;
 	margin-right: auto;
@@ -287,6 +286,10 @@
 	right: 20px;
 }
 
+.mod-wb-bookmark-bar .surfing-settings-icon {
+	top: calc(var(--header-height) + 40px);
+}
+
 .wb-frame-notice {
 	text-align: center;
 	background-color: var(--color-yellow);
@@ -438,3 +441,88 @@ input[type='text'].wb-page-search-bar-input:active, input[type='text'].wb-page-s
 .theme-dark .wb-content-list-text {
 	background-color: var(--color-base-30);
 }
+
+.mod-wb-bookmark-bar .empty-state.wb-page-search-bar {
+	position: unset;
+}
+
+.wb-bookmark-bar {
+	display: flex;
+	align-items: center;
+	overflow: scroll;
+	padding-bottom: var(--size-2-1);
+	padding-top: var(--size-2-1);
+	padding-left: var(--size-4-2);
+
+	border-top: 1px solid var(--background-modifier-border);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+div[data-type^="empty"] .wb-bookmark-bar {
+	position: absolute;
+	top: var(--header-height);
+	width: 100%;
+	margin-top: -1px;
+	z-index: 1;
+}
+
+.wb-bookmark-item, .wb-bookmark-folder {
+	max-width: 100px;
+	text-overflow: hidden;
+	overflow: hidden;
+	margin-right: var(--size-2-2);
+	padding: var(--size-2-2);
+	border: 1px solid var(--color-base-10);
+	border-radius: var(--radius-s);
+
+	display: flex;
+	align-items: flex-end;
+	align-content: flex-end;
+}
+
+.wb-bookmark-item:hover, .wb-bookmark-folder:hover {
+	background-color: var(--color-base-30);
+}
+
+.wb-bookmark-item-title {
+	text-overflow: ellipsis;
+	overflow: hidden;
+	padding-right: var(--size-4-1);
+	padding-left: var(--size-2-1);
+	font-size: var(--font-smallest);
+}
+
+.wb-bookmark-folder-title {
+	text-overflow: ellipsis;
+	overflow: hidden;
+	padding-right: var(--size-4-1);
+	padding-left: var(--size-2-1);
+	font-size: var(--font-smallest);
+}
+
+.wb-bookmark-bar::-webkit-scrollbar {
+	display: none; /* Safari and Chrome */
+}
+
+.wb-bookmark-folder-icon, .wb-bookmark-item-icon {
+	padding: unset;
+	height: 16px;
+	margin-right: var(--size-2-2);
+}
+
+.wb-bookmark-folder-icon .lucide-folder-open {
+	height: var(--size-4-4);
+	width: var(--size-4-4);
+}
+
+.wb-bookmark-item-icon .lucide-album {
+	height: var(--size-4-4);
+	width: var(--size-4-4);
+}
+
+div[data-type^="empty"].workspace-leaf-content .view-content.mod-wb-bookmark-bar {
+	padding: unset;
+	overflow: auto;
+}
+
+

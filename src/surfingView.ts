@@ -16,6 +16,7 @@ import { t } from "./translations/helper";
 import searchBox from "./component/SearchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
 import { OmniSearchContainer } from "./component/OmniSearchContainer";
+import { BookMarkBar } from "./component/bookmark/BookMarkBar";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
@@ -30,10 +31,15 @@ export class SurfingView extends ItemView {
 	private frame: HTMLIFrameElement;
 	private menu: any;
 	private searchContainer: OmniSearchContainer;
+	private bookmarkBar: BookMarkBar;
+
+	private omnisearchEnabled: boolean;
 
 	constructor(leaf: WorkspaceLeaf, plugin: SurfingPlugin) {
 		super(leaf);
 		this.plugin = plugin;
+
+		this.omnisearchEnabled = app.plugins.enabledPlugins.has("omnisearch");
 	}
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
@@ -133,7 +139,9 @@ export class SurfingView extends ItemView {
 		// Create main web view frame that displays the website.
 		this.frame = document.createElement("webview") as unknown as HTMLIFrameElement;
 		this.frame.setAttribute("allowpopups", "");
-		this.searchContainer = new OmniSearchContainer(this.leaf, this.plugin);
+		if (this.omnisearchEnabled) this.searchContainer = new OmniSearchContainer(this.leaf, this.plugin);
+		this.bookmarkBar = new BookMarkBar((this.leaf.view as SurfingView), this.plugin);
+		this.bookmarkBar.onload();
 
 		// CSS classes makes frame fill the entire tab's content space.
 		this.frame.addClass("wb-frame");
@@ -144,7 +152,7 @@ export class SurfingView extends ItemView {
 			this.navigate(url);
 		});
 
-		this.searchContainer.onload();
+		if (this.omnisearchEnabled) this.searchContainer.onload();
 
 		this.frame.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
@@ -259,7 +267,7 @@ export class SurfingView extends ItemView {
 		});
 
 		this.frame.addEventListener("page-title-updated", (event: any) => {
-			this.updateSearchBox();
+			if (this.omnisearchEnabled) this.updateSearchBox();
 			this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
 			this.currentTitle = event.title;
 		});

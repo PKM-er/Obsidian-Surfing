@@ -82,7 +82,7 @@ export class OmniSearchContainer {
 		this.query = query;
 
 		// @ts-ignore
-		const result = await omnisearch.search(this.query);
+		const result = await omnisearch?.search(this.query);
 
 		this.tick(result);
 
