@@ -1,9 +1,11 @@
 import { Form, Input, Select, Button, Cascader } from "antd";
 import { DefaultOptionType } from "antd/es/select";
+// @ts-ignore
 import moment from "moment";
 import React, { ReactNode } from "react";
 import { Bookmark, FilterType } from "./types";
 import { fetchWebTitleAndDescription, hashCode, isValidURL } from "./utils";
+
 const { Option } = Select;
 
 interface Props {
@@ -92,9 +94,9 @@ export function BookmarkForm(props: Props) {
 		return texts.map((text, i) => {
 			const option = selectedOptions[i];
 			if (i === texts.length - 1) {
-				return <span key={option.value}>{text}</span>;
+				return <span key={ option.value }>{ text }</span>;
 			}
-			return <span key={option.value}>{text} / </span>;
+			return <span key={ option.value }>{ text } / </span>;
 		});
 	};
 
@@ -163,18 +165,18 @@ export function BookmarkForm(props: Props) {
 
 	return (
 		<Form
-			form={form}
-			onFinish={onFinish}
-			onFieldsChange={onFieldsChange}
+			form={ form }
+			onFinish={ onFinish }
+			onFieldsChange={ onFieldsChange }
 			name="bookmark"
 		>
 			<Form.Item
 				label="Name"
 				name="name"
-				rules={[
+				rules={ [
 					{ required: true, message: "Please input bookmark name!" },
-				]}
-				initialValue={props.bookmark.name}
+				] }
+				initialValue={ props.bookmark.name }
 				shouldUpdate
 			>
 				<Input></Input>
@@ -182,10 +184,10 @@ export function BookmarkForm(props: Props) {
 			<Form.Item
 				label="URL"
 				name="url"
-				initialValue={props.bookmark.url}
-				rules={[
+				initialValue={ props.bookmark.url }
+				rules={ [
 					{ required: true, message: "Please input bookmark url!" },
-				]}
+				] }
 				shouldUpdate
 			>
 				<Input></Input>
@@ -193,16 +195,16 @@ export function BookmarkForm(props: Props) {
 			<Form.Item
 				label="Description"
 				name="description"
-				initialValue={props.bookmark.description}
-				rules={[
+				initialValue={ props.bookmark.description }
+				rules={ [
 					{
 						required: false,
 						message: "Please input the description!",
 					},
-				]}
+				] }
 				shouldUpdate
 			>
-				<Input.TextArea />
+				<Input.TextArea/>
 			</Form.Item>
 			<Form.Item
 				label="Tags"
@@ -210,20 +212,20 @@ export function BookmarkForm(props: Props) {
 				initialValue={
 					props.bookmark.tags ? props.bookmark.tags?.split(" ") : []
 				}
-				rules={[{ required: false, message: "Please input the tags!" }]}
+				rules={ [{ required: false, message: "Please input the tags!" }] }
 				shouldUpdate
 			>
 				<Select mode="tags" placeholder="Please select tags" allowClear>
-					{tagsList.map((tag: FilterType, index: number) => {
+					{ tagsList.map((tag: FilterType, index: number) => {
 						return (
 							<Option
-								value={tag.value}
-								key={`${tag.value}-${index}`}
+								value={ tag.value }
+								key={ `${ tag.value }-${ index }` }
 							>
-								{tag.value}
+								{ tag.value }
 							</Option>
 						);
-					})}
+					}) }
 				</Select>
 			</Form.Item>
 			<Form.Item
@@ -232,28 +234,28 @@ export function BookmarkForm(props: Props) {
 				initialValue={
 					props.bookmark.category ? props.bookmark.category : ""
 				}
-				rules={[
+				rules={ [
 					{ required: false, message: "Please select the category!" },
-				]}
+				] }
 				shouldUpdate
 			>
 				<Cascader
-					displayRender={categoryDisplayRender}
-					options={defaultCategory}
+					displayRender={ categoryDisplayRender }
+					options={ defaultCategory }
 				/>
 			</Form.Item>
 			<Form.Item
 				label="Created Time"
 				name="created"
-				initialValue={moment(props.bookmark.created).format(
+				initialValue={ moment(props.bookmark.created).format(
 					"YYYY-MM-DD hh:ss"
-				)}
-				rules={[
+				) }
+				rules={ [
 					{
 						required: true,
 						message: "Please select the created time!",
 					},
-				]}
+				] }
 				shouldUpdate
 			>
 				<Input></Input>
@@ -261,22 +263,22 @@ export function BookmarkForm(props: Props) {
 			<Form.Item
 				label="Modified Time"
 				name="modified"
-				initialValue={moment(props.bookmark.modified).format(
+				initialValue={ moment(props.bookmark.modified).format(
 					"YYYY-MM-DD hh:ss"
-				)}
-				rules={[
+				) }
+				rules={ [
 					{
 						required: true,
 						message: "Please select the modified time!",
 					},
-				]}
+				] }
 				shouldUpdate
 			>
 				<Input></Input>
 			</Form.Item>
 			<Form.Item>
-				<div className="submit-bar" style={{ textAlign: "end" }}>
-					<Button htmlType="button" onClick={onReset}>
+				<div className="submit-bar" style={ { textAlign: "end" } }>
+					<Button htmlType="button" onClick={ onReset }>
 						Reset
 					</Button>
 					<Button type="primary" htmlType="submit">

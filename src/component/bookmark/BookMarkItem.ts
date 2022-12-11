@@ -31,7 +31,7 @@ export class BookMarkItem {
 		const folderIconEl = folderEl.createEl("div", {
 			cls: "wb-bookmark-folder-icon",
 		})
-		const folderTitleEl = folderEl.createEl("div", {
+		folderEl.createEl("div", {
 			cls: "wb-bookmark-folder-title",
 			text: this.item.title,
 		});
@@ -80,7 +80,7 @@ export class BookMarkItem {
 
 		setIcon(folderIconEl, "album");
 
-		const bookmarkTitleEl = bookmarkEl.createEl("div", {
+		bookmarkEl.createEl("div", {
 			cls: "wb-bookmark-item-title",
 			text: this.item.title,
 		});
