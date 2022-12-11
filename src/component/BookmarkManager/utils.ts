@@ -1,3 +1,4 @@
+import { request } from "obsidian";
 interface Bookmark {
     id: string;
     name: string;
@@ -59,41 +60,49 @@ export function generateTagsOptions(bookmarks: Bookmark[]) {
     }
 }
 
-export async function fetchWebTitleAndDescription(url: string) {
-    // 使用fetch()方法获取给定URL所对应的HTML源代码
-    const response = await fetch(url, {
-        method: "GET", // POST，PUT，DELETE，等。
-        headers: {
-            "Content-Type": "text/plain;charset=UTF-8"
-        }
-    })
-    const html = await response.text()
-
-    // 创建一个文档对象，并将HTML源代码加载到文档中
-    const doc = new DOMParser().parseFromString(html, "text/html")
-
-    // 从文档中查找<title>标签，并获取其内容
-    const title = doc.querySelector("title")?.innerText
-
-    // 从文档中查找<meta>标签，并获取其name和description属性的值
-    const nameTag = doc.querySelector("meta[name=name]")
-    const name = nameTag ? nameTag.getAttribute("content") : null
-    const descriptionTag = doc.querySelector("meta[name=description]")
-    const description = descriptionTag
-        ? descriptionTag.getAttribute("content")
-        : null
-
-    // 返回title和description信息
-    return {
-        title,
-        name,
-        description
-    }
-}
-
 export function isValidURL(str: string): boolean {
     // 定义一个正则表达式，用于匹配合法的URL
     const regexp =
         /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()!@:%_\+.~#?&\/\/=]*)/
     return regexp.test(str)
+}
+
+async function nonElectronGetPageTitle(url: string): Promise<{ title: string | null, name: string | null, description: string | null }> {
+    try {
+        const html = await request({ url });
+
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const title = doc.querySelector("title")?.innerText
+
+        // 从文档中查找<meta>标签，并获取其name和description属性的值
+        const nameTag = doc.querySelector("meta[name=name]")
+        const name = nameTag ? nameTag.getAttribute("content") : null
+        const descriptionTag = doc.querySelector("meta[name=description]")
+        const description = descriptionTag
+            ? descriptionTag.getAttribute("content")
+            : null
+
+        return {
+            title: title ? title : "",
+            name,
+            description
+        };
+    } catch (ex) {
+        console.error(ex);
+
+        return {
+            title: "",
+            name: "",
+            description: ""
+        };
+    }
+}
+
+export async function fetchWebTitleAndDescription(url: string): Promise<{ title: string | null, name: string | null, description: string | null }> {
+    // If we're on Desktop use the Electron scraper
+    if (!(url.startsWith("http") || url.startsWith("https"))) {
+        url = "https://" + url;
+    }
+
+    return nonElectronGetPageTitle(url);
 }
