@@ -1,7 +1,6 @@
 import { Form, Input, Select, Button, Cascader } from "antd";
 import { DefaultOptionType } from "antd/es/select";
-// @ts-ignore
-import moment from "moment";
+import { moment } from "obsidian";
 import React, { ReactNode } from "react";
 import { Bookmark, FilterType } from "./types";
 import { fetchWebTitleAndDescription, hashCode, isValidURL } from "./utils";

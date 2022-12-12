@@ -1,5 +1,4 @@
-// @ts-ignore
-import moment from "moment";
+import { moment } from "obsidian";
 import {
 	Button,
 	Checkbox,

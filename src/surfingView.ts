@@ -253,6 +253,50 @@ export class SurfingView extends ItemView {
 			// 	console.log("update-target-url", url);
 			// })
 
+			try {
+				const highlightFormat = this.plugin.settings.highlightFormat;
+				const getCurrentTime = () => {
+					let link = "";
+					// eslint-disable-next-line no-useless-escape
+					const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+					if (timeString) {
+						// eslint-disable-next-line no-useless-escape
+						const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
+						link = highlightFormat.replace(timeString, momentTime);
+						return link;
+					}
+					return link;
+				}
+				webContents.executeJavaScript(`
+					window.addEventListener('dragstart', (e) => {
+						if(e.ctrlKey) {
+							e.dataTransfer.clearData();
+							console.log('ctrl');
+							const selectionText = document.getSelection().toString();
+							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
+							let link = "";
+							if ("${ highlightFormat }".includes("{TIME")) {
+								link = "${ getCurrentTime() }";
+								// // eslint-disable-next-line no-useless-escape
+								// const timeString = "${ highlightFormat }".match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+								// if (timeString) {
+								// 	// eslint-disable-next-line no-useless-escape
+								// 	const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
+								// 	link = "${ highlightFormat }".replace(timeString, momentTime);
+								// }
+							}
+							link = (link != "" ? link : "${ highlightFormat }").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+						
+							e.dataTransfer.setData('text/plain', link);
+							console.log(e);
+						}
+					});
+					`, true).then((result: any) => {
+				});
+			} catch (err) {
+				console.error('Failed to add event: ', err);
+			}
+
 		});
 
 		// When focus set current leaf active;
@@ -289,6 +333,7 @@ export class SurfingView extends ItemView {
 		this.frame.addEventListener("did-attach-webview", (event: any) => {
 			console.log("Webview attached");
 		})
+
 
 		this.initHeaderButtons();
 	}
