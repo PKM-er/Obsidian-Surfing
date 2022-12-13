@@ -64,7 +64,7 @@ export default {
 	'Show Other Search Engines When Searching': 'Show Other Search Engines When Searching',
 	"Random Icons From Default Art": "Random Icons From Default Art",
 	"Working On, Not Available Now": "Working On, Not Available Now",
-  "Toggle Dark Mode": "Toggle Dark Mode"
+	"Toggle Dark Mode": "Toggle Dark Mode",
 	'[Experimental] Replace Iframe In Canvas': '[Experimental] Replace Iframe In Canvas',
 	'Use icon list to replace defult text actions in empty view': 'Use icon list to replace defult text actions in empty view',
 	"Open BookmarkBar & Bookmark Manager": "Open BookmarkBar & Bookmark Manager",

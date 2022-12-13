@@ -62,7 +62,7 @@ export default {
 	'Show Other Search Engines When Searching': '搜索时显示其它搜索引擎',
 	"Random Icons From Default Art": "从默认的 Art 中挑选随机 Icon",
 	"Working On, Not Available Now": "正在建设中，当前不可用",
-  "Toggle Dark Mode": "切换夜间模式"
+	"Toggle Dark Mode": "切换夜间模式",
 	'[Experimental] Replace Iframe In Canvas': '【实验性功能】在 Canvas 中替换网页节点',
 	'Use icon list to replace defult text actions in empty view': '使用图标列替换空页面中的默认文本操作',
 	"Open BookmarkBar & Bookmark Manager": "打开书签栏和书签管理器",
