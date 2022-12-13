@@ -171,14 +171,11 @@ export default function BookmarkManager(props: Props) {
 
 	const handleSearch = () => {
 		const value = searchWord;
-		if (!value) {
+		if (value === "") {
 			setBookmarks(props.bookmarks);
 		} else {
 			const filteredBookmarks = bookmarks.filter((bookmark) => {
-				return Object.values(bookmark)
-					.join(" ")
-					.toLowerCase()
-					.includes(value.toLowerCase());
+				return bookmark.name.toLocaleLowerCase().includes(value.toLocaleLowerCase()) || bookmark.description.toLocaleLowerCase().includes(value.toLocaleLowerCase())
 			});
 			setBookmarks(filteredBookmarks);
 		}
@@ -186,7 +183,6 @@ export default function BookmarkManager(props: Props) {
 	const handleCancelSearch: KeyboardEventHandler<HTMLInputElement> = (
 		event
 	) => {
-		event.preventDefault();
 		if (event.key === "Escape") {
 			setBookmarks(props.bookmarks);
 			setSearchWord("");
@@ -280,7 +276,7 @@ export default function BookmarkManager(props: Props) {
 					key={new Date().toISOString()}
 					columns={columns}
 					pagination={{
-						defaultPageSize: 14,
+						defaultPageSize: Number(props.bookmarkSettings.bookmarkManager.pagination),
 					}}
 					rowKey="id"
 				></Table>
