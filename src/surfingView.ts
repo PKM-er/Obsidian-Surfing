@@ -186,7 +186,7 @@ export class SurfingView extends ItemView {
 					const brightness = Math.sqrt(colorArr[0] ** 2 * 0.241 + colorArr[1] ** 2 * 0.691 + colorArr[2] ** 2 * 0.068);
 
 					// If the background color is dark, set the theme to dark.
-					if (brightness > 120 && app.getTheme() === "obsidian") {
+					if (brightness > 120 && this.plugin.settings.darkMode) {
 						webContents.insertCSS(`
 							html {
 								filter: invert(90%) hue-rotate(180deg);
