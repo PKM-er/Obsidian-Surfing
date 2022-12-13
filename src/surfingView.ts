@@ -39,7 +39,9 @@ export class SurfingView extends ItemView {
 		super(leaf);
 		this.plugin = plugin;
 
-		this.omnisearchEnabled = app.plugins.enabledPlugins.has("omnisearch");
+		// TODO: Add a search box in next version.
+		this.omnisearchEnabled = false;
+		// this.omnisearchEnabled = app.plugins.enabledPlugins.has("omnisearch");
 	}
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {

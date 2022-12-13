@@ -72,7 +72,6 @@ export class BookMarkItem {
 
 
 			const bookmark = this.bookmark.filter((item) => {
-				console.log(child.value, item.category[item.category.length - 1]);
 				return item.category[item.category.length - 1] === child.value;
 			});
 

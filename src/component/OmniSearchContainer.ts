@@ -86,8 +86,6 @@ export class OmniSearchContainer {
 
 		this.tick(result);
 
-		console.log(result);
-
 		if (!result || result?.length === 0) {
 			setTimeout(async () => {
 				// @ts-ignore

@@ -257,7 +257,6 @@ export default function BookmarkManager(props: Props) {
 		setModalVisible(false);
 	};
 	const handleSaveBookmark = (newBookmark: Bookmark) => {
-		console.log(newBookmark);
 		const isBookmarkExist = props.bookmarks.some((bookmark, index) => {
 			if (bookmark.url === newBookmark.url) {
 				bookmarks[index] = newBookmark;
@@ -271,7 +270,6 @@ export default function BookmarkManager(props: Props) {
 		});
 
 		if (!isBookmarkExist) {
-			console.log(newBookmark);
 			bookmarks.push(newBookmark);
 			setBookmarks(bookmarks);
 			setModalVisible(false);
