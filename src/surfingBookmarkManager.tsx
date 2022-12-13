@@ -30,6 +30,7 @@ export class SurfingBookmarkManagerView extends ItemView {
 	}
 
 	protected async onOpen(): Promise<void> {
+		const bookmarkSettings = this.plugin.settings;
 		try {
 			const { bookmarks, categories } = await loadJson();
 			this.bookmarkData = bookmarks;
@@ -43,11 +44,13 @@ export class SurfingBookmarkManagerView extends ItemView {
 			}
 		}
 
-		ReactDOM.createRoot(
-			this.containerEl
-		).render(
+		ReactDOM.createRoot(this.containerEl).render(
 			<React.StrictMode>
-				<BookmarkManager bookmarks={ this.bookmarkData } categories={ this.categoryData }/>
+				<BookmarkManager
+					bookmarks={this.bookmarkData}
+					categories={this.categoryData}
+					bookmarkSettings={bookmarkSettings}
+				/>
 			</React.StrictMode>
 		);
 	}

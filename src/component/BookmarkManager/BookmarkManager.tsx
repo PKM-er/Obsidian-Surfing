@@ -18,48 +18,9 @@ import type { Bookmark, CategoryType } from "../../types/bookmark";
 import { ColumnsType } from "antd/es/table";
 import { CheckboxValueType } from "antd/es/checkbox/Group";
 import { BookmarkForm } from "./BookmarkForm";
-
-const defaultCategories = [
-	{
-		value: "计算机",
-		text: "计算机",
-		children: [
-			{
-				value: "算法",
-				text: "算法",
-			},
-			{
-				value: "数据结构",
-				text: "数据结构",
-			},
-		],
-	},
-	{
-		value: "政治学",
-		text: "政治学",
-		children: [
-			{
-				value: "比较政治",
-				text: "比较政治",
-			},
-			{
-				value: "地缘政治",
-				text: "地缘政治",
-			},
-		],
-	},
-];
+import { SurfingSettings } from "src/surfingPluginSetting";
 
 const columnOptions = [
-	"name",
-	"description",
-	"category",
-	"tags",
-	"created",
-	"modified",
-];
-
-const defaultColumnList = [
 	"name",
 	"description",
 	"category",
@@ -82,6 +43,7 @@ const emptyBookmark = {
 interface Props {
 	bookmarks: Bookmark[];
 	categories: CategoryType[];
+	bookmarkSettings: SurfingSettings;
 }
 
 export default function BookmarkManager(props: Props) {
@@ -125,7 +87,7 @@ export default function BookmarkManager(props: Props) {
 				}
 				return <p>{value.join(">")}</p>;
 			},
-			filters: defaultCategories,
+			filters: JSON.parse(props.bookmarkSettings.bookmarkManager.category),
 			onFilter: (value, record) => {
 				return record.category.includes(value as string);
 			},
@@ -195,7 +157,7 @@ export default function BookmarkManager(props: Props) {
 
 	const [columns, setColumns] = useState(defaultColumns);
 	const [checkedColumn, setCheckedColumn] =
-		useState<CheckboxValueType[]>(defaultColumnList);
+		useState<CheckboxValueType[]>(props.bookmarkSettings.bookmarkManager.defaultColumnList);
 
 	const CheckboxGroup = Checkbox.Group;
 	const onColumnChange = (list: CheckboxValueType[]) => {

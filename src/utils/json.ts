@@ -26,7 +26,7 @@ export const saveJson = async (data: any) => {
 
 export const initializeJson = async () => {
     await app.vault.adapter.write(
-        `${app.plugins.getPluginFolder()}/another-web-browser/bookmark.json`,
+        bookmarkSavePath,
         JSON.stringify({
             "bookmarks": [
                 {
