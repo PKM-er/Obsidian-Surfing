@@ -42,6 +42,7 @@ export default {
 	'Search all settings': 'Search all settings',
 	'General': 'General',
 	'Search': 'Search',
+	'Bookmark': 'Bookmark',
 	'Theme': 'Theme',
 	'Always Show Custom Engines': 'Always Show Custom Engines',
 	'Save Current Page As Markdown': 'Save Current Page As Markdown',
@@ -63,4 +64,10 @@ export default {
 	'Show Other Search Engines When Searching': 'Show Other Search Engines When Searching',
 	"Random Icons From Default Art": "Random Icons From Default Art",
 	"Working On, Not Available Now": "Working On, Not Available Now",
+	'[Experimental] Replace Iframe In Canvas': '[Experimental] Replace Iframe In Canvas',
+	'Use icon list to replace defult text actions in empty view': 'Use icon list to replace defult text actions in empty view',
+	"Open BookmarkBar & Bookmark Manager": "Open BookmarkBar & Bookmark Manager",
+	"Pagination": "Pagination",
+	"Category": "Category",
+	"Default Column List": "Default Column List",
 };

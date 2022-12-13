@@ -8,13 +8,15 @@ import {
 	ViewStateResult,
 	WorkspaceLeaf
 } from "obsidian";
-import { HeaderBar } from "./component/headerBar";
+import { HeaderBar } from "./component/HeaderBar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
 import SurfingPlugin from "./surfingIndex";
 import { t } from "./translations/helper";
-import searchBox from "./component/searchBox";
+import searchBox from "./component/SearchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
+import { OmniSearchContainer } from "./component/OmniSearchContainer";
+import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
@@ -28,10 +30,18 @@ export class SurfingView extends ItemView {
 	private favicon: HTMLImageElement;
 	private frame: HTMLIFrameElement;
 	private menu: any;
+	private searchContainer: OmniSearchContainer;
+	private bookmarkBar: BookMarkBar;
+
+	private omnisearchEnabled: boolean;
 
 	constructor(leaf: WorkspaceLeaf, plugin: SurfingPlugin) {
 		super(leaf);
 		this.plugin = plugin;
+
+		// TODO: Add a search box in next version.
+		this.omnisearchEnabled = false;
+		// this.omnisearchEnabled = app.plugins.enabledPlugins.has("omnisearch");
 	}
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
@@ -117,7 +127,6 @@ export class SurfingView extends ItemView {
 		// Allow views to replace this views.
 		this.navigation = true;
 
-		this.contentEl.empty();
 
 		// Create search bar in the header bar.
 		this.headerBar = new HeaderBar(this.headerEl.children[2], this.plugin);
@@ -127,9 +136,16 @@ export class SurfingView extends ItemView {
 		this.favicon.width = 16;
 		this.favicon.height = 16;
 
+		this.contentEl.empty();
+
 		// Create main web view frame that displays the website.
 		this.frame = document.createElement("webview") as unknown as HTMLIFrameElement;
 		this.frame.setAttribute("allowpopups", "");
+		if (this.omnisearchEnabled) this.searchContainer = new OmniSearchContainer(this.leaf, this.plugin);
+		if (this.plugin.settings.bookmarkManager.openBookMark) {
+			this.bookmarkBar = new BookMarkBar((this.leaf.view as SurfingView), this.plugin);
+			this.bookmarkBar.onload();
+		}
 
 		// CSS classes makes frame fill the entire tab's content space.
 		this.frame.addClass("wb-frame");
@@ -140,9 +156,12 @@ export class SurfingView extends ItemView {
 			this.navigate(url);
 		});
 
+		if (this.omnisearchEnabled) this.searchContainer.onload();
+
 		this.frame.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
@@ -178,7 +197,7 @@ export class SurfingView extends ItemView {
 								opacity: .8;
 							}
 							
-							video{
+							video, canvas {
 								filter: invert(110%) hue-rotate(180deg);
 								opacity: 1;
 							}
@@ -229,8 +248,6 @@ export class SurfingView extends ItemView {
 				if (emulatedKeyboardEvent.ctrlKey && emulatedKeyboardEvent.key === 'f') {
 					this.searchBox = new searchBox(this.leaf, webContents, this.plugin);
 				}
-
-
 			});
 
 			// TODO: Do we need to show a link that cursor hovering?
@@ -238,6 +255,68 @@ export class SurfingView extends ItemView {
 			// 	console.log("update-target-url", url);
 			// })
 
+			try {
+				const highlightFormat = this.plugin.settings.highlightFormat;
+				const getCurrentTime = () => {
+					let link = "";
+					// eslint-disable-next-line no-useless-escape
+					const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+					if (timeString) {
+						// eslint-disable-next-line no-useless-escape
+						const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
+						link = highlightFormat.replace(timeString, momentTime);
+						return link;
+					}
+					return link;
+				}
+				webContents.executeJavaScript(`
+					window.addEventListener('dragstart', (e) => {
+						if(e.ctrlKey) {
+							e.dataTransfer.clearData();
+							const selectionText = document.getSelection().toString();
+							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
+							let link = "";
+							if ("${ highlightFormat }".includes("{TIME")) {
+								link = "${ getCurrentTime() }";
+								// // eslint-disable-next-line no-useless-escape
+								// const timeString = "${ highlightFormat }".match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+								// if (timeString) {
+								// 	// eslint-disable-next-line no-useless-escape
+								// 	const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
+								// 	link = "${ highlightFormat }".replace(timeString, momentTime);
+								// }
+							}
+							link = (link != "" ? link : "${ highlightFormat }").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+						
+							e.dataTransfer.setData('text/plain', link);
+							console.log(e);
+						}
+					});
+					`, true).then((result: any) => {
+				});
+			} catch (err) {
+				console.error('Failed to add event: ', err);
+			}
+
+			// TODO: Support Dark Reader
+			// 	try {
+			// 		webContents.openDevTools();
+			// 		webContents.executeJavaScript(`
+			//
+			//
+			//
+			// 			var s = document.createElement('script');
+			// 			s.src = 'https://cdn.jsdelivr.net/npm/darkreader@4.9.58/darkreader.min.js';
+			// 			document.body.appendChild(s);
+			//
+			//
+			//
+			// 			`, true).then((result: any) => {
+			// 		});
+			// 	} catch (err) {
+			// 		console.error('Failed to add event: ', err);
+			// 	}
+			//
 		});
 
 		// When focus set current leaf active;
@@ -252,9 +331,9 @@ export class SurfingView extends ItemView {
 		});
 
 		this.frame.addEventListener("page-title-updated", (event: any) => {
+			if (this.omnisearchEnabled) this.updateSearchBox();
 			this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
 			this.currentTitle = event.title;
-
 		});
 
 		this.frame.addEventListener("will-navigate", (event: any) => {
@@ -275,6 +354,22 @@ export class SurfingView extends ItemView {
 			console.log("Webview attached");
 		})
 
+		// TODO: Support dark reader soon.
+		// this.frame.addEventListener("did-finish-load", (event: any) => {
+		// 	// @ts-ignore
+		// 	const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		//
+		// 	webContents.executeJavaScript(`
+		// 				window.addEventListener('DOMContentLoaded', ()=>{
+		// 					DarkReader.setFetchMethod(window.fetch);
+		// 					DarkReader.enable({brightness: 100, contrast: 90, sepia: 10});
+		// 					console.log("hlewo");
+		// 				});
+		// 			`, true).then((result: any) => {
+		// 	});
+		// })
+
+
 		this.initHeaderButtons();
 	}
 
@@ -289,6 +384,29 @@ export class SurfingView extends ItemView {
 
 	async setState(state: WebBrowserViewState, result: ViewStateResult) {
 		this.navigate(state.url, false);
+	}
+
+	updateSearchBox() {
+		const searchEngines = [...SEARCH_ENGINES, ...this.plugin.settings.customSearchEngine];
+		// @ts-ignore
+		const regex = /^(?:https?:\/\/)?(?:[^@/\n]+@)?(?:www\.)?([^:/?\n]+)/g;
+		const currentUrl = this.currentUrl?.match(regex)?.[0];
+		if (!currentUrl) return;
+		const currentSearchEngine = searchEngines.find((engine) => engine.url.startsWith(currentUrl));
+		if (!currentSearchEngine) return;
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+
+		try {
+			webContents.executeJavaScript(`
+											document.querySelector('input')?.value
+										`, true).then((result: any) => {
+				this.searchContainer.update(result?.toLowerCase());
+				console.log(result);
+			});
+		} catch (err) {
+			console.error('Failed to copy: ', err);
+		}
 	}
 
 	registerContextMenuInWebcontents() {
@@ -400,7 +518,7 @@ export class SurfingView extends ItemView {
 				this.menu.popup(webContents);
 			}
 
-			if (params.pageURL?.contains("bilibili")) {
+			if (params.pageURL?.contains("bilibili.com/")) {
 				this.menu.append(new MenuItem({
 					label: t('Copy Video Timestamp'), click: function () {
 						try {
@@ -416,7 +534,7 @@ export class SurfingView extends ItemView {
 											var timeStr= "";
 											var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
 											var pageStr = "";
-											if(typeof pageStrMatch === "object" && pageStrMatch.length > 0){
+											if(typeof pageStrMatch === "object" && pageStrMatch?.length > 0){
 											    pageStr = '&' + pageStrMatch[0];
 											}else if(typeof pageStrMatch === "string") {
 											    pageStr = '&' + pageStrMatch;
@@ -515,6 +633,7 @@ export class SurfingView extends ItemView {
 		this.currentUrl = url;
 
 		this.headerBar.setSearchBarUrl(url);
+
 		if (updateWebView) {
 			this.frame.setAttribute("src", url);
 		}

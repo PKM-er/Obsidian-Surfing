@@ -15,7 +15,7 @@ import {
 	Workspace,
 	WorkspaceLeaf,
 } from "obsidian";
-import { HeaderBar } from "./component/headerBar";
+import { HeaderBar } from "./component/HeaderBar";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "./surfingView";
 import { HTML_FILE_EXTENSIONS, SurfingFileView, WEB_BROWSER_FILE_VIEW_ID } from "./surfingFileView";
 import { t } from "./translations/helper";
@@ -23,9 +23,13 @@ import { around } from "monkey-around";
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, SurfingSettings, SurfingSettingTab } from "./surfingPluginSetting";
 import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
-import { checkIfWebBrowserAvailable } from "./utils/urltest";
+import { checkIfWebBrowserAvailable } from "./utils/url";
 import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
-import { SearchBarIconList } from "./component/SearchBarIconList";
+import { InPageIconList } from "./component/InPageIconList";
+import { InNodeWebView } from "./component/InNodeWebView";
+import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
+import { SurfingBookmarkManagerView, WEB_BROWSER_BOOKMARK_MANAGER_ID } from './surfingBookmarkManager'
+
 
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
@@ -40,6 +44,8 @@ export default class SurfingPlugin extends Plugin {
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
 		this.registerView(WEB_BROWSER_IFRAME_VIEW_ID, (leaf) => new SurfingIframeView(leaf, this));
+		if (this.settings.bookmarkManager.openBookMark) this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this));
+
 
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
@@ -50,6 +56,7 @@ export default class SurfingPlugin extends Plugin {
 		this.updateEmptyLeaves(false);
 		this.registerContextMenu();
 		this.registerCustomURI();
+
 		this.patchMarkdownView();
 		this.patchWindowOpen();
 		this.patchMarkdownView();
@@ -65,7 +72,15 @@ export default class SurfingPlugin extends Plugin {
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
 		this.patchWorkspaceLeaf();
+		if (requireApiVersion("1.1.0") && this.settings.useWebview) {
+			this.patchCanvasNode();
+			this.patchCanvas();
+		}
+		if (this.settings.bookmarkManager.openBookMark) {
+			this.registerRibbon();
+		}
 	}
+
 
 	onunload() {
 		this.app.workspace.detachLeavesOfType(WEB_BROWSER_VIEW_ID);
@@ -74,6 +89,18 @@ export default class SurfingPlugin extends Plugin {
 		// Clean up header bar added to "New tab" views when plugin is disabled.
 		// Using Obsidian getViewType
 		this.updateEmptyLeaves(true);
+
+		// Refresh all Canvas to make sure they don't contain webview anymore.
+		if (requireApiVersion("1.1.0") && this.settings.useWebview) this.refreshAllRelatedView();
+	}
+
+	private registerRibbon() {
+		this.addRibbonIcon('bookmark', WEB_BROWSER_BOOKMARK_MANAGER_ID, async () => {
+			const workspace = this.app.workspace
+			workspace.detachLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID)
+			await workspace.getLeaf(false).setViewState({ type: WEB_BROWSER_BOOKMARK_MANAGER_ID })
+			workspace.revealLeaf(workspace.getLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID)[0])
+		})
 	}
 
 	// Add header bar to empty view.
@@ -90,13 +117,22 @@ export default class SurfingPlugin extends Plugin {
 				SurfingView.spawnWebBrowserView(false, { url });
 			});
 		}
-		if (!currentView.contentEl.children[0].hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
-			const inPageContainerEl = (currentView.contentEl.children[0] as HTMLElement).createEl('div', {
+
+		const emptyStateEl = (currentView.contentEl.children[0] as HTMLElement).hasClass("empty-state") ? currentView.contentEl.children[0] as HTMLElement : null;
+		if (!emptyStateEl) return;
+		if (!emptyStateEl.hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
+			const inPageContainerEl = emptyStateEl.createEl('div', {
 				cls: "wb-search-bar-container"
 			});
-			(currentView.contentEl.children[0] as HTMLElement)?.addClass("wb-page-search-bar");
+			emptyStateEl?.addClass("wb-page-search-bar");
+
 			const inPageSearchBar = new InPageSearchBar(inPageContainerEl, this);
-			new SearchBarIconList((currentView.contentEl.children[0] as HTMLElement), currentView, this);
+			if (this.settings.useIconList) {
+				new InPageIconList(emptyStateEl, currentView, this);
+				const emptyActionsEl = emptyStateEl.querySelector(".empty-state-container");
+
+				if (emptyActionsEl) emptyActionsEl.addClass("wb-empty-actions");
+			}
 
 
 			inPageSearchBar.focus();
@@ -110,18 +146,27 @@ export default class SurfingPlugin extends Plugin {
 	// Clean up header bar added to empty views when plugin is disabled.
 	private removeHeaderAndSearchBar(currentView: ItemView) {
 		if (!currentView) return;
+
 		// Check if new leaf's view is empty, else return.
 		if (currentView.getViewType() != "empty") return;
+
 		// Check if the "New tab" view has already been processed and has a header bar already.
-		if (currentView.headerEl.children[2].hasClass("web-browser-header-bar")) {
+		if (currentView.headerEl.children[2].hasClass("wb-header-bar")) {
 			currentView.headerEl.children[2].empty();
-			currentView.headerEl.children[2].removeClass("web-browser-header-bar");
+			currentView.headerEl.children[2].removeClass("wb-header-bar");
 		}
+
+		// Remove in page search bar
 		if (currentView.contentEl.children[0].hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
 			currentView.contentEl.children[0].children[1]?.detach();
 			currentView.contentEl.children[0].children[1]?.empty();
 			currentView.contentEl.children[0].children[1]?.detach();
 			currentView.contentEl.children[0].removeClass("wb-page-search-bar");
+		}
+
+		// Remove config icon
+		if (currentView.contentEl.children[1]?.hasClass("surfing-settings-icon")) {
+			currentView.contentEl.children[1]?.detach();
 		}
 	}
 
@@ -424,9 +469,10 @@ export default class SurfingPlugin extends Plugin {
 						return next(url, target, features);
 					}
 
-					if (urlString && !target && !features) {
-						SurfingView.spawnWebBrowserView(true, { url: urlString });
-					}
+					// if (urlString && !target && !features) {
+					// 	console.log("Obsidian-Surfing: open url in web browser view");
+					// 	SurfingView.spawnWebBrowserView(true, { url: urlString });
+					// }
 
 					return null;
 
@@ -468,11 +514,11 @@ export default class SurfingPlugin extends Plugin {
 		this.register(uninstaller);
 	}
 
-
 	private patchEmptyView() {
 		const patchEmptyView = () => {
-			const view = app.workspace.getLeavesOfType("empty").first()?.view;
 			const leaf = app.workspace.getLeavesOfType("empty").first();
+			const view = leaf?.view;
+
 			if (!view) return false;
 
 			const EmptyView = view.constructor;
@@ -480,6 +526,11 @@ export default class SurfingPlugin extends Plugin {
 				around(EmptyView.prototype, {
 					onOpen: (next) =>
 						function (...args: any) {
+							const pluginSetting = app.plugins.getPlugin("surfing").settings;
+							if (!this.contentEl.querySelector(".wb-bookmark-bar") && pluginSetting.bookmarkManager.openBookMark) {
+								this.contentEl.classList.add("mod-wb-bookmark-bar");
+								new BookMarkBar(this, this.plugin).onload();
+							}
 							if (!this.contentEl.querySelector('.surfing-settings-icon')) {
 								const iconEl = this.contentEl.createDiv({
 									cls: 'surfing-settings-icon'
@@ -514,7 +565,8 @@ export default class SurfingPlugin extends Plugin {
 
 	}
 
-	patchWorkspaceLeaf() {
+	// Used to make leaf contains webview should not cause Obsidian crashed.
+	private patchWorkspaceLeaf() {
 		this.register(
 			around(WorkspaceLeaf.prototype, {
 				setViewState: (next) => {
@@ -528,7 +580,7 @@ export default class SurfingPlugin extends Plugin {
 								}
 							}, ...rest);
 						}
-						// console.log("Obsidian-Surfing: setViewState", state);
+
 						if (this.getRoot()?.type === "split" && state.type === WEB_BROWSER_IFRAME_VIEW_ID) {
 							return next.call(this, {
 								type: WEB_BROWSER_VIEW_ID,
@@ -544,7 +596,7 @@ export default class SurfingPlugin extends Plugin {
 				setDimension: (old) => {
 					return async function (dimension: any) {
 						await old.call(this, dimension);
-						if (dimension === null && (this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
+						if (dimension === null && (this.view.contentEl?.querySelector(".wb-view-content") || this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
 							app.workspace.setActiveLeaf(this);
 						}
 					}
@@ -556,6 +608,10 @@ export default class SurfingPlugin extends Plugin {
 			around(Workspace.prototype, {
 				setActiveLeaf: (next) => {
 					return function (leaf: WorkspaceLeaf, params?: any) {
+						const setting = app.plugins.getPlugin("surfing").settings;
+
+						if (leaf.view?.getViewType() === "canvas" && leaf.view.contentEl?.querySelector(".wb-view-content") && leaf.getRoot()?.type === "floating" && setting.useWebview) leaf?.rebuildView();
+						if (leaf.view?.getViewType() === "canvas" && leaf.view.contentEl?.querySelector(".canvas-link") && leaf.getRoot()?.type === "split" && setting.useWebview) leaf?.rebuildView();
 
 						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
 							leaf.setViewState({
@@ -567,7 +623,7 @@ export default class SurfingPlugin extends Plugin {
 							});
 							return;
 						}
-						if (leaf.view instanceof SurfingIframeView && leaf?.getRoot()?.type === "split") {
+						if (leaf?.view instanceof SurfingIframeView && leaf?.getRoot()?.type === "split") {
 							leaf.setViewState({
 								type: WEB_BROWSER_VIEW_ID,
 								active: true,
@@ -589,6 +645,99 @@ export default class SurfingPlugin extends Plugin {
 				},
 			})
 		)
+	}
+
+	// Used for patching Obsidian canvas before its api released.
+	private patchCanvasNode() {
+		const patchUrlNode = () => {
+			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
+
+			if (!canvasView) return false;
+			const findNode = (map: any) => {
+				for (const [, value] of map) {
+					if (value.url !== undefined) {
+						return value;
+					}
+				}
+				return false;
+			};
+
+			const tempNode = findNode(canvasView.canvas.nodes);
+			if (!tempNode) return false;
+
+			const uninstaller = around(tempNode?.constructor.prototype, {
+				render(next) {
+					return function () {
+						next.call(this);
+
+						// TODO: Move this with surfing view's constructor to prevent multiple htmlelement
+						if (this.canvas.view.leaf.getRoot().type === "floating") return;
+						if (this.canvas.isDragging) return;
+
+						new InNodeWebView(this).onload();
+					}
+				},
+			});
+			this.register(uninstaller);
+
+			tempNode.render();
+			console.log("Obsidian-Surfing: canvas view url node patched");
+			return true;
+		}
+
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchUrlNode()) {
+				const evt = app.workspace.on("layout-change", () => {
+					patchUrlNode() && app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
+	}
+
+	// Used for patching Obsidian canvas before its api released.
+	private patchCanvas() {
+		const patchCanvasSelect = () => {
+			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
+			if (!canvasView) return false;
+
+			const patchCanvasView = canvasView.canvas.constructor;
+			const uninstaller = around(patchCanvasView.prototype, {
+				selectOnly: (next) =>
+					function (e: any) {
+						next.call(this, e);
+						if (e.canvas.view.leaf.getRoot().type === "floating") return;
+						if (e.url !== undefined && !e.contentEl.classList.contains("wb-view-content")) {
+							setTimeout(() => {
+								e.render();
+							}, 0);
+							// TODO: Support alwayskeeploaded
+							e.addEventListener("focus", () => {
+								e.alwaysKeepLoaded = true;
+							})
+						}
+					},
+			});
+			this.register(uninstaller);
+
+			console.log("Obsidian-Surfing: canvas view patched");
+			return true;
+		}
+
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchCanvasSelect()) {
+				const evt = app.workspace.on("layout-change", () => {
+					patchCanvasSelect() && app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
+	}
+
+	private refreshAllRelatedView() {
+		for (const leaf of app.workspace.getLeavesOfType("canvas")) {
+			if (leaf) leaf.rebuildView();
+		}
 	}
 
 	async loadSettings() {

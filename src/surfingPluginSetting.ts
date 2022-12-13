@@ -29,12 +29,37 @@ export interface SurfingSettings {
 	highlightInSameTab: boolean;
 	openInObsidianWeb: boolean;
 	useCustomIcons: boolean;
+	useWebview: boolean;
+	useIconList: boolean;
+	bookmarkManager: {
+		openBookMark: boolean;
+		pagination: string
+		category: string
+		defaultColumnList: string[]
+	}
 }
 
 export interface SearchEngine {
 	name: string;
 	url: string;
 }
+
+const defaultCategory = `计算机
+    算法
+    数据结构
+obsidian
+    surfing
+    dataview
+`
+
+const defaultColumnList = [
+	"name",
+	"description",
+	"category",
+	"tags",
+	"created",
+	"modified",
+];
 
 export const DEFAULT_SETTINGS: SurfingSettings = {
 	defaultSearchEngine: 'duckduckgo',
@@ -52,6 +77,14 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	openInSameTab: false,
 	openInObsidianWeb: false,
 	useCustomIcons: false,
+	useWebview: false,
+	useIconList: true,
+	bookmarkManager: {
+		openBookMark: false,
+		pagination: "12",
+		category: JSON.stringify(defaultCategory),
+		defaultColumnList: defaultColumnList
+	}
 }
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
@@ -89,6 +122,7 @@ const tabNameToTabIconId: Record<string, string> = {
 	General: 'chrome',
 	Search: 'search',
 	Theme: 'brush',
+	Bookmark: 'bookmark'
 };
 
 export class DropdownRecord {
@@ -146,6 +180,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.createTabAndContent('General', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateGeneralSettings(tabName, el));
 		this.createTabAndContent('Search', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateSearchSettings(tabName, el));
 		this.createTabAndContent('Theme', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateThemeSettings(tabName, el));
+		this.createTabAndContent('Bookmark', this.navigateEl, settingsEl, (el: HTMLElement, tabName: string) => this.generateBookmarkManagerSettings(tabName, el));
 
 		this.createSearchZeroState(settingsEl);
 	}
@@ -320,6 +355,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addOpenInSameTab(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
 		this.addMarkdownPath(tabName, wbContainerEl);
+		this.addReplaceIframeInCanvas(tabName, wbContainerEl);
 		this.addOpenInObsidianWeb(tabName, wbContainerEl);
 		this.addAboutInfo(tabName, wbContainerEl);
 	}
@@ -330,7 +366,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 	}
 
 	private generateThemeSettings(tabName: string, wbContainerEl: HTMLElement): void {
+		this.useIconList(tabName, wbContainerEl);
 		this.addMyIcons(tabName, wbContainerEl);
+	}
+
+	private generateBookmarkManagerSettings(tabName: string, wbContainerEl: HTMLElement): void {
+		this.addBookmarkManagerSettings(tabName, wbContainerEl)
 	}
 
 	// @ts-ignore
@@ -589,6 +630,22 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 	}
 
+	private addReplaceIframeInCanvas(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = t('[Experimental] Replace Iframe In Canvas') + t('(Reload to take effect)');
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.useWebview)
+					.onChange(async (value) => {
+						this.plugin.settings.useWebview = value;
+						this.applySettingsUpdate();
+					});
+			});
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
+	}
+
 	private addOpenInObsidianWeb(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t('Open URL In Obsidian Web From Other Software') + " " + t('(Reload to take effect)');
 		const setting = new Setting(wbContainerEl)
@@ -647,6 +704,23 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, "surfing");
 	}
 
+	// TODO: Refresh all empty view.
+	private useIconList(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = t('Use icon list to replace defult text actions in empty view') + t('(Reload to take effect)');
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.useIconList)
+					.onChange(async (value) => {
+						this.plugin.settings.useIconList = value;
+						this.applySettingsUpdate();
+					});
+			});
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
+	}
+
 	private addMyIcons(tabName: string, wbContainerEl: HTMLElement) {
 		let settingName = t("Working On, Not Available Now");
 		let setting = new Setting(wbContainerEl)
@@ -670,5 +744,76 @@ export class SurfingSettingTab extends PluginSettingTab {
 			})
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, "theme surfing");
+	}
+
+	private addBookmarkManagerSettings(tabName: string, wbContainerEl: HTMLElement) {
+		const openBookmarkManager = new Setting(wbContainerEl)
+			.setName(t("Open BookmarkBar & Bookmark Manager"))
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.bookmarkManager.openBookMark)
+					.onChange(async (value) => {
+						this.plugin.settings.bookmarkManager.openBookMark = value;
+						this.applySettingsUpdate();
+						this.display();
+					});
+			})
+		this.addSettingToMasterSettingsList(tabName, openBookmarkManager.settingEl, t("Open BookmarkBar & Bookmark Manager"));
+
+		if (!this.plugin.settings.bookmarkManager.openBookMark) return;
+
+		const paginationSetting = new Setting(wbContainerEl)
+			.setName(t("Pagination"))
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.bookmarkManager.pagination)
+					.setValue(this.plugin.settings.bookmarkManager.pagination)
+					.onChange(async (value) => {
+						if (value === "") {
+							this.plugin.settings.bookmarkManager.pagination = DEFAULT_SETTINGS.bookmarkManager.pagination;
+							this.applySettingsUpdate();
+							// Force refresh
+							this.display();
+						}
+						this.plugin.settings.bookmarkManager.pagination = value;
+						this.applySettingsUpdate();
+					}),
+			);
+		this.addSettingToMasterSettingsList(tabName, paginationSetting.settingEl, t("Pagination"));
+
+		const categorySetting = new Setting(wbContainerEl)
+			.setName(t("Category"))
+			.addTextArea((text) => {
+				text.setPlaceholder(DEFAULT_SETTINGS.bookmarkManager.category)
+					.setValue(this.plugin.settings.bookmarkManager.category)
+					.onChange(async (value) => {
+						// if(value === ""){
+						//     this.plugin.settings.bookmarkManager.category = DEFAULT_SETTINGS.bookmarkManager.category
+						//     this.applySettingsUpdate();
+						//     this.display()
+						// }
+						this.plugin.settings.bookmarkManager.category = value;
+						this.applySettingsUpdate()
+						console.log("saved")
+					})
+			})
+		this.addSettingToMasterSettingsList(tabName, categorySetting.settingEl, t("Category"))
+
+		const defaultColumnList = new Setting(wbContainerEl)
+			.setName(t("Default Column List"))
+			.addText((text) => {
+				text.setPlaceholder(DEFAULT_SETTINGS.bookmarkManager.defaultColumnList.join(" "))
+					.setValue(this.plugin.settings.bookmarkManager.defaultColumnList.join(" "))
+					.onChange(async (value) => {
+						if (value === "") {
+							this.plugin.settings.bookmarkManager.defaultColumnList = DEFAULT_SETTINGS.bookmarkManager.defaultColumnList
+							this.applySettingsUpdate();
+							this.display()
+						}
+						this.plugin.settings.bookmarkManager.defaultColumnList = value.split(" ");
+						this.applySettingsUpdate()
+					})
+			})
+		this.addSettingToMasterSettingsList(tabName, defaultColumnList.settingEl, t("Default Column List"))
 	}
 }
