@@ -9,7 +9,7 @@ interface jsonOutput {
 export const loadJson = async (): Promise<jsonOutput> => {
 	const result = JSON.parse(
 		await app.vault.adapter.read(
-			`${ app.plugins.getPluginFolder() }/obsidian-web-browser/bookmark.json`
+			`${ app.plugins.getPluginFolder() }/bookmark.json`
 		)
 	);
 	return result;
@@ -17,14 +17,14 @@ export const loadJson = async (): Promise<jsonOutput> => {
 
 export const saveJson = async (data: any) => {
 	await app.vault.adapter.write(
-		`${ app.plugins.getPluginFolder() }/obsidian-web-browser/bookmark.json`,
+		`${ app.plugins.getPluginFolder() }/bookmark.json`,
 		JSON.stringify(data)
 	);
 }
 
 export const initializeJson = async () => {
 	await app.vault.adapter.write(
-		`${ app.plugins.getPluginFolder() }/obsidian-web-browser/bookmark.json`,
+		`${ app.plugins.getPluginFolder() }/bookmark.json`,
 		JSON.stringify({
 				"bookmarks": [
 					{
@@ -232,7 +232,7 @@ export const initializeJson = async () => {
 export const exportJsonToClipboard = async (plugin: SurfingPlugin) => {
 	const data = JSON.parse(
 		await app.vault.adapter.read(
-			`${ app.plugins.getPluginFolder() }/obsidian-web-browser/bookmark.json`
+			`${ app.plugins.getPluginFolder() }/bookmark.json`
 		)
 	);
 	navigator.clipboard.writeText(JSON.stringify(data));
@@ -241,7 +241,7 @@ export const exportJsonToClipboard = async (plugin: SurfingPlugin) => {
 export const exportJsonToMarkdown = async () => {
 	const data = JSON.parse(
 		await app.vault.adapter.read(
-			`${ app.plugins.getPluginFolder() }/obsidian-web-browser/bookmark.json`
+			`${ app.plugins.getPluginFolder() }/bookmark.json`
 		)
 	);
 	let result = `# Surfing Bookmarks`;
