@@ -4,7 +4,7 @@ import { t } from "src/translations/helper";
 import { SEARCH_ENGINES, SearchEngine } from "../../surfingPluginSetting";
 import { SurfingView } from "../../surfingView";
 import SurfingPlugin from "../../surfingIndex";
-import { getFinalUrl } from "../../utils/urltest";
+import { getFinalUrl } from "../../utils/url";
 
 export class SearchEngineSuggester extends TextInputSuggest<string> {
 	private searchEngines: SearchEngine[];
@@ -41,8 +41,6 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 
 	selectSuggestion(item: string): void {
 		const currentInputValue: string = this.inputEl.value;
-
-		console.log("hellow");
 
 		if (/^\s{0,}$/.test(currentInputValue)) return;
 
