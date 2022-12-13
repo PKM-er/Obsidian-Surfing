@@ -42,6 +42,7 @@ export default {
 	'Search all settings': 'Search all settings',
 	'General': 'General',
 	'Search': 'Search',
+    'Bookmark': 'Bookmark',
 	'Theme': 'Theme',
 	'Always Show Custom Engines': 'Always Show Custom Engines',
 	'Save Current Page As Markdown': 'Save Current Page As Markdown',

@@ -6,10 +6,12 @@ interface jsonOutput {
 	"categories": CategoryType[],
 }
 
+const bookmarkSavePath = `${ app.vault.configDir }/surfing-bookmark.json`
+
 export const loadJson = async (): Promise<jsonOutput> => {
 	const result = JSON.parse(
 		await app.vault.adapter.read(
-			`${ app.plugins.getPluginFolder() }/bookmark.json`
+			bookmarkSavePath
 		)
 	);
 	return result;
@@ -17,14 +19,14 @@ export const loadJson = async (): Promise<jsonOutput> => {
 
 export const saveJson = async (data: any) => {
 	await app.vault.adapter.write(
-		`${ app.plugins.getPluginFolder() }/bookmark.json`,
+		bookmarkSavePath,
 		JSON.stringify(data)
 	);
 }
 
 export const initializeJson = async () => {
 	await app.vault.adapter.write(
-		`${ app.plugins.getPluginFolder() }/bookmark.json`,
+		bookmarkSavePath,
 		JSON.stringify({
 				"bookmarks": [
 					{
@@ -232,7 +234,7 @@ export const initializeJson = async () => {
 export const exportJsonToClipboard = async (plugin: SurfingPlugin) => {
 	const data = JSON.parse(
 		await app.vault.adapter.read(
-			`${ app.plugins.getPluginFolder() }/bookmark.json`
+			bookmarkSavePath
 		)
 	);
 	navigator.clipboard.writeText(JSON.stringify(data));
@@ -241,7 +243,7 @@ export const exportJsonToClipboard = async (plugin: SurfingPlugin) => {
 export const exportJsonToMarkdown = async () => {
 	const data = JSON.parse(
 		await app.vault.adapter.read(
-			`${ app.plugins.getPluginFolder() }/bookmark.json`
+			bookmarkSavePath
 		)
 	);
 	let result = `# Surfing Bookmarks`;

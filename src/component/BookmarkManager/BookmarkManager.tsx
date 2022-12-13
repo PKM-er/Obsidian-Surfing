@@ -13,53 +13,14 @@ import {
 	theme,
 } from "antd";
 import React, { KeyboardEventHandler, useState } from "react";
-import { generateColor, generateTagsOptions } from "./utils";
+import { generateColor, generateTagsOptions, stringToCategory } from "./utils";
 import type { Bookmark, CategoryType } from "../../types/bookmark";
 import { ColumnsType } from "antd/es/table";
 import { CheckboxValueType } from "antd/es/checkbox/Group";
 import { BookmarkForm } from "./BookmarkForm";
-
-const defaultCategories = [
-	{
-		value: "计算机",
-		text: "计算机",
-		children: [
-			{
-				value: "算法",
-				text: "算法",
-			},
-			{
-				value: "数据结构",
-				text: "数据结构",
-			},
-		],
-	},
-	{
-		value: "政治学",
-		text: "政治学",
-		children: [
-			{
-				value: "比较政治",
-				text: "比较政治",
-			},
-			{
-				value: "地缘政治",
-				text: "地缘政治",
-			},
-		],
-	},
-];
+import { SurfingSettings } from "src/surfingPluginSetting";
 
 const columnOptions = [
-	"name",
-	"description",
-	"category",
-	"tags",
-	"created",
-	"modified",
-];
-
-const defaultColumnList = [
 	"name",
 	"description",
 	"category",
@@ -82,6 +43,7 @@ const emptyBookmark = {
 interface Props {
 	bookmarks: Bookmark[];
 	categories: CategoryType[];
+	bookmarkSettings: SurfingSettings;
 }
 
 export default function BookmarkManager(props: Props) {
@@ -96,7 +58,7 @@ export default function BookmarkManager(props: Props) {
 			dataIndex: "name",
 			key: "name",
 			render: (text, record) => {
-				return <a href={ record.url }>{ text }</a>;
+				return <a href={record.url}>{text}</a>;
 			},
 			sorter: (a, b) => {
 				return a.name.localeCompare(b.name);
@@ -123,9 +85,11 @@ export default function BookmarkManager(props: Props) {
 				if (value[0] === "") {
 					return <p></p>;
 				}
-				return <p>{ value.join(">") }</p>;
+				return <p>{value.join(">")}</p>;
 			},
-			filters: defaultCategories,
+			filters: stringToCategory(
+				props.bookmarkSettings.bookmarkManager.category
+			) as any,
 			onFilter: (value, record) => {
 				return record.category.includes(value as string);
 			},
@@ -139,8 +103,8 @@ export default function BookmarkManager(props: Props) {
 				return text.split(" ").map((tag: string) => {
 					const color = generateColor(tag);
 					return (
-						<Tag color={ color } key={ tag }>
-							{ tag.toUpperCase() }
+						<Tag color={color} key={tag}>
+							{tag.toUpperCase()}
 						</Tag>
 					);
 				});
@@ -155,7 +119,7 @@ export default function BookmarkManager(props: Props) {
 			dataIndex: "created",
 			key: "created",
 			render: (text: number) => {
-				return <p>{ moment(text).format("YYYY-MM-DD") }</p>;
+				return <p>{moment(text).format("YYYY-MM-DD")}</p>;
 			},
 			sorter: (a, b) => a.created - b.created,
 		},
@@ -164,7 +128,7 @@ export default function BookmarkManager(props: Props) {
 			dataIndex: "modified",
 			key: "modified",
 			render: (text: number) => {
-				return <p>{ moment(text).format("YYYY-MM-DD") }</p>;
+				return <p>{moment(text).format("YYYY-MM-DD")}</p>;
 			},
 			sorter: (a, b) => a.modified - b.modified,
 		},
@@ -174,17 +138,17 @@ export default function BookmarkManager(props: Props) {
 			render: (text, record) => (
 				<Space size="middle">
 					<a
-						onClick={ () => {
+						onClick={() => {
 							setCurrentBookmark(record);
 							setModalVisible(true);
-						} }
+						}}
 					>
 						Edit
 					</a>
 					<a
-						onClick={ () => {
+						onClick={() => {
 							handleDeleteBookmark(record);
-						} }
+						}}
 					>
 						Delete
 					</a>
@@ -194,8 +158,9 @@ export default function BookmarkManager(props: Props) {
 	];
 
 	const [columns, setColumns] = useState(defaultColumns);
-	const [checkedColumn, setCheckedColumn] =
-		useState<CheckboxValueType[]>(defaultColumnList);
+	const [checkedColumn, setCheckedColumn] = useState<CheckboxValueType[]>(
+		props.bookmarkSettings.bookmarkManager.defaultColumnList
+	);
 
 	const CheckboxGroup = Checkbox.Group;
 	const onColumnChange = (list: CheckboxValueType[]) => {
@@ -209,14 +174,18 @@ export default function BookmarkManager(props: Props) {
 
 	const handleSearch = () => {
 		const value = searchWord;
-		if (!value) {
+		if (value === "") {
 			setBookmarks(props.bookmarks);
 		} else {
 			const filteredBookmarks = bookmarks.filter((bookmark) => {
-				return Object.values(bookmark)
-					.join(" ")
-					.toLowerCase()
-					.includes(value.toLowerCase());
+				return (
+					bookmark.name
+						.toLocaleLowerCase()
+						.includes(value.toLocaleLowerCase()) ||
+					bookmark.description
+						.toLocaleLowerCase()
+						.includes(value.toLocaleLowerCase())
+				);
 			});
 			setBookmarks(filteredBookmarks);
 		}
@@ -224,7 +193,6 @@ export default function BookmarkManager(props: Props) {
 	const handleCancelSearch: KeyboardEventHandler<HTMLInputElement> = (
 		event
 	) => {
-		event.preventDefault();
 		if (event.key === "Escape") {
 			setBookmarks(props.bookmarks);
 			setSearchWord("");
@@ -278,66 +246,67 @@ export default function BookmarkManager(props: Props) {
 	return (
 		<div className="surfing-bookmark-manager">
 			<ConfigProvider
-				theme={ {
-					algorithm: theme.darkAlgorithm,
-				} }
+				theme={{
+					algorithm:
+						app.getTheme() === "obsidian"
+							? theme.darkAlgorithm
+							: theme.defaultAlgorithm,
+				}}
 			>
 				<div className="surfing-bookmark-manager-header-bar">
-					<Row gutter={ [16, 16] }>
-						<Col span={ 12 }>
+					<Row gutter={[16, 16]}>
+						<Col span={12}>
 							<div className="surfing-bookmark-manager-search-bar">
 								<Input
-									value={ searchWord }
-									onChange={ (e) => {
+									value={searchWord}
+									onChange={(e) => {
 										setSearchWord(e.target.value);
 										handleSearch();
-									} }
-									defaultValue={ searchWord }
-									placeholder={ `Search from ${ bookmarks.length } bookmarks` }
-									onPressEnter={ handleSearch }
-									onKeyDown={ handleCancelSearch }
+									}}
+									defaultValue={searchWord}
+									placeholder={`Search from ${bookmarks.length} bookmarks`}
+									onPressEnter={handleSearch}
+									onKeyDown={handleCancelSearch}
 									allowClear
 								/>
-								<Button
-									onClick={ handleAddBookmark }
-									type="primary"
-								>
-									+
-								</Button>
+								<Button onClick={handleAddBookmark}>+</Button>
 							</div>
 						</Col>
-						<Col span={ 6 } style={ { marginTop: "5px" } }>
+						<Col span={6} style={{ marginTop: "5px" }}>
 							<CheckboxGroup
-								options={ columnOptions }
-								value={ checkedColumn }
-								onChange={ onColumnChange }
+								options={columnOptions}
+								value={checkedColumn}
+								onChange={onColumnChange}
 							/>
 						</Col>
 					</Row>
 				</div>
 				<Table
-					dataSource={ bookmarks }
-					key={ new Date().toISOString() }
-					columns={ columns }
-					pagination={ {
-						defaultPageSize: 14,
-					} }
+					dataSource={bookmarks}
+					key={new Date().toISOString()}
+					columns={columns}
+					pagination={{
+						defaultPageSize: Number(
+							props.bookmarkSettings.bookmarkManager.pagination
+						),
+					}}
 					rowKey="id"
 				></Table>
 				<Modal
 					title="Bookmark"
-					key={ currentBookmark.id }
-					keyboard={ true }
-					open={ modalVisible }
-					onOk={ handleModalOk }
-					onCancel={ handleModalCancel }
-					footer={ [null] }
+					key={currentBookmark.id}
+					keyboard={true}
+					open={modalVisible}
+					onOk={handleModalOk}
+					onCancel={handleModalCancel}
+					footer={[null]}
 				>
 					<BookmarkForm
-						bookmark={ currentBookmark }
-						options={ options }
-						handleSaveBookmark={ handleSaveBookmark }
-						categories={ props.categories }></BookmarkForm>
+						bookmark={currentBookmark}
+						options={options}
+						handleSaveBookmark={handleSaveBookmark}
+						categories={props.categories}
+					></BookmarkForm>
 				</Modal>
 			</ConfigProvider>
 		</div>

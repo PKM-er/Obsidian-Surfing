@@ -41,6 +41,7 @@ export default {
 	'General': '常规选项',
 	'Search': '搜索选项',
 	'Theme': '主题选项',
+    'Bookmark': '书签选项',
 	'Always Show Custom Engines': '始终显示自定义引擎',
 	'Save Current Page As Markdown': '保存当前网页为 Markdown',
 	'Save As Markdown Path': '保存为 Markdown 路径',
