@@ -244,8 +244,6 @@ export class SurfingView extends ItemView {
 				if (emulatedKeyboardEvent.ctrlKey && emulatedKeyboardEvent.key === 'f') {
 					this.searchBox = new searchBox(this.leaf, webContents, this.plugin);
 				}
-
-
 			});
 
 			// TODO: Do we need to show a link that cursor hovering?
@@ -297,24 +295,25 @@ export class SurfingView extends ItemView {
 				console.error('Failed to add event: ', err);
 			}
 
-			try {
-				webContents.openDevTools();
-				webContents.executeJavaScript(`
-					
-				
-				
-					var s = document.createElement('script');
-					s.src = 'https://cdn.jsdelivr.net/npm/darkreader@4.9.58/darkreader.min.js';
-					document.body.appendChild(s);
-					
-					
-					
-					`, true).then((result: any) => {
-				});
-			} catch (err) {
-				console.error('Failed to add event: ', err);
-			}
-
+			// TODO: Support Dark Reader
+			// 	try {
+			// 		webContents.openDevTools();
+			// 		webContents.executeJavaScript(`
+			//
+			//
+			//
+			// 			var s = document.createElement('script');
+			// 			s.src = 'https://cdn.jsdelivr.net/npm/darkreader@4.9.58/darkreader.min.js';
+			// 			document.body.appendChild(s);
+			//
+			//
+			//
+			// 			`, true).then((result: any) => {
+			// 		});
+			// 	} catch (err) {
+			// 		console.error('Failed to add event: ', err);
+			// 	}
+			//
 		});
 
 		// When focus set current leaf active;
