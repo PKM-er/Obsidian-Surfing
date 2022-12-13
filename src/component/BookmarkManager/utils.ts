@@ -2,143 +2,142 @@ import { request } from "obsidian";
 import { Bookmark, FilterType, CategoryType } from "../../types/bookmark";
 
 export function hashCode(str: string) {
-    let hash = 0
-    for (let i = 0; i < str.length; i++) {
-        hash = (hash << 5) - hash + str.charCodeAt(i)
-        hash = hash & hash // Convert to 32bit integer
-    }
-    return hash
+	let hash = 0
+	for (let i = 0; i < str.length; i++) {
+		hash = (hash << 5) - hash + str.charCodeAt(i)
+		hash = hash & hash // Convert to 32bit integer
+	}
+	return hash
 }
 
 export function generateColor(str: string) {
-    // 计算字符串的哈希值
-    const hash = hashCode(str)
+	// 计算字符串的哈希值
+	const hash = hashCode(str)
 
-    // 生成颜色值
-    let color = "#"
-    for (let i = 0; i < 3; i++) {
-        const value = (hash >> (i * 8)) & 0xff
-        color += ("00" + value.toString(16)).substr(-2)
-    }
-    return color
+	// 生成颜色值
+	let color = "#"
+	for (let i = 0; i < 3; i++) {
+		const value = (hash >> (i * 8)) & 0xff
+		color += ("00" + value.toString(16)).substr(-2)
+	}
+	return color
 }
 
 export function generateTagsOptions(bookmarks: Bookmark[]) {
-    const tagsOptions: FilterType[] = []
-    const tags: Set<string> = new Set()
-    for (let i = 0; i < bookmarks.length; i++) {
-        bookmarks[i].tags.split(" ").forEach((tag: string) => {
-            tags.add(tag)
-        })
-    }
+	const tagsOptions: FilterType[] = []
+	const tags: Set<string> = new Set()
+	for (let i = 0; i < bookmarks.length; i++) {
+		bookmarks[i].tags.split(" ").forEach((tag: string) => {
+			tags.add(tag)
+		})
+	}
 
-    for (const tag of tags) {
-        tagsOptions.push({
-            text: tag,
-            value: tag
-        })
-    }
+	for (const tag of tags) {
+		tagsOptions.push({
+			text: tag,
+			value: tag
+		})
+	}
 
-    return {
-        tagsOptions
-    }
+	return {
+		tagsOptions
+	}
 }
 
 export function isValidURL(str: string): boolean {
-    // 定义一个正则表达式，用于匹配合法的URL
-    const regexp =
-        /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()!@:%_\+.~#?&\/\/=]*)/
-    return regexp.test(str)
+	// 定义一个正则表达式，用于匹配合法的URL
+	const regexp =
+		/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()!@:%_\+.~#?&\/\/=]*)/
+	return regexp.test(str)
 }
 
 async function nonElectronGetPageTitle(url: string): Promise<{ title: string | null, name: string | null, description: string | null }> {
-    try {
-        const html = await request({ url });
+	try {
+		const html = await request({ url });
 
-        const doc = new DOMParser().parseFromString(html, "text/html");
-        const title = doc.querySelector("title")?.innerText
+		const doc = new DOMParser().parseFromString(html, "text/html");
+		const title = doc.querySelector("title")?.innerText
 
-        // 从文档中查找<meta>标签，并获取其name和description属性的值
-        const nameTag = doc.querySelector("meta[name=name]")
-        const name = nameTag ? nameTag.getAttribute("content") : null
-        const descriptionTag = doc.querySelector("meta[name=description]")
-        const description = descriptionTag
-            ? descriptionTag.getAttribute("content")
-            : null
+		// 从文档中查找<meta>标签，并获取其name和description属性的值
+		const nameTag = doc.querySelector("meta[name=name]")
+		const name = nameTag ? nameTag.getAttribute("content") : null
+		const descriptionTag = doc.querySelector("meta[name=description]")
+		const description = descriptionTag
+			? descriptionTag.getAttribute("content")
+			: null
 
-        return {
-            title: title ? title : "",
-            name,
-            description
-        };
-    } catch (ex) {
-        console.error(ex);
+		return {
+			title: title ? title : "",
+			name,
+			description
+		};
+	} catch (ex) {
+		console.error(ex);
 
-        return {
-            title: "",
-            name: "",
-            description: ""
-        };
-    }
+		return {
+			title: "",
+			name: "",
+			description: ""
+		};
+	}
 }
 
 export async function fetchWebTitleAndDescription(url: string): Promise<{ title: string | null, name: string | null, description: string | null }> {
-    // If we're on Desktop use the Electron scraper
-    if (!(url.startsWith("http") || url.startsWith("https"))) {
-        url = "https://" + url;
-    }
+	// If we're on Desktop use the Electron scraper
+	if (!(url.startsWith("http") || url.startsWith("https"))) {
+		url = "https://" + url;
+	}
 
-    return nonElectronGetPageTitle(url);
+	return nonElectronGetPageTitle(url);
 }
 
 export function stringToCategory(categoryString: string): CategoryType[] {
-    const categoryOptions: CategoryType[] = []
-    let current = categoryOptions
-    let indent = 0
+	const categoryOptions: CategoryType[] = []
+	let current = categoryOptions
+	let indent = 0
 
-    categoryString.split("\n").forEach((line) => {
-        const currentIndent = line.search(/\S/)
-        const currentNode = line.trim()
-        if (currentIndent > indent) {
-            current.push({
-                label: currentNode,
-                value: currentNode,
-                text: currentNode,
-                children: []
-            })
-            console.log(current)
-            current = current[current.length - 1].children
-            indent = currentIndent
-        } else if (currentIndent === indent) {
-            console.log(current, currentNode, {
-                label: currentNode,
-                value: currentNode,
-                text: currentNode,
-                children: []
-            }, indent)
-            current.push({
-                label: currentNode,
-                value: currentNode,
-                text: currentNode,
-                children: []
-            })
-            console.log(current)
-            current = current[current.length - 1].children
-        } else {
-            while (currentIndent < indent) {
-                current = categoryOptions
-                indent -= 2
-            }
-            current.push({
-                label: currentNode,
-                value: currentNode,
-                text: currentNode,
-                children: []
-            })
-            console.log(current)
-            current = current[current.length - 1].children
-        }
-        console.log(currentNode, currentIndent, indent,)
-    })
-    return categoryOptions
+	categoryString.split("\n").forEach((line) => {
+		const currentIndent = line.search(/\S/)
+		const currentNode = line.trim()
+		if (currentIndent > indent) {
+			current.push({
+				label: currentNode,
+				value: currentNode,
+				text: currentNode,
+				children: []
+			})
+			// console.log(current)
+			current = current[current.length - 1].children
+			indent = currentIndent
+		} else if (currentIndent === indent) {
+			// console.log(current, currentNode, {
+			//     label: currentNode,
+			//     value: currentNode,
+			//     text: currentNode,
+			//     children: []
+			// }, indent)
+			current.push({
+				label: currentNode,
+				value: currentNode,
+				text: currentNode,
+				children: []
+			})
+			// console.log(current)
+			current = current[current.length - 1].children
+		} else {
+			while (currentIndent < indent) {
+				current = categoryOptions
+				indent -= 2
+			}
+			current.push({
+				label: currentNode,
+				value: currentNode,
+				text: currentNode,
+				children: []
+			})
+			// console.log(current)
+			current = current[current.length - 1].children
+		}
+	})
+	return categoryOptions
 }

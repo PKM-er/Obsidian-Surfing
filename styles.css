@@ -550,3 +550,24 @@ div[data-type^="empty"].workspace-leaf-content .view-content.mod-wb-bookmark-bar
 	margin: 4px 0px 0px 10px;
 }
 
+.wb-bookmark-manager-entry {
+	position: absolute;
+	right: var(--size-4-3);
+	padding: var(--size-2-1);
+	border-radius: var(--radius-s);
+}
+
+.wb-bookmark-manager-icon {
+	height: 18px;
+	width: 18px;
+	display: flex;
+}
+
+/*.wb-bookmark-manager-icon .lucide-bookmark {*/
+/*	height: 16px;*/
+/*	width: 16px;*/
+/*}*/
+
+.wb-bookmark-manager-entry:hover {
+	background-color: var(--color-base-30);
+}

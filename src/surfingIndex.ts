@@ -44,7 +44,7 @@ export default class SurfingPlugin extends Plugin {
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
 		this.registerView(WEB_BROWSER_IFRAME_VIEW_ID, (leaf) => new SurfingIframeView(leaf, this));
-		this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this));
+		if (this.settings.bookmarkManager.openBookMark) this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this));
 
 
 		try {
@@ -76,7 +76,9 @@ export default class SurfingPlugin extends Plugin {
 			this.patchCanvasNode();
 			this.patchCanvas();
 		}
-		this.registerRibbon();
+		if (this.settings.bookmarkManager.openBookMark) {
+			this.registerRibbon();
+		}
 	}
 
 
@@ -93,7 +95,7 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	private registerRibbon() {
-		this.addRibbonIcon('dice', WEB_BROWSER_BOOKMARK_MANAGER_ID, async () => {
+		this.addRibbonIcon('bookmark', WEB_BROWSER_BOOKMARK_MANAGER_ID, async () => {
 			const workspace = this.app.workspace
 			workspace.detachLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID)
 			await workspace.getLeaf(false).setViewState({ type: WEB_BROWSER_BOOKMARK_MANAGER_ID })
@@ -524,7 +526,8 @@ export default class SurfingPlugin extends Plugin {
 				around(EmptyView.prototype, {
 					onOpen: (next) =>
 						function (...args: any) {
-							if (!this.contentEl.querySelector(".wb-bookmark-bar")) {
+							const pluginSetting = app.plugins.getPlugin("surfing").settings;
+							if (!this.contentEl.querySelector(".wb-bookmark-bar") && pluginSetting.bookmarkManager.openBookMark) {
 								this.contentEl.classList.add("mod-wb-bookmark-bar");
 								new BookMarkBar(this, this.plugin).onload();
 							}
@@ -708,6 +711,10 @@ export default class SurfingPlugin extends Plugin {
 							setTimeout(() => {
 								e.render();
 							}, 0);
+							// TODO: Support alwayskeeploaded
+							e.addEventListener("focus", () => {
+								e.alwaysKeepLoaded = true;
+							})
 						}
 					},
 			});

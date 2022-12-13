@@ -142,8 +142,10 @@ export class SurfingView extends ItemView {
 		this.frame = document.createElement("webview") as unknown as HTMLIFrameElement;
 		this.frame.setAttribute("allowpopups", "");
 		if (this.omnisearchEnabled) this.searchContainer = new OmniSearchContainer(this.leaf, this.plugin);
-		this.bookmarkBar = new BookMarkBar((this.leaf.view as SurfingView), this.plugin);
-		this.bookmarkBar.onload();
+		if (this.plugin.settings.bookmarkManager.openBookMark) {
+			this.bookmarkBar = new BookMarkBar((this.leaf.view as SurfingView), this.plugin);
+			this.bookmarkBar.onload();
+		}
 
 		// CSS classes makes frame fill the entire tab's content space.
 		this.frame.addClass("wb-frame");
@@ -271,7 +273,6 @@ export class SurfingView extends ItemView {
 					window.addEventListener('dragstart', (e) => {
 						if(e.ctrlKey) {
 							e.dataTransfer.clearData();
-							console.log('ctrl');
 							const selectionText = document.getSelection().toString();
 							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
 							let link = "";

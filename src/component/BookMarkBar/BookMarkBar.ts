@@ -1,8 +1,9 @@
 import SurfingPlugin from "../../surfingIndex";
 import { Bookmark, CategoryType } from "../../types/bookmark";
 import { BookMarkItem } from "./BookMarkItem";
-import { ItemView } from "obsidian";
+import { ItemView, setIcon } from "obsidian";
 import { initializeJson, loadJson } from "../../utils/json";
+import { WEB_BROWSER_BOOKMARK_MANAGER_ID } from "../../surfingBookmarkManager";
 
 export class BookMarkBar {
 	private view: ItemView;
@@ -21,6 +22,8 @@ export class BookMarkBar {
 			cls: "wb-bookmark-bar"
 		})
 
+		this.renderIcon();
+
 		try {
 			const { bookmarks, categories } = await loadJson();
 			this.bookmarkData = bookmarks;
@@ -38,26 +41,24 @@ export class BookMarkBar {
 		this.render(this.bookmarkData, this.categoryData);
 	}
 
-	// convertToBookmarkFolder(data: Bookmark[]) {
-	// 	const groupBy = (list: Bookmark[], keyGetter: any) => {
-	// 		const map = new Map();
-	// 		list.forEach((item) => {
-	// 			const key = keyGetter(item);
-	// 			const collection = map.get(key);
-	// 			if (!collection) {
-	// 				item.category.splice(0, 1);
-	// 				map.set(key, [item]);
-	// 			} else {
-	// 				collection.push(item);
-	// 			}
-	// 		});
-	// 		return map;
-	// 	}
-	//
-	// 	const group = groupBy(data, (item: Bookmark) => item.category[0]);
-	// 	const result = Array.from(group, ([name, children]) => ({ name, children }));
-	// 	console.log(result);
-	// }
+	renderIcon() {
+		const bookmarkManagerEl = this.BookmarkBarEl.createEl("div", {
+			cls: "wb-bookmark-manager-entry"
+		});
+
+		const bookmarkManagerIconEl = bookmarkManagerEl.createEl("div", {
+			cls: "wb-bookmark-manager-icon",
+		})
+
+		bookmarkManagerEl.onclick = async () => {
+			const workspace = app.workspace;
+			workspace.detachLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID);
+			await workspace.getLeaf(false).setViewState({ type: WEB_BROWSER_BOOKMARK_MANAGER_ID });
+			workspace.revealLeaf(workspace.getLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID)[0]);
+		}
+
+		setIcon(bookmarkManagerIconEl, "bookmark");
+	}
 
 	render(bookmarks: Bookmark[], categories: CategoryType[]) {
 		categories.forEach((item: CategoryType) => {

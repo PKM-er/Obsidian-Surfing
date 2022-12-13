@@ -77,7 +77,6 @@ export class InNodeWebView {
 					window.addEventListener('dragstart', (e) => {
 						if(e.ctrlKey) {
 							e.dataTransfer.clearData();
-							console.log('ctrl');
 							const selectionText = document.getSelection().toString();
 							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
 							let link = "";
