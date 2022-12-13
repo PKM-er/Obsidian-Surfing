@@ -16,7 +16,7 @@ import { t } from "./translations/helper";
 import searchBox from "./component/SearchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
 import { OmniSearchContainer } from "./component/OmniSearchContainer";
-import { BookMarkBar } from "./component/bookmark/BookMarkBar";
+import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
@@ -297,6 +297,24 @@ export class SurfingView extends ItemView {
 				console.error('Failed to add event: ', err);
 			}
 
+			try {
+				webContents.openDevTools();
+				webContents.executeJavaScript(`
+					
+				
+				
+					var s = document.createElement('script');
+					s.src = 'https://cdn.jsdelivr.net/npm/darkreader@4.9.58/darkreader.min.js';
+					document.body.appendChild(s);
+					
+					
+					
+					`, true).then((result: any) => {
+				});
+			} catch (err) {
+				console.error('Failed to add event: ', err);
+			}
+
 		});
 
 		// When focus set current leaf active;
@@ -333,6 +351,21 @@ export class SurfingView extends ItemView {
 		this.frame.addEventListener("did-attach-webview", (event: any) => {
 			console.log("Webview attached");
 		})
+
+		// TODO: Support dark reader soon.
+		// this.frame.addEventListener("did-finish-load", (event: any) => {
+		// 	// @ts-ignore
+		// 	const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		//
+		// 	webContents.executeJavaScript(`
+		// 				window.addEventListener('DOMContentLoaded', ()=>{
+		// 					DarkReader.setFetchMethod(window.fetch);
+		// 					DarkReader.enable({brightness: 100, contrast: 90, sepia: 10});
+		// 					console.log("hlewo");
+		// 				});
+		// 			`, true).then((result: any) => {
+		// 	});
+		// })
 
 
 		this.initHeaderButtons();

@@ -14,11 +14,10 @@ import {
 } from "antd";
 import React, { KeyboardEventHandler, useState } from "react";
 import { generateColor, generateTagsOptions } from "./utils";
-import type { Bookmark } from "./types";
+import type { Bookmark, CategoryType } from "../../types/bookmark";
 import { ColumnsType } from "antd/es/table";
 import { CheckboxValueType } from "antd/es/checkbox/Group";
 import { BookmarkForm } from "./BookmarkForm";
-
 
 const defaultCategories = [
 	{
@@ -82,6 +81,7 @@ const emptyBookmark = {
 
 interface Props {
 	bookmarks: Bookmark[];
+	categories: CategoryType[];
 }
 
 export default function BookmarkManager(props: Props) {
@@ -243,7 +243,7 @@ export default function BookmarkManager(props: Props) {
 				newBookmarks.splice(index, 1);
 				setBookmarks(newBookmarks);
 			} else {
-				console.log("Can't find this bookmark! data seems error!");
+				console.log("Can't find this BookMark! data seems error!");
 			}
 		});
 	};
@@ -339,7 +339,7 @@ export default function BookmarkManager(props: Props) {
 						bookmark={ currentBookmark }
 						options={ options }
 						handleSaveBookmark={ handleSaveBookmark }
-					></BookmarkForm>
+						categories={ props.categories }></BookmarkForm>
 				</Modal>
 			</ConfigProvider>
 		</div>

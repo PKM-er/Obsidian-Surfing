@@ -23,11 +23,11 @@ import { around } from "monkey-around";
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, SurfingSettings, SurfingSettingTab } from "./surfingPluginSetting";
 import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
-import { checkIfWebBrowserAvailable } from "./utils/urltest";
+import { checkIfWebBrowserAvailable } from "./utils/url";
 import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
 import { InPageIconList } from "./component/InPageIconList";
 import { InNodeWebView } from "./component/InNodeWebView";
-import { BookMarkBar } from "./component/bookmark/BookMarkBar";
+import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
 import { SurfingBookmarkManagerView, WEB_BROWSER_BOOKMARK_MANAGER_ID } from './surfingBookmarkManager'
 
 

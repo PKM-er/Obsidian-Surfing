@@ -4,7 +4,7 @@ import { t } from "src/translations/helper";
 import { SEARCH_ENGINES, SearchEngine } from "../../surfingPluginSetting";
 import { SurfingView } from "../../surfingView";
 import SurfingPlugin from "../../surfingIndex";
-import { getFinalUrl } from "../../utils/urltest";
+import { getFinalUrl } from "../../utils/url";
 
 export class SearchEngineSuggester extends TextInputSuggest<string> {
 	private searchEngines: SearchEngine[];

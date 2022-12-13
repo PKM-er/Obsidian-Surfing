@@ -2,7 +2,7 @@ import { Form, Input, Select, Button, Cascader } from "antd";
 import { DefaultOptionType } from "antd/es/select";
 import { moment } from "obsidian";
 import React, { ReactNode } from "react";
-import { Bookmark, FilterType } from "./types";
+import { Bookmark, CategoryType, FilterType } from "../../types/bookmark";
 import { fetchWebTitleAndDescription, hashCode, isValidURL } from "./utils";
 
 const { Option } = Select;
@@ -12,6 +12,7 @@ interface Props {
 	options: {
 		tagsOptions: FilterType[];
 	};
+	categories: CategoryType[];
 	handleSaveBookmark: (bookmark: Bookmark) => void;
 }
 
@@ -22,43 +23,6 @@ interface FieldData {
 	validating?: boolean;
 	errors?: string[];
 }
-
-const defaultCategory = [
-	{
-		value: "计算机",
-		text: "计算机",
-		label: "计算机",
-		children: [
-			{
-				value: "算法",
-				text: "算法",
-				label: "算法",
-			},
-			{
-				value: "数据结构",
-				text: "数据结构",
-				label: "数据结构",
-			},
-		],
-	},
-	{
-		value: "政治学",
-		text: "政治学",
-		label: "政治学",
-		children: [
-			{
-				value: "比较政治",
-				text: "比较政治",
-				label: "比较政治",
-			},
-			{
-				value: "地缘政治",
-				text: "地缘政治",
-				label: "地缘政治",
-			},
-		],
-	},
-];
 
 export function BookmarkForm(props: Props) {
 	const [form] = Form.useForm();
@@ -179,7 +143,7 @@ export function BookmarkForm(props: Props) {
 				rules={ [
 					{
 						required: true,
-						message: "Please input bookmark name!",
+						message: "Please input BookMarkBar name!",
 					},
 				] }
 				initialValue={ props.bookmark.name }
@@ -195,7 +159,7 @@ export function BookmarkForm(props: Props) {
 					{
 						type: "url",
 						required: true,
-						message: "Please input bookmark url!",
+						message: "Please input BookMarkBar url!",
 					},
 				] }
 				shouldUpdate
@@ -251,7 +215,7 @@ export function BookmarkForm(props: Props) {
 			>
 				<Cascader
 					displayRender={ categoryDisplayRender }
-					options={ defaultCategory }
+					options={ props.categories }
 				/>
 			</Form.Item>
 			<Form.Item

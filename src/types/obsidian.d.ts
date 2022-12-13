@@ -11,6 +11,7 @@ declare module "obsidian" {
 		plugins: {
 			getPlugin(name: string): any;
 			enabledPlugins: Set<string>;
+			getPluginFolder(): string;
 		};
 		commands: any;
 		getTheme: () => string;

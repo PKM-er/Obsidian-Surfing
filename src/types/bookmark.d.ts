@@ -1,14 +1,28 @@
-export interface Bookmark {
-	title: string;
-	url: string;
-	created?: string;
-	star?: boolean | number;
-	parent?: BookmarkFolder;
-}
-
 export interface BookmarkFolder {
-	title: string;
+	name: string;
 	children: (Bookmark | BookmarkFolder)[];
 	root: boolean;
 	parent?: BookmarkFolder | undefined;
+}
+
+export interface Bookmark {
+	id: string
+	name: string
+	description: string
+	url: string
+	tags: string
+	category: string[]
+	created: number
+	modified: number
+}
+
+export interface FilterType {
+	text: string
+	value: string
+}
+
+export interface CategoryType {
+	value: string
+	label: string
+	children: CategoryType[]
 }
