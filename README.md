@@ -68,6 +68,10 @@ the current browser URL within Obsidain.
    plugin
 5. Done!
 
+## Contribution
+
+- [Windily-cloud(皮皮)](https://github.com/windily-cloud) - Chinese translation && Features
+
 ## Support
 
 You can support original author `Trikzon` :

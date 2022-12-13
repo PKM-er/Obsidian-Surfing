@@ -59,6 +59,10 @@
 4. 重启obsidian（不重启也行，得刷新），在设置界面启用该插件
 5. 欧了
 
+## Contribution
+
+- [皮皮](https://github.com/windily-cloud) - 中文翻译 && 部分功能实现
+
 ## Support
 
 You can support original author `Trikzon` :
