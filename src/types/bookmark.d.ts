@@ -24,5 +24,6 @@ export interface FilterType {
 export interface CategoryType {
 	value: string
 	label: string
+    text: string
 	children: CategoryType[]
 }

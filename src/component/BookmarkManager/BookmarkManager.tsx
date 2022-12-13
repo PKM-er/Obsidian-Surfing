@@ -13,7 +13,7 @@ import {
 	theme,
 } from "antd";
 import React, { KeyboardEventHandler, useState } from "react";
-import { generateColor, generateTagsOptions } from "./utils";
+import { generateColor, generateTagsOptions, stringToCategory } from "./utils";
 import type { Bookmark, CategoryType } from "../../types/bookmark";
 import { ColumnsType } from "antd/es/table";
 import { CheckboxValueType } from "antd/es/checkbox/Group";
@@ -87,7 +87,9 @@ export default function BookmarkManager(props: Props) {
 				}
 				return <p>{value.join(">")}</p>;
 			},
-			filters: JSON.parse(props.bookmarkSettings.bookmarkManager.category),
+			filters: stringToCategory(
+				props.bookmarkSettings.bookmarkManager.category
+			) as any,
 			onFilter: (value, record) => {
 				return record.category.includes(value as string);
 			},
@@ -156,8 +158,9 @@ export default function BookmarkManager(props: Props) {
 	];
 
 	const [columns, setColumns] = useState(defaultColumns);
-	const [checkedColumn, setCheckedColumn] =
-		useState<CheckboxValueType[]>(props.bookmarkSettings.bookmarkManager.defaultColumnList);
+	const [checkedColumn, setCheckedColumn] = useState<CheckboxValueType[]>(
+		props.bookmarkSettings.bookmarkManager.defaultColumnList
+	);
 
 	const CheckboxGroup = Checkbox.Group;
 	const onColumnChange = (list: CheckboxValueType[]) => {
@@ -175,7 +178,14 @@ export default function BookmarkManager(props: Props) {
 			setBookmarks(props.bookmarks);
 		} else {
 			const filteredBookmarks = bookmarks.filter((bookmark) => {
-				return bookmark.name.toLocaleLowerCase().includes(value.toLocaleLowerCase()) || bookmark.description.toLocaleLowerCase().includes(value.toLocaleLowerCase())
+				return (
+					bookmark.name
+						.toLocaleLowerCase()
+						.includes(value.toLocaleLowerCase()) ||
+					bookmark.description
+						.toLocaleLowerCase()
+						.includes(value.toLocaleLowerCase())
+				);
 			});
 			setBookmarks(filteredBookmarks);
 		}
@@ -276,7 +286,9 @@ export default function BookmarkManager(props: Props) {
 					key={new Date().toISOString()}
 					columns={columns}
 					pagination={{
-						defaultPageSize: Number(props.bookmarkSettings.bookmarkManager.pagination),
+						defaultPageSize: Number(
+							props.bookmarkSettings.bookmarkManager.pagination
+						),
 					}}
 					rowKey="id"
 				></Table>

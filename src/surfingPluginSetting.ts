@@ -43,36 +43,13 @@ export interface SearchEngine {
     url: string;
 }
 
-const defaultCategory = [
-    {
-        value: "计算机",
-        text: "计算机",
-        children: [
-            {
-                value: "算法",
-                text: "算法",
-            },
-            {
-                value: "数据结构",
-                text: "数据结构",
-            },
-        ],
-    },
-    {
-        value: "政治学",
-        text: "政治学",
-        children: [
-            {
-                value: "比较政治",
-                text: "比较政治",
-            },
-            {
-                value: "地缘政治",
-                text: "地缘政治",
-            },
-        ],
-    },
-];
+const defaultCategory = `计算机
+    算法
+    数据结构
+obsidian
+    surfing
+    dataview
+`
 
 const defaultColumnList = [
     "name",
@@ -794,13 +771,14 @@ export class SurfingSettingTab extends PluginSettingTab {
                         text.setPlaceholder(DEFAULT_SETTINGS.bookmarkManager.category)
                             .setValue(this.plugin.settings.bookmarkManager.category)
                             .onChange(async (value)=>{
-                                if(value === ""){
-                                    this.plugin.settings.bookmarkManager.category = DEFAULT_SETTINGS.bookmarkManager.category
-                                    this.applySettingsUpdate();
-                                    this.display()
-                                }
+                                // if(value === ""){
+                                //     this.plugin.settings.bookmarkManager.category = DEFAULT_SETTINGS.bookmarkManager.category
+                                //     this.applySettingsUpdate();
+                                //     this.display()
+                                // }
                                 this.plugin.settings.bookmarkManager.category = value;
                                 this.applySettingsUpdate()
+                                console.log("saved")
                             })
                     })
         this.addSettingToMasterSettingsList(tabName, categorySetting.settingEl, "category")
