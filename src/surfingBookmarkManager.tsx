@@ -26,7 +26,7 @@ export class SurfingBookmarkManagerView extends ItemView {
 	}
 
 	getIcon(): string {
-		return "Album";
+		return "album";
 	}
 
 	protected async onOpen(): Promise<void> {
