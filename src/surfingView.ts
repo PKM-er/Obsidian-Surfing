@@ -2,7 +2,7 @@ import {
 	debounce,
 	Editor,
 	htmlToMarkdown,
-	ItemView, Keymap,
+	ItemView,
 	MarkdownView,
 	moment,
 	ViewStateResult,
