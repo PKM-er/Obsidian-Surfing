@@ -151,7 +151,8 @@
 }
 
 .wb-btn {
-	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
+	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07))
+		drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
 }
 
 .theme-dark .wb-btn a {
@@ -253,6 +254,15 @@
 	text-align: center;
 }
 
+.setting-item-control .surfing-setting-textarea {
+	height: 400px;
+    width: 200px;
+}
+
+.setting-item-control .surfing-setting-input {
+    width: 400px;
+}
+
 .wb-about-icon .surfing {
 	height: 72px !important;
 	width: 72px !important;
@@ -299,7 +309,8 @@
 .wb-search-suggestion-container {
 	background-color: var(--color-base-10);
 	border-radius: var(--radius-l);
-	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
+	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07))
+		drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
 }
 
 .wb-search-suggestion {
@@ -317,12 +328,14 @@
 
 .wb-search-suggest-item:first-child.is-selected {
 	/*background-color: var(--color-base-30);*/
-	border-radius: var(--radius-l) var(--radius-l) var(--radius-m) var(--radius-m);
+	border-radius: var(--radius-l) var(--radius-l) var(--radius-m)
+		var(--radius-m);
 }
 
 .wb-search-suggest-item:last-child.is-selected {
 	/*background-color: var(--color-base-30);*/
-	border-radius: var(--radius-m) var(--radius-m) var(--radius-l) var(--radius-l);
+	border-radius: var(--radius-m) var(--radius-m) var(--radius-l)
+		var(--radius-l);
 }
 
 .wb-search-suggest-item {
@@ -437,7 +450,8 @@ input[type="text"].wb-page-search-bar-input:focus-visible {
 
 .theme-light .wb-content-list-text {
 	background-color: var(--color-base-20);
-	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
+	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07))
+		drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
 }
 
 .theme-dark .wb-content-list-text {
@@ -468,7 +482,8 @@ div[data-type^="empty"] .wb-bookmark-bar {
 	z-index: 1;
 }
 
-.wb-bookmark-item, .wb-bookmark-folder {
+.wb-bookmark-item,
+.wb-bookmark-folder {
 	max-width: 100px;
 	text-overflow: hidden;
 	overflow: hidden;
@@ -483,7 +498,8 @@ div[data-type^="empty"] .wb-bookmark-bar {
 	align-content: flex-end;
 }
 
-.wb-bookmark-item:hover, .wb-bookmark-folder:hover {
+.wb-bookmark-item:hover,
+.wb-bookmark-folder:hover {
 	background-color: var(--color-base-30);
 }
 
@@ -507,7 +523,8 @@ div[data-type^="empty"] .wb-bookmark-bar {
 	display: none; /* Safari and Chrome */
 }
 
-.wb-bookmark-folder-icon, .wb-bookmark-item-icon {
+.wb-bookmark-folder-icon,
+.wb-bookmark-item-icon {
 	padding: unset;
 	height: 16px;
 	margin-right: var(--size-2-2);
@@ -523,11 +540,11 @@ div[data-type^="empty"] .wb-bookmark-bar {
 	width: var(--size-4-4);
 }
 
-div[data-type^="empty"].workspace-leaf-content .view-content.mod-wb-bookmark-bar {
+div[data-type^="empty"].workspace-leaf-content
+	.view-content.mod-wb-bookmark-bar {
 	padding: unset;
 	overflow: auto;
 }
-
 
 .surfing-bookmark-manager-header-bar {
 	display: flex;

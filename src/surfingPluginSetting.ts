@@ -54,12 +54,12 @@ obsidian
 `
 
 const defaultColumnList = [
-	"name",
-	"description",
-	"category",
-	"tags",
-	"created",
-	"modified",
+    "name",
+    "description",
+    "category",
+    "tags",
+    "created",
+    "modified",
 ];
 
 export const DEFAULT_SETTINGS: SurfingSettings = {
@@ -121,10 +121,10 @@ export const SEARCH_ENGINES: SearchEngine[] = [
 ];
 
 const tabNameToTabIconId: Record<string, string> = {
-	General: 'chrome',
-	Search: 'search',
-	Theme: 'brush',
-	Bookmark: 'bookmark'
+    General: 'chrome',
+    Search: 'search',
+    Theme: 'brush',
+    Bookmark: 'bookmark'
 };
 
 export class DropdownRecord {
