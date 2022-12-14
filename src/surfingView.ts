@@ -28,10 +28,12 @@ export class SurfingView extends ItemView {
 
 	private headerBar: HeaderBar;
 	private favicon: HTMLImageElement;
-	private frame: HTMLIFrameElement;
+	private webviewEl: HTMLElement;
 	private menu: any;
 	private searchContainer: OmniSearchContainer;
 	private bookmarkBar: BookMarkBar;
+
+	private doc: Document;
 
 	private omnisearchEnabled: boolean;
 
@@ -123,44 +125,24 @@ export class SurfingView extends ItemView {
 		return WEB_BROWSER_VIEW_ID;
 	}
 
-	async onOpen() {
-		// Allow views to replace this views.
-		this.navigation = true;
-
-
-		// Create search bar in the header bar.
-		this.headerBar = new HeaderBar(this.headerEl.children[2], this.plugin);
-
-		// Create favicon image element.
-		this.favicon = document.createElement("img") as HTMLImageElement;
-		this.favicon.width = 16;
-		this.favicon.height = 16;
-
+	createWebview = () => {
 		this.contentEl.empty();
 
-		// Create main web view frame that displays the website.
-		this.frame = document.createElement("webview") as unknown as HTMLIFrameElement;
-		this.frame.setAttribute("allowpopups", "");
-		if (this.omnisearchEnabled) this.searchContainer = new OmniSearchContainer(this.leaf, this.plugin);
-		if (this.plugin.settings.bookmarkManager.openBookMark) {
-			this.bookmarkBar = new BookMarkBar((this.leaf.view as SurfingView), this.plugin);
-			this.bookmarkBar.onload();
-		}
+		let doc = this.contentEl.doc;
+		this.webviewEl = doc.createElement('webview');
+		this.webviewEl.setAttribute("allowpopups", "");
+		this.webviewEl.addClass("wb-frame");
+		this.contentEl.appendChild(this.webviewEl);
 
-		// CSS classes makes frame fill the entire tab's content space.
-		this.frame.addClass("wb-frame");
-		this.contentEl.addClass("wb-view-content");
-		this.contentEl.appendChild(this.frame);
+		if (this.currentUrl) this.navigate(this.currentUrl);
 
 		this.headerBar.addOnSearchBarEnterListener((url: string) => {
 			this.navigate(url);
 		});
 
-		if (this.omnisearchEnabled) this.searchContainer.onload();
-
-		this.frame.addEventListener("dom-ready", (event: any) => {
+		this.webviewEl.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
-			const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+			const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 
 
 			// Open new browser tab if the web view requests it.
@@ -320,39 +302,47 @@ export class SurfingView extends ItemView {
 		});
 
 		// When focus set current leaf active;
-		this.frame.addEventListener("focus", (event: any) => {
+		this.webviewEl.addEventListener("focus", (event: any) => {
 			app.workspace.setActiveLeaf(this.leaf);
 		});
 
-		this.frame.addEventListener("page-favicon-updated", (event: any) => {
+		this.webviewEl.addEventListener("page-favicon-updated", (event: any) => {
 			if (event.favicons[0] !== undefined) this.favicon.src = event.favicons[0];
 			this.leaf.tabHeaderInnerIconEl.empty();
 			this.leaf.tabHeaderInnerIconEl.appendChild(this.favicon);
 		});
 
-		this.frame.addEventListener("page-title-updated", (event: any) => {
+		this.webviewEl.addEventListener("page-title-updated", (event: any) => {
 			if (this.omnisearchEnabled) this.updateSearchBox();
+			console.log("page-title-updated", event);
 			this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
 			this.currentTitle = event.title;
 		});
 
-		this.frame.addEventListener("will-navigate", (event: any) => {
+		this.webviewEl.addEventListener("will-navigate", (event: any) => {
 			this.navigate(event.url, true, false);
 		});
 
-		this.frame.addEventListener("did-navigate-in-page", (event: any) => {
+		this.webviewEl.addEventListener("did-navigate-in-page", (event: any) => {
 			this.navigate(event.url, true, false);
 			this.menu = undefined;
 		});
 
-		this.frame.addEventListener("new-window", (event: any) => {
+		this.webviewEl.addEventListener("new-window", (event: any) => {
 			console.log("Trying to open new window at url: " + event.url);
 			event.preventDefault();
 		});
 
-		this.frame.addEventListener("did-attach-webview", (event: any) => {
+		this.webviewEl.addEventListener("did-attach-webview", (event: any) => {
 			console.log("Webview attached");
 		})
+
+		this.webviewEl.addEventListener('destroyed', () => {
+			if (doc !== this.contentEl.doc) {
+				this.webviewEl.detach();
+				this.createWebview();
+			}
+		});
 
 		// TODO: Support dark reader soon.
 		// this.frame.addEventListener("did-finish-load", (event: any) => {
@@ -371,6 +361,33 @@ export class SurfingView extends ItemView {
 
 
 		this.initHeaderButtons();
+	}
+
+	async onOpen() {
+		// Allow views to replace this views.
+		this.navigation = true;
+
+
+		// Create search bar in the header bar.
+		this.headerBar = new HeaderBar(this.headerEl.children[2], this.plugin);
+
+		// Create favicon image element.
+		this.favicon = document.createElement("img") as HTMLImageElement;
+		this.favicon.width = 16;
+		this.favicon.height = 16;
+
+		this.contentEl.addClass("wb-view-content");
+
+		// Create main web view frame that displays the website.
+
+		if (this.omnisearchEnabled) this.searchContainer = new OmniSearchContainer(this.leaf, this.plugin);
+		if (this.omnisearchEnabled) this.searchContainer.onload();
+		if (this.plugin.settings.bookmarkManager.openBookMark) {
+			this.bookmarkBar = new BookMarkBar((this.leaf.view as SurfingView), this.plugin);
+			this.bookmarkBar.onload();
+		}
+
+		this.createWebview();
 	}
 
 	initHeaderButtons() {
@@ -395,7 +412,7 @@ export class SurfingView extends ItemView {
 		const currentSearchEngine = searchEngines.find((engine) => engine.url.startsWith(currentUrl));
 		if (!currentSearchEngine) return;
 		// @ts-ignore
-		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 
 		try {
 			webContents.executeJavaScript(`
@@ -411,7 +428,7 @@ export class SurfingView extends ItemView {
 
 	registerContextMenuInWebcontents() {
 		// @ts-ignore
-		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 
 		webContents.on("context-menu", (event: any, params: any) => {
 			event.preventDefault();
@@ -568,7 +585,7 @@ export class SurfingView extends ItemView {
 
 	clearHistory(): void {
 		// @ts-ignore
-		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 		if (!webContents) return;
 
 		webContents.clearHistory();
@@ -635,7 +652,7 @@ export class SurfingView extends ItemView {
 		this.headerBar.setSearchBarUrl(url);
 
 		if (updateWebView) {
-			this.frame.setAttribute("src", url);
+			this.webviewEl.setAttribute("src", url);
 		}
 		this.searchBox?.unload();
 		app.workspace.requestSaveLayout();
@@ -644,7 +661,7 @@ export class SurfingView extends ItemView {
 	// TODO: Combine this with context menu method.
 	getCurrentTimestamp(editor?: Editor) {
 		// @ts-ignore
-		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 		webContents.executeJavaScript(`
 					var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
 					var timeYMSArr=time.split(':');
@@ -667,7 +684,7 @@ export class SurfingView extends ItemView {
 	// TODO: Refresh the page.
 	refresh() {
 		// @ts-ignore
-		const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
+		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 		webContents.reload();
 	}
 }

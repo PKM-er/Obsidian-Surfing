@@ -4,7 +4,7 @@ import { t } from "src/translations/helper";
 import { SEARCH_ENGINES, SearchEngine } from "../../surfingPluginSetting";
 import { SurfingView } from "../../surfingView";
 import SurfingPlugin from "../../surfingIndex";
-import { getFinalUrl } from "../../utils/url";
+import { getComposedUrl } from "../../utils/url";
 
 export class SearchEngineSuggester extends TextInputSuggest<string> {
 	private searchEngines: SearchEngine[];
@@ -47,7 +47,7 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 		const currentSearchEngine = this.searchEngines.find((engine) => engine.name === item);
 		const url = (currentSearchEngine ? currentSearchEngine.url : SEARCH_ENGINES[0].url);
 
-		const finalUrl = getFinalUrl(url, currentInputValue);
+		const finalUrl = getComposedUrl(url, currentInputValue);
 
 		SurfingView.spawnWebBrowserView(false, { url: finalUrl });
 	}

@@ -4,11 +4,15 @@ import { clipboard, remote } from "electron";
 import { SurfingView } from "../surfingView";
 import { t } from "../translations/helper";
 import { moment } from "obsidian";
+import { getUrl } from "../utils/url";
 
 export class InNodeWebView {
 	private contentEl: HTMLElement;
-	private iframeEl: HTMLElement;
+	private webviewEl: HTMLElement;
 	private node: any;
+	private searchBarEl: InPageHeaderBar;
+
+	private currentUrl: string;
 
 	constructor(node: any) {
 		this.contentEl = node.contentEl;
@@ -18,37 +22,51 @@ export class InNodeWebView {
 	onload() {
 		this.contentEl.empty();
 
-		const searchBarEl = new InPageHeaderBar(this.node, this.node.url);
-		searchBarEl.onload();
-		searchBarEl.addOnSearchBarEnterListener((url: string) => {
-			this.iframeEl.setAttribute("src", url);
-			searchBarEl.setSearchBarUrl(url);
+		this.appendSearchBar();
+		this.appendWebView();
+
+		this.contentEl.addClass("wb-view-content");
+
+	}
+
+	appendSearchBar() {
+		this.searchBarEl = new InPageHeaderBar(this.node, this.node.url);
+		this.searchBarEl.onload();
+		this.currentUrl = this.node.url;
+		this.searchBarEl.setSearchBarUrl(this.node.url);
+
+		this.searchBarEl.addOnSearchBarEnterListener((url: string) => {
+			const finalURL = getUrl(url);
+			if (finalURL) this.currentUrl = finalURL;
+			else this.currentUrl = url;
+
+			this.webviewEl.setAttribute("src", this.currentUrl);
+			this.searchBarEl.setSearchBarUrl(this.currentUrl);
 
 			const oldData = this.node.getData();
-			if (oldData.url === url) return;
-			oldData.url = url;
+			if (oldData.url === this.currentUrl) return;
+			oldData.url = this.currentUrl;
 			this.node.setData(oldData);
 			this.node.canvas.requestSave();
 
 			this.node.render();
 		});
-		searchBarEl.setSearchBarUrl(this.node.url);
+	}
 
-		// Create main web view frame that displays the website.
-		this.iframeEl = document.createElement("webview") as unknown as HTMLIFrameElement;
-		this.iframeEl.setAttribute("allowpopups", "");
+	appendWebView() {
+		let doc = this.contentEl.doc;
+		this.webviewEl = doc.createElement('webview');
+		this.webviewEl.setAttribute("allowpopups", "");
+		this.webviewEl.addClass("wb-frame");
+		this.contentEl.appendChild(this.webviewEl);
 
-		// CSS classes makes frame fill the entire tab's content space.
-		this.iframeEl.addClass("wb-frame");
-		this.contentEl.addClass("wb-view-content");
-		this.contentEl.appendChild(this.iframeEl);
+		if (this.currentUrl) this.webviewEl.setAttribute("src", this.currentUrl);
+		else this.webviewEl.setAttribute("src", this.node.url);
+		// this.node.placeholderEl.innerText = this.node.url;
 
-		this.iframeEl.setAttribute("src", this.node.url);
-		this.node.placeholderEl.innerText = this.node.url;
-
-		this.iframeEl.addEventListener("dom-ready", (event: any) => {
+		this.webviewEl.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
-			const webContents = remote.webContents.fromId(this.iframeEl.getWebContentsId());
+			const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
@@ -230,25 +248,33 @@ export class InNodeWebView {
 			}, false);
 		});
 
-		this.iframeEl.addEventListener("will-navigate", (event: any) => {
+		this.webviewEl.addEventListener("will-navigate", (event: any) => {
 			const oldData = this.node.getData();
 			oldData.url = event.url;
 			this.node.setData(oldData);
 			this.node.canvas.requestSave();
 		});
 
-		this.iframeEl.addEventListener("did-navigate-in-page", (event: any) => {
+		this.webviewEl.addEventListener("did-navigate-in-page", (event: any) => {
 			const oldData = this.node.getData();
 			if (event.url.contains("contacts.google.com/widget") || (this.node.canvas.isDragging && oldData.url === event.url)) {
 				// @ts-ignore
-				const webContents = remote.webContents.fromId(this.iframeEl.getWebContentsId());
+				const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 				webContents.stop();
 				return;
 			}
 			if (oldData.url === event.url) return;
 			oldData.url = event.url;
+			oldData.alwaysKeepLoaded = true;
 			this.node.setData(oldData);
 			this.node.canvas.requestSave();
+		});
+
+		this.webviewEl.addEventListener('destroyed', () => {
+			if (doc !== this.contentEl.doc) {
+				this.webviewEl.detach();
+				this.appendWebView();
+			}
 		});
 	}
 }

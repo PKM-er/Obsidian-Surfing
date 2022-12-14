@@ -24,7 +24,6 @@ import { DEFAULT_SETTINGS, SEARCH_ENGINES, SurfingSettings, SurfingSettingTab } 
 import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/url";
-import { SurfingIframeView, WEB_BROWSER_IFRAME_VIEW_ID } from "./surfingIframeView";
 import { InPageIconList } from "./component/InPageIconList";
 import { InNodeWebView } from "./component/InNodeWebView";
 import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
@@ -43,7 +42,6 @@ export default class SurfingPlugin extends Plugin {
 
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
-		this.registerView(WEB_BROWSER_IFRAME_VIEW_ID, (leaf) => new SurfingIframeView(leaf, this));
 		if (this.settings.bookmarkManager.openBookMark) this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this));
 
 
@@ -71,7 +69,6 @@ export default class SurfingPlugin extends Plugin {
 		this.registerCustomIcon();
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
-		this.patchWorkspaceLeaf();
 		if (requireApiVersion("1.1.0") && this.settings.useWebview) {
 			this.patchCanvasNode();
 			this.patchCanvas();
@@ -363,21 +360,21 @@ export default class SurfingPlugin extends Plugin {
 			});
 		})
 
-        this.addCommand({
-            id: 'toggle dark mode',
-            name: t('Toggle Dark Mode'),
-            callback: async ()=>{
-                this.settings.darkMode = !this.settings.darkMode;
-                await this.saveSettings()
-                const webbrowserView = this.app.workspace.getActiveViewOfType(SurfingView);
+		this.addCommand({
+			id: 'toggle dark mode',
+			name: t('Toggle Dark Mode'),
+			callback: async () => {
+				this.settings.darkMode = !this.settings.darkMode;
+				await this.saveSettings()
+				const webbrowserView = this.app.workspace.getActiveViewOfType(SurfingView);
 				if (webbrowserView) {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
-						webbrowserView.refresh();
+					webbrowserView.refresh();
 
 				}
-            }
-        })
+			}
+		})
 
 	}
 
@@ -580,88 +577,6 @@ export default class SurfingPlugin extends Plugin {
 
 	}
 
-	// Used to make leaf contains webview should not cause Obsidian crashed.
-	private patchWorkspaceLeaf() {
-		this.register(
-			around(WorkspaceLeaf.prototype, {
-				setViewState: (next) => {
-					return function (state: ViewState, ...rest: any[]) {
-						if (this.getRoot()?.type === "floating" && state.type === WEB_BROWSER_VIEW_ID) {
-							return next.call(this, {
-								type: WEB_BROWSER_IFRAME_VIEW_ID,
-								active: true,
-								state: {
-									url: state.state.url
-								}
-							}, ...rest);
-						}
-
-						if (this.getRoot()?.type === "split" && state.type === WEB_BROWSER_IFRAME_VIEW_ID) {
-							return next.call(this, {
-								type: WEB_BROWSER_VIEW_ID,
-								active: true,
-								state: {
-									url: state.state.url
-								}
-							}, ...rest);
-						}
-						return next.apply(this, [state, ...rest]);
-					};
-				},
-				setDimension: (old) => {
-					return async function (dimension: any) {
-						await old.call(this, dimension);
-						if (dimension === null && (this.view.contentEl?.querySelector(".wb-view-content") || this.view instanceof SurfingView || this.view instanceof SurfingIframeView)) {
-							app.workspace.setActiveLeaf(this);
-						}
-					}
-				},
-			})
-		);
-
-		this.register(
-			around(Workspace.prototype, {
-				setActiveLeaf: (next) => {
-					return function (leaf: WorkspaceLeaf, params?: any) {
-						const setting = app.plugins.getPlugin("surfing").settings;
-
-						if (leaf.view?.getViewType() === "canvas" && leaf.view.contentEl?.querySelector(".wb-view-content") && leaf.getRoot()?.type === "floating" && setting.useWebview) leaf?.rebuildView();
-						if (leaf.view?.getViewType() === "canvas" && leaf.view.contentEl?.querySelector(".canvas-link") && leaf.getRoot()?.type === "split" && setting.useWebview) leaf?.rebuildView();
-
-						if (leaf.view instanceof SurfingView && leaf?.getRoot()?.type === "floating") {
-							leaf.setViewState({
-								type: WEB_BROWSER_IFRAME_VIEW_ID,
-								active: true,
-								state: {
-									url: leaf.view.getState()?.url
-								}
-							});
-							return;
-						}
-						if (leaf?.view instanceof SurfingIframeView && leaf?.getRoot()?.type === "split") {
-							leaf.setViewState({
-								type: WEB_BROWSER_VIEW_ID,
-								active: true,
-								state: {
-									url: leaf.view.getState()?.url
-								}
-							});
-							return;
-						}
-						return next.call(this, leaf, params);
-					};
-				},
-				moveLeafToPopout: (old) => {
-					return function (leaf: WorkspaceLeaf, data?: any) {
-						const result = old.call(this, leaf, data);
-						app.workspace.setActiveLeaf(leaf);
-						return result;
-					};
-				},
-			})
-		)
-	}
-
 	// Used for patching Obsidian canvas before its api released.
 	private patchCanvasNode() {
 		const patchUrlNode = () => {
@@ -686,7 +601,6 @@ export default class SurfingPlugin extends Plugin {
 						next.call(this);
 
 						// TODO: Move this with surfing view's constructor to prevent multiple htmlelement
-						if (this.canvas.view.leaf.getRoot().type === "floating") return;
 						if (this.canvas.isDragging) return;
 
 						new InNodeWebView(this).onload();
@@ -721,15 +635,10 @@ export default class SurfingPlugin extends Plugin {
 				selectOnly: (next) =>
 					function (e: any) {
 						next.call(this, e);
-						if (e.canvas.view.leaf.getRoot().type === "floating") return;
 						if (e.url !== undefined && !e.contentEl.classList.contains("wb-view-content")) {
 							setTimeout(() => {
 								e.render();
 							}, 0);
-							// TODO: Support alwayskeeploaded
-							e.addEventListener("focus", () => {
-								e.alwaysKeepLoaded = true;
-							})
 						}
 					},
 			});

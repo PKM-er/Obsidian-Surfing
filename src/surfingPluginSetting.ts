@@ -1,12 +1,12 @@
 import {
-    App,
-    DropdownComponent,
-    Notice,
-    Platform,
-    PluginSettingTab,
-    SearchComponent,
-    setIcon,
-    Setting
+	App,
+	DropdownComponent,
+	Notice,
+	Platform,
+	PluginSettingTab,
+	SearchComponent,
+	setIcon,
+	Setting
 } from "obsidian";
 import { t } from "./translations/helper";
 import { clipboard } from "electron";
@@ -31,7 +31,7 @@ export interface SurfingSettings {
 	useCustomIcons: boolean;
 	useWebview: boolean;
 	useIconList: boolean;
-  darkMode: boolean;
+	darkMode: boolean;
 	bookmarkManager: {
 		openBookMark: boolean;
 		pagination: string
@@ -41,8 +41,8 @@ export interface SurfingSettings {
 }
 
 export interface SearchEngine {
-    name: string;
-    url: string;
+	name: string;
+	url: string;
 }
 
 const defaultCategory = `计算机
@@ -80,7 +80,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	useCustomIcons: false,
 	useWebview: false,
 	useIconList: true,
-  darkMode: false,
+	darkMode: false,
 	bookmarkManager: {
 		openBookMark: false,
 		pagination: "12",
@@ -90,34 +90,34 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 }
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
-    {
-        name: 'google',
-        url: 'https://www.google.com/search?q=',
-    },
-    {
-        name: 'bing',
-        url: 'https://www.bing.com/search?q=',
-    },
-    {
-        name: 'duckduckgo',
-        url: 'https://duckduckgo.com/?q=',
-    },
-    {
-        name: 'yahoo',
-        url: 'https://search.yahoo.com/search?p=',
-    },
-    {
-        name: 'baidu',
-        url: 'https://www.baidu.com/s?wd=',
-    },
-    {
-        name: 'yandex',
-        url: 'https://yandex.com/search/?text=',
-    },
-    {
-        name: 'wikipeida',
-        url: 'https://en.wikipedia.org/w/index.php?search=',
-    }
+	{
+		name: 'google',
+		url: 'https://www.google.com/search?q=',
+	},
+	{
+		name: 'bing',
+		url: 'https://www.bing.com/search?q=',
+	},
+	{
+		name: 'duckduckgo',
+		url: 'https://duckduckgo.com/?q=',
+	},
+	{
+		name: 'yahoo',
+		url: 'https://search.yahoo.com/search?p=',
+	},
+	{
+		name: 'baidu',
+		url: 'https://www.baidu.com/s?wd=',
+	},
+	{
+		name: 'yandex',
+		url: 'https://yandex.com/search/?text=',
+	},
+	{
+		name: 'wikipeida',
+		url: 'https://en.wikipedia.org/w/index.php?search=',
+	}
 ];
 
 const tabNameToTabIconId: Record<string, string> = {
@@ -128,13 +128,13 @@ const tabNameToTabIconId: Record<string, string> = {
 };
 
 export class DropdownRecord {
-    public value: string;
-    public description: string;
+	public value: string;
+	public description: string;
 
-    constructor(value: string, description: string) {
-        this.value = value;
-        this.description = description;
-    }
+	constructor(value: string, description: string) {
+		this.value = value;
+		this.description = description;
+	}
 }
 
 export class SurfingSettingTab extends PluginSettingTab {
@@ -369,6 +369,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 	private generateThemeSettings(tabName: string, wbContainerEl: HTMLElement): void {
 		this.useIconList(tabName, wbContainerEl);
+		this.addDarkMode(tabName, wbContainerEl);
 		this.addMyIcons(tabName, wbContainerEl);
 	}
 
@@ -722,22 +723,22 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 	}
-  
-  private addDarkMode(tabName: string, wbContainerEl: HTMLElement) {
-        const settingName = t("Toggle Dark Mode");
-        const setting = new Setting(wbContainerEl)
-            .setName(settingName)
-            .addToggle((toggle) => {
-                toggle
-                    .setValue(this.plugin.settings.darkMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.darkMode = value;
-                        this.applySettingsUpdate()
-                    })
-            })
 
-        this.addSettingToMasterSettingsList(tabName, setting.settingEl, "theme surfing")
-    }
+	private addDarkMode(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = t("Toggle Dark Mode");
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.darkMode)
+					.onChange(async (value) => {
+						this.plugin.settings.darkMode = value;
+						this.applySettingsUpdate()
+					})
+			})
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, "theme surfing")
+	}
 
 	private addMyIcons(tabName: string, wbContainerEl: HTMLElement) {
 		let settingName = t("Working On, Not Available Now");
