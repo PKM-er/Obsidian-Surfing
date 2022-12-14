@@ -128,7 +128,7 @@ export class SurfingView extends ItemView {
 	createWebview = () => {
 		this.contentEl.empty();
 
-		let doc = this.contentEl.doc;
+		const doc = this.contentEl.doc;
 		this.webviewEl = doc.createElement('webview');
 		this.webviewEl.setAttribute("allowpopups", "");
 		this.webviewEl.addClass("wb-frame");

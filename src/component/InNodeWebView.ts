@@ -54,7 +54,7 @@ export class InNodeWebView {
 	}
 
 	appendWebView() {
-		let doc = this.contentEl.doc;
+		const doc = this.contentEl.doc;
 		this.webviewEl = doc.createElement('webview');
 		this.webviewEl.setAttribute("allowpopups", "");
 		this.webviewEl.addClass("wb-frame");

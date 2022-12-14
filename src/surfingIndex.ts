@@ -11,9 +11,6 @@ import {
 	Plugin, requireApiVersion,
 	setIcon,
 	TFile,
-	ViewState,
-	Workspace,
-	WorkspaceLeaf,
 } from "obsidian";
 import { HeaderBar } from "./component/HeaderBar";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "./surfingView";
