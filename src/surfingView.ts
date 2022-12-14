@@ -314,7 +314,6 @@ export class SurfingView extends ItemView {
 
 		this.webviewEl.addEventListener("page-title-updated", (event: any) => {
 			if (this.omnisearchEnabled) this.updateSearchBox();
-			console.log("page-title-updated", event);
 			this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
 			this.currentTitle = event.title;
 		});
