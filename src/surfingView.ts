@@ -253,7 +253,7 @@ export class SurfingView extends ItemView {
 				}
 				webContents.executeJavaScript(`
 					window.addEventListener('dragstart', (e) => {
-						if(e.ctrlKey) {
+						if(e.ctrlKey || e.metaKey) {
 							e.dataTransfer.clearData();
 							const selectionText = document.getSelection().toString();
 							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
@@ -314,7 +314,6 @@ export class SurfingView extends ItemView {
 
 		this.webviewEl.addEventListener("page-title-updated", (event: any) => {
 			if (this.omnisearchEnabled) this.updateSearchBox();
-			console.log("page-title-updated", event);
 			this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
 			this.currentTitle = event.title;
 		});
