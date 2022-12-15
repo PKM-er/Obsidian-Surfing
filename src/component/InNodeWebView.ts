@@ -58,7 +58,6 @@ export class InNodeWebView {
 		this.webviewEl = doc.createElement('webview');
 		this.webviewEl.setAttribute("allowpopups", "");
 		this.webviewEl.addClass("wb-frame");
-		this.contentEl.appendChild(this.webviewEl);
 
 		if (this.currentUrl) this.webviewEl.setAttribute("src", this.currentUrl);
 		else this.webviewEl.setAttribute("src", this.node.url);
@@ -276,5 +275,11 @@ export class InNodeWebView {
 				this.appendWebView();
 			}
 		});
+
+		doc.contains(this.contentEl) ? this.contentEl.appendChild(this.webviewEl) : this.contentEl.onNodeInserted(() => {
+			this.contentEl.doc === doc ? this.contentEl.appendChild(this.webviewEl) : this.appendWebView()
+		})
+
+
 	}
 }
