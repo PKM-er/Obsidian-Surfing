@@ -1,4 +1,4 @@
-import { moment } from "obsidian";
+import { moment, Notice } from "obsidian";
 import {
 	Button,
 	Checkbox,
@@ -6,6 +6,7 @@ import {
 	ConfigProvider,
 	Input,
 	Modal,
+	Popconfirm,
 	Row,
 	Space,
 	Table,
@@ -13,12 +14,13 @@ import {
 	theme,
 } from "antd";
 import React, { KeyboardEventHandler, useState } from "react";
-import { generateColor, generateTagsOptions, stringToCategory } from "./utils";
-import type { Bookmark, CategoryType } from "../../types/bookmark";
+import { generateColor, generateTagsOptions, parseList } from "./utils";
+import type { Bookmark } from "../../types/bookmark";
 import { ColumnsType } from "antd/es/table";
 import { CheckboxValueType } from "antd/es/checkbox/Group";
 import { BookmarkForm } from "./BookmarkForm";
 import SurfingPlugin from "src/surfingIndex";
+import { saveJson } from "src/utils/json";
 
 const columnOptions = [
 	"name",
@@ -42,7 +44,6 @@ const emptyBookmark = {
 
 interface Props {
 	bookmarks: Bookmark[];
-	categories: CategoryType[];
 	plugin: SurfingPlugin;
 }
 
@@ -87,8 +88,9 @@ export default function BookmarkManager(props: Props) {
 				}
 				return <p>{value.join(">")}</p>;
 			},
-			filters: stringToCategory(
-				props.plugin.settings.bookmarkManager.category
+			filters: parseList(
+				props.plugin.settings.bookmarkManager.category,
+				0
 			) as any,
 			onFilter: (value, record) => {
 				return record.category.includes(value as string);
@@ -134,6 +136,7 @@ export default function BookmarkManager(props: Props) {
 		},
 		{
 			title: "Action",
+			dataIndex: "action",
 			key: "action",
 			render: (text, record) => (
 				<Space size="middle">
@@ -145,13 +148,17 @@ export default function BookmarkManager(props: Props) {
 					>
 						Edit
 					</a>
-					<a
-						onClick={() => {
+					<Popconfirm
+						title="Are you sure to delete this task?"
+						onConfirm={() => {
 							handleDeleteBookmark(record);
 						}}
+						onCancel={() => {}}
+						okText="Yes"
+						cancelText="No"
 					>
-						Delete
-					</a>
+						<a href="#">Delete</a>
+					</Popconfirm>
 				</Space>
 			),
 		},
@@ -177,7 +184,7 @@ export default function BookmarkManager(props: Props) {
 	const handleSearch = () => {
 		const value = searchWord;
 		if (value === "") {
-			setBookmarks(props.bookmarks);
+			setBookmarks(bookmarks);
 		} else {
 			const filteredBookmarks = bookmarks.filter((bookmark) => {
 				return (
@@ -196,7 +203,7 @@ export default function BookmarkManager(props: Props) {
 		event
 	) => {
 		if (event.key === "Escape") {
-			setBookmarks(props.bookmarks);
+			setBookmarks(bookmarks);
 			setSearchWord("");
 		}
 	};
@@ -206,16 +213,35 @@ export default function BookmarkManager(props: Props) {
 		setModalVisible(true);
 	};
 
-	const handleDeleteBookmark = (oldBookmark: Bookmark) => {
-		bookmarks.some((bookmark, index) => {
+	const handleDeleteBookmark = async (oldBookmark: Bookmark) => {
+		let bookmarkIndex: number | null = null;
+		const isBookmarkExist = bookmarks.some((bookmark, index) => {
 			if (bookmark.id === oldBookmark.id) {
-				const newBookmarks = JSON.parse(JSON.stringify(bookmarks));
-				newBookmarks.splice(index, 1);
-				setBookmarks(newBookmarks);
+				bookmarkIndex = index;
+				return true;
 			} else {
-				console.log("Can't find this BookMark! data seems error!");
+				return false;
 			}
 		});
+		if (isBookmarkExist && bookmarkIndex != null) {
+			try {
+                // console.log(bookmarkIndex, oldBookmark, bookmarks)
+                const newBookmarks = [...bookmarks]
+				newBookmarks.splice(bookmarkIndex, 1);
+                // console.log("newBookmarks", newBookmarks)
+				setBookmarks(newBookmarks);
+                // console.log("modified:", bookmarks)
+				await saveJson({ bookmarks: newBookmarks });
+                new Notice("Delete success!")
+			} catch (err) {
+				new Notice("Bookmark save to Json error");
+			}
+		} else if(!isBookmarkExist){
+			new Notice("Can't find this Bookmark! data seems error!");
+			console.log("Can't find this Bookmark! data seems error!");
+		}else{
+            new Notice('Delete bookmark failed!')
+        }
 	};
 
 	const handleModalOk = () => {
@@ -226,23 +252,30 @@ export default function BookmarkManager(props: Props) {
 		setCurrentBookmark(emptyBookmark);
 		setModalVisible(false);
 	};
-	const handleSaveBookmark = (newBookmark: Bookmark) => {
-		const isBookmarkExist = props.bookmarks.some((bookmark, index) => {
-			if (bookmark.url === newBookmark.url) {
-				bookmarks[index] = newBookmark;
-				setBookmarks(bookmarks);
-				setModalVisible(false);
-				setCurrentBookmark(emptyBookmark);
+	const handleSaveBookmark = async (newBookmark: Bookmark) => {
+		let newBookmarkIndex: null | number = null;
+		const isBookmarkExist = bookmarks.some((bookmark, index) => {
+			if (bookmark.id === newBookmark.id) {
+				newBookmarkIndex = index;
 				return true;
 			} else {
 				return false;
 			}
 		});
 
-		if (!isBookmarkExist) {
-			bookmarks.push(newBookmark);
+		if (isBookmarkExist && newBookmarkIndex != null) {
+			bookmarks.splice(newBookmarkIndex, 1, newBookmark);
 			setBookmarks(bookmarks);
 			setModalVisible(false);
+			setCurrentBookmark(emptyBookmark);
+			await saveJson({ bookmarks });
+		} else if (!isBookmarkExist) {
+			bookmarks.unshift(newBookmark);
+			setBookmarks(bookmarks);
+			setModalVisible(false);
+			await saveJson({ bookmarks });
+		} else {
+			console.log("Error! Cant't find the bookmark to save!");
 		}
 	};
 	return (
@@ -286,13 +319,13 @@ export default function BookmarkManager(props: Props) {
 				<Table
 					dataSource={bookmarks}
 					key={new Date().toISOString()}
+					rowKey={(record) => record.id}
 					columns={columns}
 					pagination={{
 						defaultPageSize: Number(
 							props.plugin.settings.bookmarkManager.pagination
 						),
 					}}
-					rowKey="id"
 				></Table>
 				<Modal
 					title="Bookmark"
@@ -307,7 +340,10 @@ export default function BookmarkManager(props: Props) {
 						bookmark={currentBookmark}
 						options={options}
 						handleSaveBookmark={handleSaveBookmark}
-						categories={props.categories}
+						categories={parseList(
+							props.plugin.settings.bookmarkManager.category,
+							0
+						)}
 					></BookmarkForm>
 				</Modal>
 			</ConfigProvider>

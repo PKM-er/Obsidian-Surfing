@@ -4,13 +4,12 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import BookmarkManager from "./component/BookmarkManager/BookmarkManager";
 import { initializeJson, loadJson } from "./utils/json";
-import { Bookmark, CategoryType } from "./types/bookmark";
+import { Bookmark } from "./types/bookmark";
 
 export const WEB_BROWSER_BOOKMARK_MANAGER_ID = "surfing-bookmark-manager";
 
 export class SurfingBookmarkManagerView extends ItemView {
 	private bookmarkData: Bookmark[] = [];
-	private categoryData: CategoryType[] = [];
 
 	constructor(leaf: WorkspaceLeaf, public plugin: SurfingPlugin) {
 		super(leaf);
@@ -31,15 +30,13 @@ export class SurfingBookmarkManagerView extends ItemView {
 
 	protected async onOpen(): Promise<void> {
 		try {
-			const { bookmarks, categories } = await loadJson();
+			const { bookmarks } = await loadJson();
 			this.bookmarkData = bookmarks;
-			this.categoryData = categories;
 		} catch (e) {
 			if (this.bookmarkData.length === 0) {
 				await initializeJson();
-				const { bookmarks, categories } = await loadJson();
+				const { bookmarks } = await loadJson();
 				this.bookmarkData = bookmarks;
-				this.categoryData = categories;
 			}
 		}
 
@@ -47,7 +44,6 @@ export class SurfingBookmarkManagerView extends ItemView {
 			<React.StrictMode>
 				<BookmarkManager
 					bookmarks={this.bookmarkData}
-					categories={this.categoryData}
 					plugin={this.plugin}
 				/>
 			</React.StrictMode>

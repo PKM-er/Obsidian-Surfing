@@ -91,53 +91,42 @@ export async function fetchWebTitleAndDescription(url: string): Promise<{ title:
 	return nonElectronGetPageTitle(url);
 }
 
-export function stringToCategory(categoryString: string): CategoryType[] {
-	const categoryOptions: CategoryType[] = []
-	let current = categoryOptions
-	let indent = 0
+export function parseList(listStr: string, level: number): CategoryType[]{
+    // 定义一个数组来存储解析后的列表项
+    const items: any[] = [];
 
-	categoryString.split("\n").forEach((line) => {
-		const currentIndent = line.search(/\S/)
-		const currentNode = line.trim()
-		if (currentIndent > indent) {
-			current.push({
-				label: currentNode,
-				value: currentNode,
-				text: currentNode,
-				children: []
-			})
-			// console.log(current)
-			current = current[current.length - 1].children
-			indent = currentIndent
-		} else if (currentIndent === indent) {
-			// console.log(current, currentNode, {
-			//     label: currentNode,
-			//     value: currentNode,
-			//     text: currentNode,
-			//     children: []
-			// }, indent)
-			current.push({
-				label: currentNode,
-				value: currentNode,
-				text: currentNode,
-				children: []
-			})
-			// console.log(current)
-			current = current[current.length - 1].children
-		} else {
-			while (currentIndent < indent) {
-				current = categoryOptions
-				indent -= 2
-			}
-			current.push({
-				label: currentNode,
-				value: currentNode,
-				text: currentNode,
-				children: []
-			})
-			// console.log(current)
-			current = current[current.length - 1].children
-		}
-	})
-	return categoryOptions
+    // 使用正则表达式匹配所有列表项
+    const regex = /^(\s*)-\s(.+)/gm;
+    let match;
+    while ((match = regex.exec(listStr)) !== null) {
+        // 获取列表项前面的缩进空格
+        const indent = match[1];
+        // 获取列表项文本
+        const label = match[2];
+
+        // 计算列表项的缩进层级
+        const itemLevel = indent.length / 2;
+
+        // 如果列表项的缩进层级比当前层级更高，则表示该列表项是当前列表项的子项
+        if (itemLevel > level) {
+            // 将列表项添加到当前列表项的 children 属性中
+            const item = items[items.length - 1];
+            if (!item.children) {
+                item.children = [];
+            }
+            item.children.push({ label, value: label, text: label });
+        } else {
+            // 如果列表项的缩进层级和当前层级相同，则表示该列表项与当前列表项并列，应该将它添加到当前列表项的同级
+            if (itemLevel === level) {
+                items.push({ label, value: label, text: label });
+            } else {
+                // 如果列表项的缩进层级比当前层级更低，则表示该列表项属于上一级列表，应该将它添加到上一级列表中
+                const parentLevel = itemLevel - 1;
+                // 递归调用 parseList 函数，并将列表项的子项作为参数传入
+                const subItems = parseList(listStr.slice(match.index), parentLevel);
+                items.push(...subItems);
+            }
+        }
+    }
+    return items;
 }
