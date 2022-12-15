@@ -358,8 +358,11 @@ export class SurfingView extends ItemView {
 		// 	});
 		// })
 
+		doc.contains(this.contentEl) ? this.contentEl.appendChild(this.webviewEl) : this.contentEl.onNodeInserted(() => {
+			this.contentEl.doc === doc ? this.contentEl.appendChild(this.webviewEl) : this.createWebview()
+		})
 
-		this.initHeaderButtons();
+
 	}
 
 	async onOpen() {
@@ -387,6 +390,7 @@ export class SurfingView extends ItemView {
 		}
 
 		this.createWebview();
+		this.initHeaderButtons();
 	}
 
 	initHeaderButtons() {
