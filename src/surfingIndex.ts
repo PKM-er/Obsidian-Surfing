@@ -600,7 +600,7 @@ export default class SurfingPlugin extends Plugin {
 						// TODO: Move this with surfing view's constructor to prevent multiple htmlelement
 						if (this.canvas.isDragging) return;
 
-						new InNodeWebView(this).onload();
+						new InNodeWebView(this, this?.canvas).onload();
 					}
 				},
 			});

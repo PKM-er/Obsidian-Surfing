@@ -9,14 +9,16 @@ import { getUrl } from "../utils/url";
 export class InNodeWebView {
 	private contentEl: HTMLElement;
 	private webviewEl: HTMLElement;
+	private canvas: any;
 	private node: any;
 	private searchBarEl: InPageHeaderBar;
 
 	private currentUrl: string;
 
-	constructor(node: any) {
+	constructor(node: any, canvas: any) {
 		this.contentEl = node.contentEl;
 		this.node = node;
+		this.canvas = canvas;
 	}
 
 	onload() {
@@ -69,10 +71,33 @@ export class InNodeWebView {
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
-				SurfingView.spawnWebBrowserView(true, { url: event.url });
-				return {
-					action: "allow",
+				if (event.disposition !== "foreground-tab") {
+					SurfingView.spawnWebBrowserView(true, { url: event.url });
+					return {
+						action: "allow",
+					}
 				}
+
+				if (this.canvas) {
+					const linkNode = this.canvas.createLinkNode(event.url, {
+						x: this.node.x + this.node.width + 20,
+						y: this.node.y
+					}, {
+						height: this.node.height,
+						width: this.node.width
+					});
+					this.canvas.deselectAll();
+					this.canvas.addNode(linkNode);
+
+					this.canvas.select(linkNode);
+					this.canvas.zoomToSelection();
+					this.canvas.requestSave();
+
+					return {
+						action: "allow",
+					}
+				}
+
 			});
 
 			try {
@@ -256,6 +281,7 @@ export class InNodeWebView {
 
 		this.webviewEl.addEventListener("did-navigate-in-page", (event: any) => {
 			const oldData = this.node.getData();
+
 			if (event.url.contains("contacts.google.com/widget") || (this.node.canvas.isDragging && oldData.url === event.url)) {
 				// @ts-ignore
 				const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
