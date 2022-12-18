@@ -358,7 +358,7 @@ export default class SurfingPlugin extends Plugin {
 		})
 
 		this.addCommand({
-			id: 'toggle dark mode',
+			id: 'toggle-dark-mode',
 			name: t('Toggle Dark Mode'),
 			callback: async () => {
 				this.settings.darkMode = !this.settings.darkMode;
