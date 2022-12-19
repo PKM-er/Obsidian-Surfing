@@ -3,7 +3,6 @@ import { clipboard, remote } from "electron";
 import { SurfingView } from "../surfingView";
 import { t } from "../translations/helper";
 import { FileSystemAdapter, moment } from "obsidian";
-import { getUrl } from "../utils/url";
 
 export class EmbededWebView {
 	private contentEl: HTMLElement;
