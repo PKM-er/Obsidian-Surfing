@@ -1,58 +1,40 @@
-import { InPageHeaderBar } from "./InPageHeaderBar";
 // @ts-ignore
 import { clipboard, remote } from "electron";
 import { SurfingView } from "../surfingView";
 import { t } from "../translations/helper";
-import { moment } from "obsidian";
+import { FileSystemAdapter, moment } from "obsidian";
 import { getUrl } from "../utils/url";
 
-export class InNodeWebView {
+export class EmbededWebView {
 	private contentEl: HTMLElement;
 	private webviewEl: HTMLElement;
-	private canvas: any;
 	private node: any;
-	private searchBarEl: InPageHeaderBar;
+	private file: any;
+	private menu: any;
 
 	private currentUrl: string;
 
-	constructor(node: any, canvas?: any) {
-		this.contentEl = node.contentEl;
+	constructor(node: any, file: any) {
+		this.contentEl = node.containerEl;
 		this.node = node;
-		this.canvas = canvas;
+		this.file = file;
 	}
 
-	onload() {
-		this.contentEl.empty();
+	load() {
+		// this.contentEl.empty();
 
-		this.appendSearchBar();
 		this.appendWebView();
-
-		this.contentEl.addClass("wb-view-content");
-
+		this.contentEl.addClass("wb-view-content-embeded");
 	}
 
-	appendSearchBar() {
-		this.searchBarEl = new InPageHeaderBar(this.node, this.node.url);
-		this.searchBarEl.onload();
-		this.currentUrl = this.node.url;
-		this.searchBarEl.setSearchBarUrl(this.node.url);
+	unload() {
+		this.contentEl.removeClass("wb-view-content-embeded");
+		// this.contentEl.empty();
+	}
 
-		this.searchBarEl.addOnSearchBarEnterListener((url: string) => {
-			const finalURL = getUrl(url);
-			if (finalURL) this.currentUrl = finalURL;
-			else this.currentUrl = url;
-
-			this.webviewEl.setAttribute("src", this.currentUrl);
-			this.searchBarEl.setSearchBarUrl(this.currentUrl);
-
-			const oldData = this.node.getData();
-			if (oldData.url === this.currentUrl) return;
-			oldData.url = this.currentUrl;
-			this.node.setData(oldData);
-			this.node.canvas.requestSave();
-
-			this.node.render();
-		});
+	loadFile(file: any) {
+		// this.file = file;
+		this.load();
 	}
 
 	appendWebView() {
@@ -61,8 +43,11 @@ export class InNodeWebView {
 		this.webviewEl.setAttribute("allowpopups", "");
 		this.webviewEl.addClass("wb-frame");
 
+		const adapter = app.vault.adapter as FileSystemAdapter;
+		this.currentUrl = "file:///" + (adapter.getBasePath() + "/" + this.file.path).toString().replace(/\s/g, "%20");
+
 		if (this.currentUrl) this.webviewEl.setAttribute("src", this.currentUrl);
-		else this.webviewEl.setAttribute("src", this.node.url);
+		else this.webviewEl.setAttribute("src", this.file.path);
 		// this.node.placeholderEl.innerText = this.node.url;
 
 		this.webviewEl.addEventListener("dom-ready", (event: any) => {
@@ -78,25 +63,25 @@ export class InNodeWebView {
 					}
 				}
 
-				if (this.canvas) {
-					const linkNode = this.canvas.createLinkNode(event.url, {
-						x: this.node.x + this.node.width + 20,
-						y: this.node.y
-					}, {
-						height: this.node.height,
-						width: this.node.width
-					});
-					this.canvas.deselectAll();
-					this.canvas.addNode(linkNode);
-
-					this.canvas.select(linkNode);
-					this.canvas.zoomToSelection();
-					this.canvas.requestSave();
-
-					return {
-						action: "allow",
-					}
-				}
+				// if (this.canvas) {
+				// 	const linkNode = this.canvas.createLinkNode(event.url, {
+				// 		x: this.node.x + this.node.width + 20,
+				// 		y: this.node.y
+				// 	}, {
+				// 		height: this.node.height,
+				// 		width: this.node.width
+				// 	});
+				// 	this.canvas.deselectAll();
+				// 	this.canvas.addNode(linkNode);
+				//
+				// 	this.canvas.select(linkNode);
+				// 	this.canvas.zoomToSelection();
+				// 	this.canvas.requestSave();
+				//
+				// 	return {
+				// 		action: "allow",
+				// 	}
+				// }
 
 			});
 
@@ -149,11 +134,11 @@ export class InNodeWebView {
 				event.preventDefault();
 
 				const { Menu, MenuItem } = remote;
-				const menu = new Menu();
+				this.menu = new Menu();
 				// Basic Menu For Webview
 				// TODO: Support adding different commands to the menu.
 				// Possible to use Obsidian Default API?
-				menu.append(
+				this.menu.append(
 					new MenuItem(
 						{
 							label: t('Open Current URL In External Browser'),
@@ -164,7 +149,7 @@ export class InNodeWebView {
 					)
 				);
 
-				menu.append(
+				this.menu.append(
 					new MenuItem(
 						{
 							label: 'Open Current URL In Surfing',
@@ -178,8 +163,8 @@ export class InNodeWebView {
 				if (params.selectionText) {
 					const pluginSettings = app.plugins.getPlugin("surfing").settings;
 
-					menu.append(new MenuItem({ type: 'separator' }));
-					menu.append(new MenuItem({
+					this.menu.append(new MenuItem({ type: 'separator' }));
+					this.menu.append(new MenuItem({
 						label: t('Search Text'), click: function () {
 							try {
 								SurfingView.spawnWebBrowserView(true, { url: params.selectionText });
@@ -189,8 +174,8 @@ export class InNodeWebView {
 							}
 						}
 					}));
-					menu.append(new MenuItem({ type: 'separator' }));
-					menu.append(new MenuItem({
+					this.menu.append(new MenuItem({ type: 'separator' }));
+					this.menu.append(new MenuItem({
 						label: t('Copy Plain Text'), click: function () {
 							try {
 								webContents.copy();
@@ -201,7 +186,7 @@ export class InNodeWebView {
 						}
 					}));
 					const highlightFormat = pluginSettings.highlightFormat;
-					menu.append(new MenuItem({
+					this.menu.append(new MenuItem({
 						label: t('Copy Link to Highlight'), click: function () {
 							try {
 								// eslint-disable-next-line no-useless-escape
@@ -226,11 +211,11 @@ export class InNodeWebView {
 						}
 					}));
 
-					menu.popup(webContents);
+					this.menu.popup(webContents);
 				}
 
 				if (params.pageURL?.contains("bilibili.com/")) {
-					menu.append(new MenuItem({
+					this.menu.append(new MenuItem({
 						label: t('Copy Video Timestamp'), click: function () {
 							try {
 								webContents.executeJavaScript(`
@@ -263,36 +248,23 @@ export class InNodeWebView {
 				}
 
 				setTimeout(() => {
-					menu.popup(webContents);
+					this.menu.popup(webContents);
 					// Dirty workaround for showing the menu, when currentUrl is not the same as the url of the webview
 					if (this.node.url !== params.pageURL && !params.selectionText) {
-						menu.popup(webContents);
+						this.menu.popup(webContents);
 					}
 				}, 0)
 			}, false);
 		});
 
 		this.webviewEl.addEventListener("will-navigate", (event: any) => {
-			const oldData = this.node.getData();
-			oldData.url = event.url;
-			this.node.setData(oldData);
-			this.node.canvas.requestSave();
+			this.currentUrl = event.url;
+			// this.webviewEl.setAttribute("src", event.url);
 		});
 
 		this.webviewEl.addEventListener("did-navigate-in-page", (event: any) => {
-			const oldData = this.node.getData();
-
-			if (event.url.contains("contacts.google.com/widget") || (this.node.canvas.isDragging && oldData.url === event.url)) {
-				// @ts-ignore
-				const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
-				webContents.stop();
-				return;
-			}
-			if (oldData.url === event.url) return;
-			oldData.url = event.url;
-			oldData.alwaysKeepLoaded = true;
-			this.node.setData(oldData);
-			this.node.canvas.requestSave();
+			this.currentUrl = event.url;
+			this.webviewEl.setAttribute("src", event.url);
 		});
 
 		this.webviewEl.addEventListener('destroyed', () => {
