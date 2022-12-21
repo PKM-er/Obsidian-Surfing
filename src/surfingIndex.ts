@@ -25,6 +25,7 @@ import { InPageIconList } from "./component/InPageIconList";
 import { InNodeWebView } from "./component/InNodeWebView";
 import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
 import { SurfingBookmarkManagerView, WEB_BROWSER_BOOKMARK_MANAGER_ID } from './surfingBookmarkManager'
+import { EmbededWebView } from "./component/EmbededWebView";
 
 
 export default class SurfingPlugin extends Plugin {
@@ -40,7 +41,6 @@ export default class SurfingPlugin extends Plugin {
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
 		if (this.settings.bookmarkManager.openBookMark) this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this));
-
 
 		try {
 			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
@@ -69,6 +69,7 @@ export default class SurfingPlugin extends Plugin {
 		if (requireApiVersion("1.1.0") && this.settings.useWebview) {
 			this.patchCanvasNode();
 			this.patchCanvas();
+			this.registerEmbededHTML();
 		}
 		if (this.settings.bookmarkManager.openBookMark) {
 			this.registerRibbon();
@@ -85,7 +86,10 @@ export default class SurfingPlugin extends Plugin {
 		this.updateEmptyLeaves(true);
 
 		// Refresh all Canvas to make sure they don't contain webview anymore.
-		if (requireApiVersion("1.1.0") && this.settings.useWebview) this.refreshAllRelatedView();
+		if (requireApiVersion("1.1.0") && this.settings.useWebview) {
+			this.refreshAllRelatedView();
+			this.unRegisterEmbededHTML();
+		}
 	}
 
 	private registerRibbon() {
@@ -600,7 +604,7 @@ export default class SurfingPlugin extends Plugin {
 						// TODO: Move this with surfing view's constructor to prevent multiple htmlelement
 						if (this.canvas.isDragging) return;
 
-						new InNodeWebView(this).onload();
+						new InNodeWebView(this, this?.canvas).onload();
 					}
 				},
 			});
@@ -659,6 +663,24 @@ export default class SurfingPlugin extends Plugin {
 		for (const leaf of app.workspace.getLeavesOfType("canvas")) {
 			if (leaf) leaf.rebuildView();
 		}
+	}
+
+	private registerEmbededHTML() {
+		// @ts-expect-error
+		app.embedRegistry.registerExtension("html", (e, t, n) => {
+			return new EmbededWebView(e, t);
+		});
+		// @ts-expect-error
+		app.embedRegistry.registerExtension("htm", (e, t, n) => {
+			return new EmbededWebView(e, t);
+		});
+	}
+
+	unRegisterEmbededHTML() {
+		// @ts-expect-error
+		app.embedRegistry.unregisterExtension("html");
+		// @ts-expect-error
+		app.embedRegistry.unregisterExtension("htm");
 	}
 
 	async loadSettings() {

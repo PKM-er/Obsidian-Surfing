@@ -151,8 +151,7 @@
 }
 
 .wb-btn {
-	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07))
-		drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
+	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
 }
 
 .theme-dark .wb-btn a {
@@ -256,11 +255,11 @@
 
 .setting-item-control .surfing-setting-textarea {
 	height: 400px;
-    width: 200px;
+	width: 200px;
 }
 
 .setting-item-control .surfing-setting-input {
-    width: 400px;
+	width: 400px;
 }
 
 .wb-about-icon .surfing {
@@ -309,8 +308,7 @@
 .wb-search-suggestion-container {
 	background-color: var(--color-base-10);
 	border-radius: var(--radius-l);
-	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07))
-		drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
+	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
 }
 
 .wb-search-suggestion {
@@ -328,14 +326,12 @@
 
 .wb-search-suggest-item:first-child.is-selected {
 	/*background-color: var(--color-base-30);*/
-	border-radius: var(--radius-l) var(--radius-l) var(--radius-m)
-		var(--radius-m);
+	border-radius: var(--radius-l) var(--radius-l) var(--radius-m) var(--radius-m);
 }
 
 .wb-search-suggest-item:last-child.is-selected {
 	/*background-color: var(--color-base-30);*/
-	border-radius: var(--radius-m) var(--radius-m) var(--radius-l)
-		var(--radius-l);
+	border-radius: var(--radius-m) var(--radius-m) var(--radius-l) var(--radius-l);
 }
 
 .wb-search-suggest-item {
@@ -450,8 +446,7 @@ input[type="text"].wb-page-search-bar-input:focus-visible {
 
 .theme-light .wb-content-list-text {
 	background-color: var(--color-base-20);
-	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07))
-		drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
+	filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));
 }
 
 .theme-dark .wb-content-list-text {
@@ -541,7 +536,7 @@ div[data-type^="empty"] .wb-bookmark-bar {
 }
 
 div[data-type^="empty"].workspace-leaf-content
-	.view-content.mod-wb-bookmark-bar {
+.view-content.mod-wb-bookmark-bar {
 	padding: unset;
 	overflow: auto;
 }
@@ -587,4 +582,8 @@ div[data-type^="empty"].workspace-leaf-content
 
 .wb-bookmark-manager-entry:hover {
 	background-color: var(--color-base-30);
+}
+
+.wb-view-content-embeded {
+	height: 500px;
 }
