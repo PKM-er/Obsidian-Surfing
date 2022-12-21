@@ -584,6 +584,6 @@ div[data-type^="empty"].workspace-leaf-content
 	background-color: var(--color-base-30);
 }
 
-.wb-view-content-embeded {
+.cm-scroller .wb-view-content-embeded {
 	height: 500px;
 }
