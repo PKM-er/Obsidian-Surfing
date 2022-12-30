@@ -72,7 +72,14 @@ export class SurfingView extends ItemView {
 					}
 				}
 			}
-			app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+
+			app.workspace.getLeaf(newLeaf).setViewState({
+				type: WEB_BROWSER_VIEW_ID,
+				active: state.active ?? true,
+				state
+			});
+
+
 			return;
 		}
 
@@ -147,7 +154,10 @@ export class SurfingView extends ItemView {
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
-				SurfingView.spawnWebBrowserView(true, { url: event.url });
+				SurfingView.spawnWebBrowserView(true, {
+					url: event.url,
+					active: event.disposition !== "background-tab",
+				});
 				return {
 					action: "allow",
 				}
@@ -694,4 +704,5 @@ export class SurfingView extends ItemView {
 
 class WebBrowserViewState {
 	url: string;
+	active?: boolean;
 }
