@@ -104,13 +104,27 @@ export class SurfingView extends ItemView {
 			leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass("same-tab");
 			return;
 		} else {
+			
+			if (state.active != undefined && state.active == false) {
+				app.workspace.getLeaf(newLeaf).setViewState({
+					type: WEB_BROWSER_VIEW_ID,
+					active: true,
+					state
+				});
+
+				return;
+			}
 
 			if (!app.workspace.getLeafById(leafId)) {
 				const newLeafID = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
 				if (newLeafID) {
 					localStorage.setItem("web-browser-leaf-id", newLeafID);
+
+
 					(app.workspace.getLeafById(newLeafID)?.view as SurfingView).navigate(state.url, true);
 					app.workspace.getLeafById(newLeafID)?.rebuildView();
+
+
 					return;
 				}
 			}
