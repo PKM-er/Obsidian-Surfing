@@ -33,6 +33,7 @@ export default class SurfingPlugin extends Plugin {
 	private onLayoutChangeEventRef: EventRef;
 	private applyURLDebounceTimer = 0;
 	private urlOpened = false;
+	private urlToOpen = "";
 
 	async onload() {
 		await this.loadSettings();
@@ -469,7 +470,7 @@ export default class SurfingPlugin extends Plugin {
 			this.urlOpened = true;
 			this.applyURLDebounceTimer = window.setTimeout(() => {
 				this.urlOpened = false;
-			}, 1000);
+			}, 300);
 		}
 
 		const currentUrlOpened = () => {
@@ -520,7 +521,7 @@ export default class SurfingPlugin extends Plugin {
 			this.urlOpened = true;
 			this.applyURLDebounceTimer = window.setTimeout(() => {
 				this.urlOpened = false;
-			}, 1000);
+			}, 300);
 		}
 
 		const currentUrlOpened = () => {
@@ -539,6 +540,8 @@ export default class SurfingPlugin extends Plugin {
 							if (url) {
 								if (event.ctrlKey) {
 									window.open(url, '_blank', 'external');
+
+									preventSameUrl();
 									return;
 								}
 
