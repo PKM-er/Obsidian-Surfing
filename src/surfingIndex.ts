@@ -31,6 +31,8 @@ import { EmbededWebView } from "./component/EmbededWebView";
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
 	private onLayoutChangeEventRef: EventRef;
+	private applyURLDebounceTimer = 0;
+	private urlOpened = false;
 
 	async onload() {
 		await this.loadSettings();
@@ -69,8 +71,8 @@ export default class SurfingPlugin extends Plugin {
 		if (requireApiVersion("1.1.0") && this.settings.useWebview) {
 			this.patchCanvasNode();
 			this.patchCanvas();
-			this.registerEmbededHTML();
 		}
+		this.registerEmbededHTML();
 		if (this.settings.bookmarkManager.openBookMark) {
 			this.registerRibbon();
 		}
@@ -462,6 +464,18 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	private patchWindowOpen() {
+		const preventSameUrl = () => {
+			clearTimeout(this.applyURLDebounceTimer);
+			this.urlOpened = true;
+			this.applyURLDebounceTimer = window.setTimeout(() => {
+				this.urlOpened = false;
+			}, 1000);
+		}
+
+		const currentUrlOpened = () => {
+			return this.urlOpened;
+		}
+
 		// Use monkey-around to match current need.
 		// @ts-ignore
 		const uninstaller = around(window, {
@@ -482,10 +496,12 @@ export default class SurfingPlugin extends Plugin {
 						return next(url, target, features);
 					}
 
-					// if (urlString && !target && !features) {
-					// 	console.log("Obsidian-Surfing: open url in web browser view");
-					// 	SurfingView.spawnWebBrowserView(true, { url: urlString });
-					// }
+					if (urlString && !target && !features && !currentUrlOpened()) {
+						console.log("Obsidian-Surfing: open url in web browser view");
+						SurfingView.spawnWebBrowserView(true, { url: urlString });
+
+						preventSameUrl();
+					}
 
 					return null;
 
@@ -499,11 +515,25 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	private patchMarkdownPreviewRenderer() {
+		const preventSameUrl = () => {
+			clearTimeout(this.applyURLDebounceTimer);
+			this.urlOpened = true;
+			this.applyURLDebounceTimer = window.setTimeout(() => {
+				this.urlOpened = false;
+			}, 1000);
+		}
+
+		const currentUrlOpened = () => {
+			return this.urlOpened;
+		}
+
 		const uninstaller = around(MarkdownPreviewRenderer as MarkdownPreviewRendererStatic, {
 			// @ts-ignore
 			registerDomEvents: (next) =>
 				function (el: HTMLElement, instance: { getFile?(): TFile; }, ...args: unknown[]) {
 					el?.on("click", ".external-link", (event: MouseEvent, targetEl: HTMLElement) => {
+						event.stopPropagation();
+						event.preventDefault();
 						if (targetEl) {
 							const url = targetEl.getAttribute("href");
 							if (url) {
@@ -511,8 +541,11 @@ export default class SurfingPlugin extends Plugin {
 									window.open(url, '_blank', 'external');
 									return;
 								}
-								if (checkIfWebBrowserAvailable(url)) {
+
+								if (checkIfWebBrowserAvailable(url) && !currentUrlOpened()) {
 									SurfingView.spawnWebBrowserView(true, { url: url });
+
+									preventSameUrl();
 								} else {
 									window.open(url, '_blank', 'external');
 								}
