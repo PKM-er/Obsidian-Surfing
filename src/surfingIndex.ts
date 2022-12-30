@@ -33,7 +33,6 @@ export default class SurfingPlugin extends Plugin {
 	private onLayoutChangeEventRef: EventRef;
 	private applyURLDebounceTimer = 0;
 	private urlOpened = false;
-	private urlToOpen = "";
 
 	async onload() {
 		await this.loadSettings();
