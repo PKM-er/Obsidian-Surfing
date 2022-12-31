@@ -1,20 +1,37 @@
 import SurfingPlugin from "../surfingIndex";
 import { t } from "../translations/helper";
+import { ItemView, setIcon } from "obsidian";
 
 export class HeaderBar {
 	plugin: SurfingPlugin;
 	private searchBar: HTMLInputElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>;
+	private view: ItemView;
 	removeChild = true;
 
-	constructor(parent: Element, plugin: SurfingPlugin, removeChild?: boolean) {
+	constructor(parent: Element, plugin: SurfingPlugin, view: ItemView, removeChild?: boolean) {
 		this.plugin = plugin;
+		this.view = view;
+
 		if (removeChild !== undefined) this.removeChild = removeChild;
 		// CSS class removes the gradient at the right of the header bar.
 		parent.addClass("wb-header-bar");
 		// Remove default title from header bar.
 		// Use Obsidian API to remove the title.
 		if (this.removeChild) parent.empty();
+
+		if (this.plugin.settings.showRefreshButton && removeChild) {
+			const refreshButton = parent.createEl("div", {
+				cls: "wb-refresh-button"
+			});
+			refreshButton.addEventListener("click", () => {
+				this.view.leaf.rebuildView();
+			});
+
+			setIcon(refreshButton, "refresh-cw");
+
+			console.log("refresh button added");
+		}
 
 		// Create search bar in header bar.
 		// Use Obsidian CreateEL method.

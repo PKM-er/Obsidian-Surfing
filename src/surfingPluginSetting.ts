@@ -26,6 +26,7 @@ export interface SurfingSettings {
 	markdownPath: string;
 	highlightFormat: string;
 	openInSameTab: boolean;
+	showRefreshButton: boolean;
 	highlightInSameTab: boolean;
 	openInObsidianWeb: boolean;
 	useCustomIcons: boolean;
@@ -54,12 +55,12 @@ obsidian
 `
 
 const defaultColumnList = [
-    "name",
-    "description",
-    "category",
-    "tags",
-    "created",
-    "modified",
+	"name",
+	"description",
+	"category",
+	"tags",
+	"created",
+	"modified",
 ];
 
 export const DEFAULT_SETTINGS: SurfingSettings = {
@@ -76,6 +77,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	highlightFormat: '[{CONTENT}]({URL})',
 	highlightInSameTab: false,
 	openInSameTab: false,
+	showRefreshButton: false,
 	openInObsidianWeb: false,
 	useCustomIcons: false,
 	useWebview: false,
@@ -121,10 +123,10 @@ export const SEARCH_ENGINES: SearchEngine[] = [
 ];
 
 const tabNameToTabIconId: Record<string, string> = {
-    General: 'chrome',
-    Search: 'search',
-    Theme: 'brush',
-    Bookmark: 'bookmark'
+	General: 'chrome',
+	Search: 'search',
+	Theme: 'brush',
+	Bookmark: 'bookmark'
 };
 
 export class DropdownRecord {
@@ -355,6 +357,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 	private generateGeneralSettings(tabName: string, wbContainerEl: HTMLElement) {
 		this.addOpenInSameTab(tabName, wbContainerEl);
+		this.addRefreshButton(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
 		this.addMarkdownPath(tabName, wbContainerEl);
 		this.addReplaceIframeInCanvas(tabName, wbContainerEl);
@@ -398,6 +401,22 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.searchZeroState = containerEl.createDiv();
 		(this.searchZeroState as HTMLElement).hide();
 		this.searchZeroState.createEl(Platform.isMobile ? 'h3' : 'h2', { text: 'No settings match search' }).style.textAlign = 'center';
+	}
+
+	private addRefreshButton(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = t('Show Refresh Button Near Search Bar');
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.showRefreshButton)
+					.onChange(async (value) => {
+						this.plugin.settings.showRefreshButton = value;
+						this.applySettingsUpdate();
+					});
+			})
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 	}
 
 	private addInpageSearch(tabName: string, wbContainerEl: HTMLElement) {
