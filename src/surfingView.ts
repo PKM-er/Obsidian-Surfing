@@ -594,7 +594,6 @@ export class SurfingView extends ItemView {
 							}
 							link = (link != "" ? link : highlightFormat).replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText);
 							clipboard.writeText(link);
-							console.log('Link URL copied to clipboard');
 						} catch (err) {
 							console.error('Failed to copy: ', err);
 						}
