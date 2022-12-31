@@ -575,6 +575,16 @@ div[data-type^="empty"].workspace-leaf-content
 	display: flex;
 }
 
+.wb-refresh-button, .wb-refresh-button .lucide-refresh-cw {
+	height: var(--size-4-4);
+	width: var(--size-4-4);
+	color: var(--color-base-50);
+}
+
+.wb-refresh-button {
+	margin-right: var(--size-4-2);
+}
+
 /*.wb-bookmark-manager-icon .lucide-bookmark {*/
 /*	height: 16px;*/
 /*	width: 16px;*/

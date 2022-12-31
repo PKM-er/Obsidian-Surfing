@@ -71,4 +71,5 @@ export default {
 	"Pagination": "Pagination",
 	"Category": "Category",
 	"Default Column List": "Default Column List",
+	'Show Refresh Button Near Search Bar': 'Show Refresh Button Near Search Bar',
 };
