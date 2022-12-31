@@ -1,7 +1,7 @@
 {
 	"id": "surfing",
 	"name": "Surfing",
-	"version": "0.6.7",
+	"version": "0.7.0",
 	"minAppVersion": "1.0.0",
 	"description": "Surf the Net in Obsidian.",
 	"author": "Boninall & Windily-cloud",

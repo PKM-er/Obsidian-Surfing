@@ -1,7 +1,7 @@
 {
 	"name": "surfing",
-	"version": "0.6.7",
-	"description": "Surf the Net in Obsidian.",
+	"version": "0.7.0",
+	"description": "Use surfing to surf the net in Obsidian.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "npm run lint && node esbuild.config.mjs",
