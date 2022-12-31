@@ -72,7 +72,14 @@ export class SurfingView extends ItemView {
 					}
 				}
 			}
-			app.workspace.getLeaf(newLeaf).setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+
+			app.workspace.getLeaf(newLeaf).setViewState({
+				type: WEB_BROWSER_VIEW_ID,
+				active: state.active ?? true,
+				state
+			});
+
+
 			return;
 		}
 
@@ -98,12 +105,26 @@ export class SurfingView extends ItemView {
 			return;
 		} else {
 
+			if (state.active != undefined && state.active == false) {
+				app.workspace.getLeaf(newLeaf).setViewState({
+					type: WEB_BROWSER_VIEW_ID,
+					active: true,
+					state
+				});
+
+				return;
+			}
+
 			if (!app.workspace.getLeafById(leafId)) {
 				const newLeafID = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[0]?.id;
 				if (newLeafID) {
 					localStorage.setItem("web-browser-leaf-id", newLeafID);
+
+
 					(app.workspace.getLeafById(newLeafID)?.view as SurfingView).navigate(state.url, true);
 					app.workspace.getLeafById(newLeafID)?.rebuildView();
+
+
 					return;
 				}
 			}
@@ -147,7 +168,10 @@ export class SurfingView extends ItemView {
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
-				SurfingView.spawnWebBrowserView(true, { url: event.url });
+				SurfingView.spawnWebBrowserView(true, {
+					url: event.url,
+					active: event.disposition !== "background-tab",
+				});
 				return {
 					action: "allow",
 				}
@@ -256,7 +280,29 @@ export class SurfingView extends ItemView {
 						if(e.ctrlKey || e.metaKey) {
 							e.dataTransfer.clearData();
 							const selectionText = document.getSelection().toString();
-							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
+							
+							let tempText = encodeURIComponent(selectionText);
+							const chineseRegex = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
+							const englishSentence = selectionText.split('\\n');
+							
+							if (selectionText.match(chineseRegex)?.length > 50) {
+								if (englishSentence.length > 1) {
+									const fistSentenceWords = englishSentence[0];
+									const lastSentenceWords = englishSentence[englishSentence.length - 1];
+
+									tempText = encodeURIComponent(fistSentenceWords.slice(0, 4)) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 4, lastSentenceWords.length));
+								} else {
+									tempText = encodeURIComponent(selectionText.substring(0, 8)) + "," + encodeURIComponent(selectionText.substring(selectionText.length - 8, selectionText.length));
+								}
+							} else if (englishSentence.length > 1) {
+
+								const fistSentenceWords = englishSentence[0].split(' ');
+								const lastSentenceWords = englishSentence[englishSentence.length - 1].split(' ');
+
+								tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
+							}
+							
+							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
 							let link = "";
 							if ("${ highlightFormat }".includes("{TIME")) {
 								link = "${ getCurrentTime() }";
@@ -271,7 +317,6 @@ export class SurfingView extends ItemView {
 							link = (link != "" ? link : "${ highlightFormat }").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
 						
 							e.dataTransfer.setData('text/plain', link);
-							console.log(e);
 						}
 					});
 					`, true).then((result: any) => {
@@ -328,7 +373,6 @@ export class SurfingView extends ItemView {
 		});
 
 		this.webviewEl.addEventListener("new-window", (event: any) => {
-			console.log("Trying to open new window at url: " + event.url);
 			event.preventDefault();
 		});
 
@@ -514,8 +558,30 @@ export class SurfingView extends ItemView {
 					label: t('Copy Link to Highlight'), click: function () {
 						try {
 							// eslint-disable-next-line no-useless-escape
-							const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(params.selectionText);
-							const selectionText = params.selectionText;
+							let tempText = encodeURIComponent(params.selectionText);
+							const chineseRegex = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
+							const englishSentence = params.selectionText.split('\n');
+
+							if (params.selectionText.match(chineseRegex)?.length > 50) {
+								if (englishSentence.length > 1) {
+									const fistSentenceWords = englishSentence[0];
+									const lastSentenceWords = englishSentence[englishSentence.length - 1];
+
+									tempText = encodeURIComponent(fistSentenceWords.slice(0, 3)) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 4, lastSentenceWords.length));
+								} else {
+									tempText = encodeURIComponent(params.selectionText.substring(0, 8)) + "," + encodeURIComponent(params.selectionText.substring(params.selectionText.length - 8, params.selectionText.length));
+								}
+							} else if (englishSentence.length > 1) {
+
+								const fistSentenceWords = englishSentence[0].split(' ');
+								const lastSentenceWords = englishSentence[englishSentence.length - 1].split(' ');
+
+								tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
+								// tempText = encodeURIComponent(englishWords.slice(0, 2).join(' ')) + "," + encodeURIComponent(englishWords.slice(englishWords.length - 1, englishWords.length).join(' '));
+							}
+
+							const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
+							const selectionText = params.selectionText.replace(/\n/g, " ");
 							let link = "";
 							if (highlightFormat.contains("{TIME")) {
 								// eslint-disable-next-line no-useless-escape
@@ -528,7 +594,6 @@ export class SurfingView extends ItemView {
 							}
 							link = (link != "" ? link : highlightFormat).replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText);
 							clipboard.writeText(link);
-							console.log('Link URL copied to clipboard');
 						} catch (err) {
 							console.error('Failed to copy: ', err);
 						}
@@ -694,4 +759,5 @@ export class SurfingView extends ItemView {
 
 class WebBrowserViewState {
 	url: string;
+	active?: boolean;
 }

@@ -671,6 +671,7 @@ export default class SurfingPlugin extends Plugin {
 				selectOnly: (next) =>
 					function (e: any) {
 						next.call(this, e);
+						if (!e.contentEl) return;
 						if (e.url !== undefined && !e.contentEl.classList.contains("wb-view-content")) {
 							setTimeout(() => {
 								e.render();
