@@ -13,7 +13,7 @@ interface Props {
 		tagsOptions: FilterType[];
 	};
 	categories: CategoryType[];
-	handleSaveBookmark: (bookmark: Bookmark) => void;
+	handleSaveBookmark: (bookmark: Bookmark, previousID: string) => void;
 }
 
 interface FieldData {
@@ -27,7 +27,7 @@ interface FieldData {
 export function BookmarkForm(props: Props) {
 	const [form] = Form.useForm();
 	// const inputRef = useRef<InputRef>(null)
-	// const [name, setName] = useState("")
+	// const [id, setID] = useState(props.bookmark?.id);
 	// let index = 0
 	if (!props.bookmark) return <></>;
 
@@ -91,6 +91,7 @@ export function BookmarkForm(props: Props) {
 			try {
 				const { title, description } =
 					await fetchWebTitleAndDescription(urlField.value);
+
 				if (title && description) {
 					form.setFieldValue("name", title);
 					form.setFieldValue("description", description);
@@ -119,10 +120,13 @@ export function BookmarkForm(props: Props) {
 			description: values.description,
 			category: values.category,
 			tags: values.tags.join(" "),
-			created: values.created,
-			modified: values.modified,
+			created: moment(values.created, "YYYY-MM-DD HH:mm").valueOf(),
+			modified: moment(values.modified, "YYYY-MM-DD HH:mm").valueOf(),
 		};
-		props.handleSaveBookmark(bookmark);
+
+		console.log("bookmark", bookmark);
+		if (props.bookmark?.id) props.handleSaveBookmark(bookmark, props.bookmark?.id);
+		else props.handleSaveBookmark(bookmark, "");
 		form.resetFields();
 	};
 
@@ -222,7 +226,7 @@ export function BookmarkForm(props: Props) {
 				label="Created Time"
 				name="created"
 				initialValue={ moment(props.bookmark.created).format(
-					"YYYY-MM-DD hh:ss"
+					"YYYY-MM-DD HH:mm"
 				) }
 				rules={ [
 					{
@@ -238,7 +242,7 @@ export function BookmarkForm(props: Props) {
 				label="Modified Time"
 				name="modified"
 				initialValue={ moment(props.bookmark.modified).format(
-					"YYYY-MM-DD hh:ss"
+					"YYYY-MM-DD HH:mm"
 				) }
 				rules={ [
 					{
@@ -252,7 +256,7 @@ export function BookmarkForm(props: Props) {
 			</Form.Item>
 			<Form.Item>
 				<div className="submit-bar" style={ { textAlign: "end" } }>
-					<Button htmlType="button" onClick={ onReset }>
+					<Button className="wb-reset-button" htmlType="button" onClick={ onReset }>
 						Reset
 					</Button>
 					<Button type="primary" htmlType="submit">

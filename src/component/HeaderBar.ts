@@ -29,8 +29,6 @@ export class HeaderBar {
 			});
 
 			setIcon(refreshButton, "refresh-cw");
-
-			console.log("refresh button added");
 		}
 
 		// Create search bar in header bar.
