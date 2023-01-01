@@ -70,4 +70,5 @@ export default {
 	"Category": "分类",
 	"Default Column List": "默认的列",
 	'Show Refresh Button Near Search Bar': '在搜索栏旁边显示刷新按钮',
+	'Focus On Current Search Bar': '聚焦到当前的搜索栏',
 };
