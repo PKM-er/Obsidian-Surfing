@@ -61,7 +61,7 @@ export class BookMarkBar {
 	}
 
 	render(bookmarks: Bookmark[], categories: CategoryType[]) {
-		categories.forEach((item: CategoryType) => {
+		categories?.forEach((item: CategoryType) => {
 			new BookMarkItem(this.BookmarkBarEl, this.plugin, this.view, item, bookmarks).onload();
 		})
 	}

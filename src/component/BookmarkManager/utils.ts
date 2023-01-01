@@ -26,7 +26,7 @@ export function generateColor(str: string) {
 export function generateTagsOptions(bookmarks: Bookmark[]) {
 	const tagsOptions: FilterType[] = []
 	const tags: Set<string> = new Set()
-	for (let i = 0; i < bookmarks.length; i++) {
+	for (let i = 0; i < bookmarks?.length; i++) {
 		bookmarks[i].tags.split(" ").forEach((tag: string) => {
 			tags.add(tag)
 		})
@@ -56,12 +56,13 @@ async function nonElectronGetPageTitle(url: string): Promise<{ title: string | n
 		const html = await request({ url });
 
 		const doc = new DOMParser().parseFromString(html, "text/html");
-		const title = doc.querySelector("title")?.innerText
+		const title = doc.querySelector("title")?.innerText;
 
 		// 从文档中查找<meta>标签，并获取其name和description属性的值
-		const nameTag = doc.querySelector("meta[name=name]")
-		const name = nameTag ? nameTag.getAttribute("content") : null
-		const descriptionTag = doc.querySelector("meta[name=description]")
+		const nameTag = doc.querySelector("meta[name=name]");
+		const name = nameTag ? nameTag.getAttribute("content") : null;
+		const descriptionTag = doc.querySelector("meta[name=description]");
+
 		const description = descriptionTag
 			? descriptionTag.getAttribute("content")
 			: null

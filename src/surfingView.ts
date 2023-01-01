@@ -149,6 +149,11 @@ export class SurfingView extends ItemView {
 	createWebview = () => {
 		this.contentEl.empty();
 
+		if (this.plugin.settings.bookmarkManager.openBookMark) {
+			this.bookmarkBar = new BookMarkBar((this.leaf.view as SurfingView), this.plugin);
+			this.bookmarkBar.onload();
+		}
+
 		const doc = this.contentEl.doc;
 		this.webviewEl = doc.createElement('webview');
 		this.webviewEl.setAttribute("allowpopups", "");
@@ -428,10 +433,6 @@ export class SurfingView extends ItemView {
 
 		if (this.omnisearchEnabled) this.searchContainer = new OmniSearchContainer(this.leaf, this.plugin);
 		if (this.omnisearchEnabled) this.searchContainer.onload();
-		if (this.plugin.settings.bookmarkManager.openBookMark) {
-			this.bookmarkBar = new BookMarkBar((this.leaf.view as SurfingView), this.plugin);
-			this.bookmarkBar.onload();
-		}
 
 		this.createWebview();
 		this.initHeaderButtons();

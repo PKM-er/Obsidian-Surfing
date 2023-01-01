@@ -80,9 +80,11 @@ export class BookMarkItem {
 					subMenu.addItem((item) => {
 						item.setIcon('surfing')
 							.setTitle(bookmarkItem.name)
-							.onClick(() => {
+							.onClick((e: MouseEvent) => {
+								console.log(e);
 								// @ts-ignore
-								SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
+								if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
+								else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
 							})
 					});
 				});
@@ -101,9 +103,11 @@ export class BookMarkItem {
 				menu.addItem((item) => {
 					item.setIcon('surfing')
 						.setTitle(bookmarkItem.name)
-						.onClick(() => {
+						.onClick((e: MouseEvent) => {
+							console.log(e);
 							// @ts-ignore
-							SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
+							if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
+							else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
 						})
 				});
 			});
@@ -128,9 +132,10 @@ export class BookMarkItem {
 					cls: "wb-bookmark-item-title",
 					text: bookmarkItem.name,
 				});
-				bookmarkEl.onclick = () => {
+				bookmarkEl.onclick = (e: MouseEvent) => {
 					// @ts-ignore
-					SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
+					if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
+					else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
 				}
 			});
 		}

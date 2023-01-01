@@ -394,7 +394,6 @@ export default class SurfingPlugin extends Plugin {
 						if (searchBarEl) searchBarEl.focus();
 					}
 
-					// This command will only show up in Command Palette when the check function returns true
 					return true;
 				}
 			}
@@ -508,6 +507,8 @@ export default class SurfingPlugin extends Plugin {
 					} else if (url instanceof URL) {
 						urlString = url.toString();
 					}
+
+					console.log(target, urlString, features);
 
 					if (decodeURI(urlString) !== urlString) urlString = decodeURI(urlString).toString().replace(/\s/g, "%20");
 

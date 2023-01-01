@@ -20,7 +20,7 @@ export const loadJson = async (): Promise<jsonOutput> => {
 export const saveJson = async (data: any) => {
 	await app.vault.adapter.write(
 		bookmarkSavePath,
-		JSON.stringify(data)
+		JSON.stringify(data, null, 2)
 	);
 }
 
@@ -30,7 +30,7 @@ export const initializeJson = async () => {
 		JSON.stringify({
 				"bookmarks": [],
 				"categories": []
-			}
+			}, null, 2
 		)
 	);
 }
@@ -41,7 +41,7 @@ export const exportJsonToClipboard = async (plugin: SurfingPlugin) => {
 			bookmarkSavePath
 		)
 	);
-	navigator.clipboard.writeText(JSON.stringify(data));
+	navigator.clipboard.writeText(JSON.stringify(data, null, 2));
 }
 
 export const exportJsonToMarkdown = async () => {
