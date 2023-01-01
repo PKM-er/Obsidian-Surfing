@@ -4,7 +4,7 @@ import { EditorPosition, MarkdownPreviewRenderer, Menu } from "obsidian";
 
 declare module "obsidian" {
 	export interface ItemView {
-		headerEl: HTMLDivElement
+		headerEl: HTMLDivElement;
 	}
 
 	interface App {

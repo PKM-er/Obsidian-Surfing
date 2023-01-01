@@ -24,7 +24,7 @@ export class SurfingView extends ItemView {
 	plugin: SurfingPlugin;
 	searchBox: searchBox;
 	private currentUrl: string;
-	private currentTitle = "New tab";
+	private currentTitle = "New Tab";
 
 	headerBar: HeaderBar;
 	private favicon: HTMLImageElement;
@@ -44,6 +44,7 @@ export class SurfingView extends ItemView {
 		// TODO: Add a search box in next version.
 		this.omnisearchEnabled = false;
 		// this.omnisearchEnabled = app.plugins.enabledPlugins.has("omnisearch");
+
 	}
 
 	static spawnWebBrowserView(newLeaf: boolean, state: WebBrowserViewState) {
@@ -755,6 +756,71 @@ export class SurfingView extends ItemView {
 		// @ts-ignore
 		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 		webContents.reload();
+	}
+
+	copyHighLight() {
+		const highlightFormat = this.plugin.settings.highlightFormat;
+
+		const getCurrentTime = () => {
+			let link = "";
+			// eslint-disable-next-line no-useless-escape
+			const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+			if (timeString) {
+				// eslint-disable-next-line no-useless-escape
+				const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
+				link = highlightFormat.replace(timeString, momentTime);
+				return link;
+			}
+			return link;
+		}
+
+		const getCurrentUrl = () => {
+			return this.currentUrl;
+		}
+
+		const checkTime = () => {
+			return highlightFormat.includes("{TIME");
+		}
+
+
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
+
+		webContents.openDevTools();
+		webContents.executeJavaScript(`
+				const selectionText = document.getSelection().toString();	
+				let tempText = encodeURIComponent(selectionText);
+				const chineseRegex = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
+				const englishSentence = selectionText.split('\\n');
+				
+				if (selectionText.match(chineseRegex)?.length > 50) {
+					if (englishSentence.length > 1) {
+						const fistSentenceWords = englishSentence[0];
+						const lastSentenceWords = englishSentence[englishSentence.length - 1];
+
+						tempText = encodeURIComponent(fistSentenceWords.slice(0, 4)) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 4, lastSentenceWords.length));
+					} else {
+						tempText = encodeURIComponent(selectionText.substring(0, 8)) + "," + encodeURIComponent(selectionText.substring(selectionText.length - 8, selectionText.length));
+					}
+				} else if (englishSentence.length > 1) {
+
+					const fistSentenceWords = englishSentence[0].split(' ');
+					const lastSentenceWords = englishSentence[englishSentence.length - 1].split(' ');
+
+					tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
+				}
+				
+				let linkToHighlight = "${ getCurrentUrl() }".replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
+				
+				let link = "";
+				if (${ checkTime() }) {
+					link = "${ getCurrentTime() }";
+				}
+				link = (link != "" ? link : "${ highlightFormat }").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));	
+				
+				`, true).then((result: any) => {
+			clipboard.writeText(result);
+		});
 	}
 }
 

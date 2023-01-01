@@ -47,6 +47,21 @@
    代码，自己新建一个书签
 3. 现在可以点击书签，将浏览器当前页面在 Obsidian 打开了
 
+## 使用技巧
+
+对于中文用户，你可能希望复制的高亮链接是可以直接显示原文，这种情况下，你可以应用下述的 Quickadd 脚本：
+
+```javascript
+selObj = window.getSelection();
+text = selObj.toString();
+text = await decodeURIComponent(text)
+this.quickAddApi.utility.setClipboard(text);
+
+return text;
+```
+
+然后粘贴取代原来的文本内容即可。
+
 ## 安装
 
 - 目前尚未准备好上架市场

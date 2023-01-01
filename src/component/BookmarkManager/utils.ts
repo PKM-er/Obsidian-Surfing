@@ -93,9 +93,11 @@ export async function fetchWebTitleAndDescription(url: string): Promise<{ title:
 }
 
 export function stringToCategory(categoryString: string): CategoryType[] {
-	const categoryOptions: CategoryType[] = []
-	let current = categoryOptions
-	let indent = 0
+	const categoryOptions: CategoryType[] = [];
+	let current = categoryOptions;
+	let indent = 0;
+
+	console.log(categoryString);
 
 	categoryString.split("\n").forEach((line) => {
 		const currentIndent = line.search(/\S/)
@@ -140,5 +142,7 @@ export function stringToCategory(categoryString: string): CategoryType[] {
 			current = current[current.length - 1].children
 		}
 	})
+	console.log(categoryOptions);
+
 	return categoryOptions
 }
