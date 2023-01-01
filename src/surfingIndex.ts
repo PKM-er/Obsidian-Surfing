@@ -399,6 +399,24 @@ export default class SurfingPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'copy-link-to-highlight',
+			name: t('Copy Link to Highlight'),
+			checkCallback: (checking: boolean) => {
+				// Conditions to check
+				const surfingView = this.app.workspace.getActiveViewOfType(SurfingView);
+				if (surfingView) {
+					// If checking is true, we're simply "checking" if the command can be run.
+					// If checking is false, then we want to actually perform the operation.
+					if (!checking) {
+						surfingView.copyHighLight();
+					}
+
+					return true;
+				}
+			}
+		});
+
 	}
 
 	private registerCustomIcon() {
