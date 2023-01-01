@@ -72,4 +72,5 @@ export default {
 	"Category": "Category",
 	"Default Column List": "Default Column List",
 	'Show Refresh Button Near Search Bar': 'Show Refresh Button Near Search Bar',
+	'Focus On Current Search Bar': 'Focus On Current Search Bar',
 };

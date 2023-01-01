@@ -379,6 +379,27 @@ export default class SurfingPlugin extends Plugin {
 			}
 		})
 
+
+		this.addCommand({
+			id: 'focus-on-current-search-bar',
+			name: t('Focus On Current Search Bar'),
+			checkCallback: (checking: boolean) => {
+				// Conditions to check
+				const surfingView = this.app.workspace.getActiveViewOfType(SurfingView);
+				if (surfingView) {
+					// If checking is true, we're simply "checking" if the command can be run.
+					// If checking is false, then we want to actually perform the operation.
+					if (!checking) {
+						const searchBarEl = surfingView.headerBar;
+						if (searchBarEl) searchBarEl.focus();
+					}
+
+					// This command will only show up in Command Palette when the check function returns true
+					return true;
+				}
+			}
+		});
+
 	}
 
 	private registerCustomIcon() {

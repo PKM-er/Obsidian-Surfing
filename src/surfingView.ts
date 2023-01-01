@@ -26,7 +26,7 @@ export class SurfingView extends ItemView {
 	private currentUrl: string;
 	private currentTitle = "New tab";
 
-	private headerBar: HeaderBar;
+	headerBar: HeaderBar;
 	private favicon: HTMLImageElement;
 	private webviewEl: HTMLElement;
 	private menu: any;
