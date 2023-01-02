@@ -5,7 +5,7 @@ import {
 	Col,
 	ConfigProvider,
 	Input,
-	Modal,
+	Modal, Popconfirm,
 	Row,
 	Space,
 	Table,
@@ -159,13 +159,18 @@ export default function BookmarkManager(props: Props) {
 					>
 						Edit
 					</a>
-					<a
-						onClick={ () => {
+					<Popconfirm
+						title="Are you sure to delete this bookmark?"
+						onConfirm={ () => {
 							handleDeleteBookmark(record);
 						} }
+						onCancel={ () => {
+						} }
+						okText="Yes"
+						cancelText="No"
 					>
-						Delete
-					</a>
+						<a href="#">Delete</a>
+					</Popconfirm>
 				</Space>
 			),
 		},
@@ -193,10 +198,12 @@ export default function BookmarkManager(props: Props) {
 			const tempCategories = stringToCategory(props.plugin.settings.bookmarkManager.category);
 			setCategories(tempCategories);
 
-			saveJson({
-				bookmarks: bookmarks,
-				categories: tempCategories,
-			})
+			if (tempCategories) {
+				saveJson({
+					bookmarks: bookmarks,
+					categories: tempCategories,
+				});
+			}
 		};
 	}, [props.categories]);
 
