@@ -125,6 +125,7 @@ export default function BookmarkManager(props: Props) {
 			},
 			filters: options.tagsOptions,
 			onFilter: (value, record) => {
+				if (value === "") return record.tags === "";
 				return record.tags.indexOf(value as string) === 0;
 			},
 		},
