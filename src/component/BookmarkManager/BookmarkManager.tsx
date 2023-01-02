@@ -12,7 +12,7 @@ import {
 	Tag,
 	theme,
 } from "antd";
-import React, { KeyboardEventHandler, useEffect, useState } from "react";
+import React, { KeyboardEventHandler, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { generateColor, generateTagsOptions, stringToCategory } from "./utils";
 import type { Bookmark, CategoryType } from "../../types/bookmark";
 import { ColumnsType } from "antd/es/table";
@@ -54,7 +54,6 @@ export default function BookmarkManager(props: Props) {
 	const options = generateTagsOptions(bookmarks);
 	const [currentBookmark, setCurrentBookmark] = useState(emptyBookmark);
 	const [searchWord, setSearchWord] = useState("");
-
 
 	const defaultColumns: ColumnsType<Bookmark> = [
 		{
@@ -348,7 +347,7 @@ export default function BookmarkManager(props: Props) {
 						position: ["bottomCenter"],
 					} }
 					scroll={ {
-						y: 'calc(100vh - 14em)',
+						y: 'calc(100vh- 14em)',
 						x: 'max-content'
 					} }
 					rowKey="id"
