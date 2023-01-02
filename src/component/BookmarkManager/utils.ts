@@ -109,14 +109,16 @@ export function doParse(categoryString: string): CategoryType[] {
 	const categoryOptions: CategoryType[] = [];
 	const lines = categoryString.split('\n');
 	const regex = /^(\s*)-\s(.*)/;
-	const tabRegex = /^\t+/g;
+
 	lines.forEach(function (line, i) {
 		const matches = line.match(regex);
 		if (matches) {
 			let level;
-			if (tabRegex.test(matches[1])) level = matches[1].length / 2;
-			else level = matches[1].length / 4;
-			
+			let blank = matches[1];
+
+			if (new RegExp(/^\t+/g).test(blank)) level = blank.length;
+			else level = blank.length / 4;
+
 			const title = matches[2];
 			const node = Node(title);
 

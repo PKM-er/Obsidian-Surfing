@@ -14,6 +14,8 @@ export const loadJson = async (): Promise<jsonOutput> => {
 			bookmarkSavePath
 		)
 	);
+
+	console.log(result);
 	return result;
 }
 
