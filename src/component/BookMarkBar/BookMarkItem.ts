@@ -19,7 +19,7 @@ export class BookMarkItem {
 	}
 
 	onload() {
-		if (typeof this.item === "object" && this.item.value && this.item.value !== "ROOT") {
+		if (typeof this.item === "object" && (this.item.value || this.item.children) && this.item.value !== "ROOT") {
 			this.renderFolder();
 		} else {
 			this.renderBookmark();
@@ -74,6 +74,8 @@ export class BookMarkItem {
 				return item.category[item.category.length - 1] === child.value;
 			});
 
+			console.log(category, bookmark);
+
 			if (bookmark.length > 0) {
 				bookmark.forEach((bookmarkItem) => {
 					subMenu?.addItem((item) => {
@@ -94,6 +96,8 @@ export class BookMarkItem {
 		const bookmark = this.bookmark.filter((item) => {
 			return item.category[item.category.length - 1].contains(category.value);
 		});
+
+		console.log(category, bookmark);
 
 
 		if (bookmark.length > 0) {
