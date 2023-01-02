@@ -605,11 +605,7 @@ div[data-type^="empty"].workspace-leaf-content
 	justify-content: space-between;
 }
 
-.theme-light .ant-form-item .ant-btn-primary {
-	background-color: #1677ff;
-}
-
-.theme-light .ant-table-filter-dropdown .ant-btn-primary {
+.theme-light .ant-btn-primary {
 	background-color: #1677ff;
 }
 
