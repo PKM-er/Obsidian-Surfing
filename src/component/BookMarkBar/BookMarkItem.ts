@@ -19,7 +19,7 @@ export class BookMarkItem {
 	}
 
 	onload() {
-		if (typeof this.item === "object" && this.item.children.length > 0) {
+		if (typeof this.item === "object" && this.item.value && this.item.value !== "ROOT") {
 			this.renderFolder();
 		} else {
 			this.renderBookmark();
@@ -65,11 +65,10 @@ export class BookMarkItem {
 
 	loopMenu(menu: Menu, category: CategoryType) {
 		if (category?.children) category?.children.forEach((child) => {
-			let subMenu: Menu;
+			let subMenu: Menu | undefined;
 			menu.addItem((item) =>
-				subMenu = item.setTitle(child.label).setIcon('surfing').setSubmenu()
+				subMenu = item.setTitle(child.label).setIcon('folder').setSubmenu()
 			);
-
 
 			const bookmark = this.bookmark.filter((item) => {
 				return item.category[item.category.length - 1] === child.value;
@@ -77,11 +76,10 @@ export class BookMarkItem {
 
 			if (bookmark.length > 0) {
 				bookmark.forEach((bookmarkItem) => {
-					subMenu.addItem((item) => {
+					subMenu?.addItem((item) => {
 						item.setIcon('surfing')
 							.setTitle(bookmarkItem.name)
 							.onClick((e: MouseEvent) => {
-								console.log(e);
 								// @ts-ignore
 								if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
 								else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
@@ -90,7 +88,7 @@ export class BookMarkItem {
 				});
 			}
 
-			if (child?.children?.length > 0) this.loopMenu(menu, child);
+			if (child?.children && subMenu) this.loopMenu(subMenu, child);
 		});
 
 		const bookmark = this.bookmark.filter((item) => {
@@ -104,7 +102,6 @@ export class BookMarkItem {
 					item.setIcon('surfing')
 						.setTitle(bookmarkItem.name)
 						.onClick((e: MouseEvent) => {
-							console.log(e);
 							// @ts-ignore
 							if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
 							else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });

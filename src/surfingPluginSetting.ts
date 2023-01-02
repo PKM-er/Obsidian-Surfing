@@ -35,9 +35,10 @@ export interface SurfingSettings {
 	darkMode: boolean;
 	bookmarkManager: {
 		openBookMark: boolean;
-		pagination: string
-		category: string
-		defaultColumnList: string[]
+		pagination: string;
+		category: string;
+		defaultColumnList: string[];
+		defaultFilterType: string;
 	}
 }
 
@@ -87,7 +88,8 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 		openBookMark: false,
 		pagination: "12",
 		category: JSON.stringify(defaultCategory),
-		defaultColumnList: defaultColumnList
+		defaultColumnList: defaultColumnList,
+		defaultFilterType: 'tree',
 	}
 }
 // Add search engines here for the future used.
@@ -852,5 +854,20 @@ export class SurfingSettingTab extends PluginSettingTab {
 					})
 			})
 		this.addSettingToMasterSettingsList(tabName, defaultColumnList.settingEl, t("Default Column List"))
+
+		const defaultFilterType = new Setting(wbContainerEl)
+			.setName(t("Default Category Filter Type"))
+			.addDropdown(async (drowdown: DropdownComponent) => {
+				const aDropdown = drowdown
+					.addOption('tree', t('Tree'))
+					.addOption('menu', t('Menu'));
+
+				aDropdown.setValue(this.plugin.settings.bookmarkManager.defaultFilterType).onChange(async (value) => {
+					this.plugin.settings.bookmarkManager.defaultFilterType = value;
+					this.applySettingsUpdate();
+				})
+			});
+
+		this.addSettingToMasterSettingsList(tabName, defaultFilterType.settingEl, t("Default Category Filter Type"));
 	}
 }

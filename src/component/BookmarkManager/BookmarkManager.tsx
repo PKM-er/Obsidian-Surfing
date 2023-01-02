@@ -21,6 +21,7 @@ import { BookmarkForm } from "./BookmarkForm";
 import SurfingPlugin from "src/surfingIndex";
 import { saveJson } from "../../utils/json";
 import { SurfingView } from "../../surfingView";
+import { t } from "../../translations/helper";
 
 const columnOptions = [
 	"name",
@@ -57,7 +58,7 @@ export default function BookmarkManager(props: Props) {
 
 	const defaultColumns: ColumnsType<Bookmark> = [
 		{
-			title: "name",
+			title: t("Name"),
 			dataIndex: "name",
 			key: "name",
 			render: (text, record) => {
@@ -70,12 +71,13 @@ export default function BookmarkManager(props: Props) {
 					}
 				}>{ text }</a>;
 			},
+			showSorterTooltip: false,
 			sorter: (a, b) => {
 				return a.name.localeCompare(b.name);
 			},
 		},
 		{
-			title: "description",
+			title: t("Description"),
 			dataIndex: "description",
 			key: "description",
 			onFilter: (value, record) => {
@@ -83,12 +85,12 @@ export default function BookmarkManager(props: Props) {
 			},
 		},
 		{
-			title: "url",
+			title: t("Url"),
 			dataIndex: "url",
 			key: "url",
 		},
 		{
-			title: "category",
+			title: t("Category"),
 			dataIndex: "category",
 			key: "category",
 			render: (value) => {
@@ -100,15 +102,14 @@ export default function BookmarkManager(props: Props) {
 			filters: stringToCategory(
 				props.plugin.settings.bookmarkManager.category
 			) as any,
-			filterMode: 'tree',
+			filterMode: props.plugin.settings.bookmarkManager.defaultFilterType as any,
 			filterSearch: true,
 			onFilter: (value, record) => {
-				console.log(value, record);
 				return record.category.includes(value as string);
 			},
 		},
 		{
-			title: "tags",
+			title: t("Tags"),
 			dataIndex: "tags",
 			key: "tags",
 			render: (text: string) => {
@@ -128,7 +129,7 @@ export default function BookmarkManager(props: Props) {
 			},
 		},
 		{
-			title: "created",
+			title: t("Created"),
 			dataIndex: "created",
 			key: "created",
 			render: (text: number) => {
@@ -137,7 +138,7 @@ export default function BookmarkManager(props: Props) {
 			sorter: (a, b) => a.created - b.created,
 		},
 		{
-			title: "modified",
+			title: t("Modified"),
 			dataIndex: "modified",
 			key: "modified",
 			render: (text: number) => {
@@ -146,7 +147,8 @@ export default function BookmarkManager(props: Props) {
 			sorter: (a, b) => a.modified - b.modified,
 		},
 		{
-			title: "Action",
+			title: t("Action"),
+			dataIndex: "action",
 			key: "action",
 			render: (text, record) => (
 				<Space size="middle">
@@ -183,7 +185,7 @@ export default function BookmarkManager(props: Props) {
 	const CheckboxGroup = Checkbox.Group;
 	const onColumnChange = async (list: CheckboxValueType[]) => {
 		const newColumns = defaultColumns.filter((column) => {
-			return list.includes(column.title as string);
+			return list.includes(column.key as string);
 		});
 		setColumns(newColumns);
 		setCheckedColumn(list);
@@ -317,7 +319,7 @@ export default function BookmarkManager(props: Props) {
 										handleSearch(e.target.value);
 									} }
 									defaultValue={ searchWord }
-									placeholder={ `Search from ${ bookmarks.length } bookmarks` }
+									placeholder={ ` ${ t("Search from ") } ${ bookmarks.length } ${ t(" bookmarks") } ` }
 									onPressEnter={ (e) => {
 										handleSearch(e.currentTarget.value);
 									} }
@@ -347,10 +349,12 @@ export default function BookmarkManager(props: Props) {
 						position: ["bottomCenter"],
 					} }
 					scroll={ {
-						y: 'calc(100vh- 14em)',
-						x: 'max-content'
+						y: '100%',
+						x: 'fit-content'
 					} }
+					sticky={ true }
 					rowKey="id"
+					showSorterTooltip={ false }
 				></Table>
 				<Modal
 					title="Bookmark"
