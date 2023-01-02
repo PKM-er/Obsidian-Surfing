@@ -124,7 +124,6 @@ export function BookmarkForm(props: Props) {
 			modified: moment(values.modified, "YYYY-MM-DD HH:mm").valueOf(),
 		};
 
-		console.log("bookmark", bookmark);
 		if (props.bookmark?.id) props.handleSaveBookmark(bookmark, props.bookmark?.id);
 		else props.handleSaveBookmark(bookmark, "");
 		form.resetFields();
@@ -220,6 +219,7 @@ export function BookmarkForm(props: Props) {
 				<Cascader
 					displayRender={ categoryDisplayRender }
 					options={ props.categories }
+					changeOnSelect
 				/>
 			</Form.Item>
 			<Form.Item

@@ -93,56 +93,60 @@ export async function fetchWebTitleAndDescription(url: string): Promise<{ title:
 }
 
 export function stringToCategory(categoryString: string): CategoryType[] {
-	const categoryOptions: CategoryType[] = [];
-	let current = categoryOptions;
-	let indent = 0;
+	const categoryOptions: CategoryType[] = doParse(categoryString);
 
-	console.log(categoryString);
-
-	categoryString.split("\n").forEach((line) => {
-		const currentIndent = line.search(/\S/)
-		const currentNode = line.trim()
-		if (currentIndent > indent) {
-			current.push({
-				label: currentNode,
-				value: currentNode,
-				text: currentNode,
-				children: []
-			})
-			// console.log(current)
-			current = current[current.length - 1].children
-			indent = currentIndent
-		} else if (currentIndent === indent) {
-			// console.log(current, currentNode, {
-			//     label: currentNode,
-			//     value: currentNode,
-			//     text: currentNode,
-			//     children: []
-			// }, indent)
-			current.push({
-				label: currentNode,
-				value: currentNode,
-				text: currentNode,
-				children: []
-			})
-			// console.log(current)
-			current = current[current.length - 1].children
-		} else {
-			while (currentIndent < indent) {
-				current = categoryOptions
-				indent -= 2
-			}
-			current.push({
-				label: currentNode,
-				value: currentNode,
-				text: currentNode,
-				children: []
-			})
-			// console.log(current)
-			current = current[current.length - 1].children
-		}
-	})
-	console.log(categoryOptions);
+	categoryOptions.unshift({
+		"value": "ROOT",
+		"text": "ROOT",
+		"label": "ROOT",
+		"children": []
+	});
 
 	return categoryOptions
+}
+
+export function doParse(categoryString: string): CategoryType[] {
+	const categoryOptions: CategoryType[] = [];
+	const lines = categoryString.split('\n');
+	const regex = /^(\s*)-\s(.*)/;
+	lines.forEach(function (line, i) {
+		const matches = line.match(regex);
+		if (matches) {
+			const level = matches[1].length / 4;
+			const title = matches[2];
+			const node = Node(title);
+
+			if (level === 0) {
+				categoryOptions.push(node)
+			} else {
+				const p = getParentNode(level, categoryOptions);
+				p?.children.push(node);
+			}
+		}
+	})
+	return categoryOptions
+}
+
+function getParentNode(level: number, categoryOptions: CategoryType[]) {
+	let i = 0;
+	let node = categoryOptions[categoryOptions.length - 1];
+	while (i < level - 1) {
+		const childNodes = node.children;
+		node = childNodes[childNodes.length - 1];
+		i++;
+	}
+
+	if (!node?.children && node) {
+		node.children = []
+	}
+	return node;
+}
+
+function Node(title: string) {
+	return {
+		"value": title,
+		"text": title,
+		"label": title,
+		"children": []
+	}
 }

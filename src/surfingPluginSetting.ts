@@ -832,7 +832,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 						// }
 						this.plugin.settings.bookmarkManager.category = value;
 						this.applySettingsUpdate()
-						console.log("saved")
 					})
 			})
 		this.addSettingToMasterSettingsList(tabName, categorySetting.settingEl, t("Category"))
