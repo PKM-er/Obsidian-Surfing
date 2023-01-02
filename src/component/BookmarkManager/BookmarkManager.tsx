@@ -280,7 +280,7 @@ export default function BookmarkManager(props: Props) {
 		});
 
 		if (!isBookmarkExist) {
-			bookmarks.push(newBookmark);
+			bookmarks.unshift(newBookmark);
 			setBookmarks(bookmarks);
 			setModalVisible(false);
 		}
