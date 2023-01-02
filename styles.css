@@ -628,7 +628,7 @@ div[data-type^="empty"].workspace-leaf-content
 }
 
 .ant-table-wrapper {
-	height: 55%;
+	height: 85vh;
 }
 
 .ant-table {
