@@ -70,24 +70,26 @@ export class BookMarkItem {
 				subMenu = item.setTitle(child.label).setIcon('folder').setSubmenu()
 			);
 
-			const bookmark = this.bookmark.filter((item) => {
-				return item.category[item.category.length - 1] === child.value;
-			});
-
-			console.log(category, bookmark);
-
-			if (bookmark.length > 0) {
-				bookmark.forEach((bookmarkItem) => {
-					subMenu?.addItem((item) => {
-						item.setIcon('surfing')
-							.setTitle(bookmarkItem.name)
-							.onClick((e: MouseEvent) => {
-								// @ts-ignore
-								if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
-								else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
-							})
-					});
+			if (!child?.children) {
+				const bookmark = this.bookmark.filter((item) => {
+					return item.category[item.category.length - 1] === child.value;
 				});
+
+				console.log(category, bookmark);
+
+				if (bookmark.length > 0) {
+					bookmark.forEach((bookmarkItem) => {
+						subMenu?.addItem((item) => {
+							item.setIcon('surfing')
+								.setTitle(bookmarkItem.name)
+								.onClick((e: MouseEvent) => {
+									// @ts-ignore
+									if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
+									else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
+								})
+						});
+					});
+				}
 			}
 
 			if (child?.children && subMenu) this.loopMenu(subMenu, child);

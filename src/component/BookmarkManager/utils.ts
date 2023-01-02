@@ -114,7 +114,7 @@ export function doParse(categoryString: string): CategoryType[] {
 		const matches = line.match(regex);
 		if (matches) {
 			let level;
-			let blank = matches[1];
+			const blank = matches[1];
 
 			if (new RegExp(/^\t+/g).test(blank)) level = blank.length;
 			else level = blank.length / 4;
