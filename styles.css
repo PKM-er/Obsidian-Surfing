@@ -221,6 +221,13 @@
 	opacity: 0.4;
 }
 
+
+.wb-tab-settings textarea {
+	width: 500px;
+	height: 200px;
+	overflow-y: scroll;
+}
+
 .wb-navigation-item {
 	display: flex;
 	align-items: flex-start;
@@ -609,7 +616,6 @@ div[data-type^="empty"].workspace-leaf-content
 .theme-light .ant-tree-treenode-checkbox-checked .ant-tree-node-content-wrapper {
 	color: var(--text-on-accent);
 }
-
 
 /*.wb-bookmark-manager-icon .lucide-bookmark {*/
 /*	height: 16px;*/
