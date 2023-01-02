@@ -109,10 +109,14 @@ export function doParse(categoryString: string): CategoryType[] {
 	const categoryOptions: CategoryType[] = [];
 	const lines = categoryString.split('\n');
 	const regex = /^(\s*)-\s(.*)/;
+	const tabRegex = /^\t+/g;
 	lines.forEach(function (line, i) {
 		const matches = line.match(regex);
 		if (matches) {
-			const level = matches[1].length / 4;
+			let level;
+			if (tabRegex.test(matches[1])) level = matches[1].length / 2;
+			else level = matches[1].length / 4;
+			
 			const title = matches[2];
 			const node = Node(title);
 
@@ -120,7 +124,7 @@ export function doParse(categoryString: string): CategoryType[] {
 				categoryOptions.push(node)
 			} else {
 				const p = getParentNode(level, categoryOptions);
-				p?.children.push(node);
+				p?.children?.push(node);
 			}
 		}
 	})
@@ -132,7 +136,7 @@ function getParentNode(level: number, categoryOptions: CategoryType[]) {
 	let node = categoryOptions[categoryOptions.length - 1];
 	while (i < level - 1) {
 		const childNodes = node.children;
-		node = childNodes[childNodes.length - 1];
+		if (childNodes) node = childNodes[childNodes.length - 1];
 		i++;
 	}
 
@@ -147,6 +151,5 @@ function Node(title: string) {
 		"value": title,
 		"text": title,
 		"label": title,
-		"children": []
 	}
 }

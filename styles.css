@@ -555,10 +555,26 @@ div[data-type^="empty"].workspace-leaf-content
 
 .surfing-bookmark-manager {
 	margin: 1em;
+	display: flex;
+	flex-direction: column;
 }
 
 .surfing-bookmark-manager-header-bar .surfing-bookmark-manager-search-bar {
 	display: flex;
+	align-items: center;
+}
+
+.surfing-bookmark-manager-header-bar .ant-row {
+	display: flex;
+	align-items: center;
+}
+
+.ant-table-header {
+	min-height: 55px;
+}
+
+.surfing-bookmark-manager-header-bar {
+	height: 50px;
 }
 
 :where(.css-dev-only-do-not-override-1np4o0i).ant-input-affix-wrapper {
@@ -566,7 +582,7 @@ div[data-type^="empty"].workspace-leaf-content
 }
 
 .surfing-bookmark-manager-header-bar button {
-	margin: 4px 0px 0px 10px;
+	margin: 0px 0px 0px 10px;
 }
 
 .wb-bookmark-manager-entry {
@@ -596,6 +612,29 @@ div[data-type^="empty"].workspace-leaf-content
 	margin: 6px 0;
 }
 
+.ant-table-container {
+	height: 100%;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+/*.ant-table-sticky-holder {*/
+/*	height: 100px;*/
+/*}*/
+
+.ant-table-wrapper, .ant-spin-nested-loading, .ant-spin-container {
+	height: 100%;
+}
+
+.ant-table-wrapper {
+	height: 55%;
+}
+
+.ant-table {
+	height: 100%;
+}
+
 .wb-reset-button {
 	left: 0;
 }
@@ -611,6 +650,15 @@ div[data-type^="empty"].workspace-leaf-content
 
 .theme-light .ant-tree-treenode-checkbox-checked .ant-tree-node-content-wrapper {
 	color: var(--text-on-accent);
+}
+
+.surfing-bookmark-manager-header .ant-col-6 {
+	display: flex;
+	align-items: center;
+}
+
+div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
+	height: 20px;
 }
 
 /*.wb-bookmark-manager-icon .lucide-bookmark {*/
