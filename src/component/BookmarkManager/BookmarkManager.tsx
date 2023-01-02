@@ -50,6 +50,7 @@ interface Props {
 
 export default function BookmarkManager(props: Props) {
 	const [bookmarks, setBookmarks] = useState(props.bookmarks);
+	const [categories, setCategories] = useState(props.categories);
 	const options = generateTagsOptions(bookmarks);
 	const [currentBookmark, setCurrentBookmark] = useState(emptyBookmark);
 	const [searchWord, setSearchWord] = useState("");
@@ -100,7 +101,10 @@ export default function BookmarkManager(props: Props) {
 			filters: stringToCategory(
 				props.plugin.settings.bookmarkManager.category
 			) as any,
+			filterMode: 'tree',
+			filterSearch: true,
 			onFilter: (value, record) => {
+				console.log(value, record);
 				return record.category.includes(value as string);
 			},
 		},
@@ -183,6 +187,19 @@ export default function BookmarkManager(props: Props) {
 		await props.plugin.saveSettings();
 	};
 	const [modalVisible, setModalVisible] = useState(false);
+
+	useEffect(() => {
+		return () => {
+			const tempCategories = stringToCategory(props.plugin.settings.bookmarkManager.category);
+			setCategories(tempCategories);
+
+			saveJson({
+				bookmarks: bookmarks,
+				categories: tempCategories,
+			})
+		};
+	}, [props.categories]);
+
 
 	const handleSearch = (value: string) => {
 		if (value === undefined) value = searchWord;
@@ -342,7 +359,7 @@ export default function BookmarkManager(props: Props) {
 						bookmark={ currentBookmark }
 						options={ options }
 						handleSaveBookmark={ handleSaveBookmark }
-						categories={ props.categories }
+						categories={ categories }
 					></BookmarkForm>
 				</Modal>
 			</ConfigProvider>

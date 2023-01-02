@@ -598,15 +598,23 @@ div[data-type^="empty"].workspace-leaf-content
 	justify-content: space-between;
 }
 
-.ant-form-item .ant-btn-primary {
+.theme-light .ant-form-item .ant-btn-primary {
 	background-color: #1677ff;
 }
+
+.theme-light .ant-table-filter-dropdown .ant-btn-primary {
+	background-color: #1677ff;
+}
+
+.theme-light .ant-tree-treenode-checkbox-checked .ant-tree-node-content-wrapper {
+	color: var(--text-on-accent);
+}
+
 
 /*.wb-bookmark-manager-icon .lucide-bookmark {*/
 /*	height: 16px;*/
 /*	width: 16px;*/
 /*}*/
-
 .wb-bookmark-manager-entry:hover {
 	background-color: var(--color-base-30);
 }
