@@ -61,8 +61,9 @@ export class BookMarkBar {
 	}
 
 	render(bookmarks: Bookmark[], categories: CategoryType[]) {
-
-		console.log(categories);
+		// Move root to the end;
+		const rootCategory = categories.shift();
+		if (rootCategory) categories.push(rootCategory);
 
 		categories?.forEach((item: CategoryType) => {
 			new BookMarkItem(this.BookmarkBarEl, this.plugin, this.view, item, bookmarks).onload();
