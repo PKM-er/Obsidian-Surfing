@@ -258,12 +258,12 @@ export default function BookmarkManager(props: Props) {
 		setModalVisible(true);
 	};
 
-	const handleDeleteBookmark = (oldBookmark: Bookmark) => {
-		const newBookmarks = [...bookmarks];
+	const handleDeleteBookmark = async (oldBookmark: Bookmark) => {
+		const newBookmarks = [...bookmarksRef.current];
 
 		setBookmarks(newBookmarks.filter((bookmark) => bookmark.id !== oldBookmark.id));
 
-		saveJson({
+		await saveJson({
 			bookmarks: bookmarksRef.current,
 			categories: props.categories,
 		});
