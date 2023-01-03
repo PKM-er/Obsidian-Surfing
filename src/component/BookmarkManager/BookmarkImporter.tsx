@@ -4,31 +4,36 @@ import moment from "moment";
 import { Bookmark } from "src/types/bookmark";
 import { hashCode } from "./utils";
 import { loadJson, saveJson } from "src/utils/json";
+import { Notice } from "obsidian";
 
-const handleSaveBookmark = async (newBookmark: Bookmark)=>{
-    try{
-        const {bookmarks, categories} = await loadJson()
-        const isBookmarkExist = bookmarks.some((bookmark)=>{
-            if(bookmark.url === newBookmark.url){
-                return true
-            }else{
-                return false
-            }
-        })
+const handleSaveBookmark = async (newBookmark: Bookmark) => {
+	const urlRegEx =
+		/^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
+	if (!urlRegEx.test(newBookmark.url)) {
+		return;
+	}
 
-        if(!isBookmarkExist){
-            bookmarks.unshift(newBookmark)
-            saveJson({
-                bookmarks,
-                categories
-            })
-        }
+	try {
+		const { bookmarks, categories } = await loadJson();
+		const isBookmarkExist = bookmarks.some((bookmark) => {
+			if (bookmark.url === newBookmark.url) {
+				return true;
+			} else {
+				return false;
+			}
+		});
 
-    }catch(err){
-        console.log(err)
-    }
-}
-
+		if (!isBookmarkExist) {
+			bookmarks.unshift(newBookmark);
+			saveJson({
+				bookmarks,
+				categories,
+			});
+		}
+	} catch (err) {
+		console.log(err);
+	}
+};
 
 const uploadProps: UploadProps = {
 	action: "",
@@ -60,12 +65,20 @@ const uploadProps: UploadProps = {
 						created: moment().valueOf(),
 						modified: moment().valueOf(),
 					};
-					try{
-                        await handleSaveBookmark(newBookmark)
-                    }catch(err){
-                        console.log("Failed to import this bookmark!", newBookmark.name)
-                    }
+					try {
+						await handleSaveBookmark(newBookmark);
+					} catch (err) {
+						console.log(
+							"Failed to import this bookmark!",
+							newBookmark.name
+						);
+						new Notice(`import ${newBookmark.name} faield`);
+					}
 				}
+			};
+
+			reader.onloadend = () => {
+				new Notice("Import success!!!");
 			};
 		});
 	},
