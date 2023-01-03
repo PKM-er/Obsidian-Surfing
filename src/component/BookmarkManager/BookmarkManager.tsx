@@ -22,7 +22,7 @@ import { CheckboxValueType } from "antd/es/checkbox/Group";
 import { BookmarkForm } from "./BookmarkForm";
 import BookmarkImporter from "./BookmarkImporter";
 import SurfingPlugin from "src/surfingIndex";
-import { saveJson } from "../../utils/json";
+import { loadJson, saveJson } from "../../utils/json";
 import { SurfingView } from "../../surfingView";
 import { t } from "../../translations/helper";
 
@@ -271,6 +271,10 @@ export default function BookmarkManager(props: Props) {
 		});
 	};
 
+	const handleImportFinished = async (importedBookmarks: Bookmark[]): Promise<void> => {
+		setBookmarks([...importedBookmarks]);
+	}
+
 	const handleModalOk = () => {
 		setCurrentBookmark(emptyBookmark);
 		setModalVisible(false);
@@ -311,6 +315,10 @@ export default function BookmarkManager(props: Props) {
 		});
 	};
 
+	const importProps = {
+		handleImportFinished: (importedBookmarks: Bookmark[]) => handleImportFinished(importedBookmarks),
+	}
+
 	return (
 		<div className="surfing-bookmark-manager">
 			<ConfigProvider
@@ -341,7 +349,7 @@ export default function BookmarkManager(props: Props) {
 									allowClear
 								/>
 								<Button onClick={ handleAddBookmark }>+</Button>
-								<BookmarkImporter/>
+								<BookmarkImporter { ...importProps } />
 							</div>
 						</Col>
 						<Col span={ 7 } style={ { marginTop: "5px" } }>
