@@ -1,10 +1,9 @@
 import React from "react";
 import { Button, Upload, UploadProps } from "antd";
-import moment from "moment";
 import { Bookmark } from "src/types/bookmark";
 import { hashCode } from "./utils";
 import { loadJson, saveJson } from "src/utils/json";
-import { Notice } from "obsidian";
+import { moment, Notice } from "obsidian";
 
 const handleSaveBookmark = async (newBookmark: Bookmark) => {
 	const urlRegEx =
@@ -72,7 +71,7 @@ const uploadProps: UploadProps = {
 							"Failed to import this bookmark!",
 							newBookmark.name
 						);
-						new Notice(`import ${newBookmark.name} faield`);
+						new Notice(`import ${ newBookmark.name } faield`);
 					}
 				}
 			};
@@ -85,7 +84,7 @@ const uploadProps: UploadProps = {
 };
 
 const BookmarkImporter: React.FC = () => (
-	<Upload {...uploadProps}>
+	<Upload { ...uploadProps }>
 		<Button>Import</Button>
 	</Upload>
 );
