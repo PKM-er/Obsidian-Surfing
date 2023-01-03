@@ -468,7 +468,6 @@ export class SurfingView extends ItemView {
 											document.querySelector('input')?.value
 										`, true).then((result: any) => {
 				this.searchContainer.update(result?.toLowerCase());
-				console.log(result);
 			});
 		} catch (err) {
 			console.error('Failed to copy: ', err);

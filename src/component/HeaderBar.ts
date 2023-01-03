@@ -1,6 +1,7 @@
 import SurfingPlugin from "../surfingIndex";
 import { t } from "../translations/helper";
 import { ItemView, setIcon } from "obsidian";
+import { BookmarkSuggester } from "./suggester/bookmarkSuggester";
 
 export class HeaderBar {
 	plugin: SurfingPlugin;
@@ -53,6 +54,8 @@ export class HeaderBar {
 				}
 			}
 		}, false);
+
+		new BookmarkSuggester(app, this.plugin, this.searchBar);
 
 		// Use focusin to bubble up to the parent
 		// Rather than just input element itself.

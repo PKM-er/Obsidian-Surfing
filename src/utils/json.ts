@@ -15,7 +15,6 @@ export const loadJson = async (): Promise<jsonOutput> => {
 		)
 	);
 
-	console.log(result);
 	return result;
 }
 
