@@ -37,8 +37,6 @@ export class BookMarkBar {
 			}
 		}
 
-		console.log(this.categoryData);
-
 		// this.convertToBookmarkFolder(this.bookmarkData);
 		this.render(this.bookmarkData, this.categoryData);
 	}
@@ -66,8 +64,6 @@ export class BookMarkBar {
 		// Move root to the end;
 		const rootCategory = categories.shift();
 		if (rootCategory) categories.push(rootCategory);
-
-		console.log(categories);
 
 		categories?.forEach((item: CategoryType) => {
 			new BookMarkItem(this.BookmarkBarEl, this.plugin, this.view, item, bookmarks).onload();
