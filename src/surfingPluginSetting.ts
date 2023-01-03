@@ -62,6 +62,7 @@ const defaultColumnList = [
 	"tags",
 	"created",
 	"modified",
+	"action",
 ];
 
 export const DEFAULT_SETTINGS: SurfingSettings = {
@@ -845,9 +846,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.bookmarkManager.defaultColumnList.join(" "))
 					.onChange(async (value) => {
 						if (value === "") {
-							this.plugin.settings.bookmarkManager.defaultColumnList = DEFAULT_SETTINGS.bookmarkManager.defaultColumnList
+							this.plugin.settings.bookmarkManager.defaultColumnList = DEFAULT_SETTINGS.bookmarkManager.defaultColumnList;
 							this.applySettingsUpdate();
-							this.display()
+							this.display();
 						}
 						this.plugin.settings.bookmarkManager.defaultColumnList = value.split(" ");
 						this.applySettingsUpdate()

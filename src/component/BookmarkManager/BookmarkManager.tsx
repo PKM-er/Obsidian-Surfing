@@ -185,16 +185,19 @@ export default function BookmarkManager(props: Props) {
 		},
 	];
 
-	const [columns, setColumns] = useState(defaultColumns);
 	const [checkedColumn, setCheckedColumn] = useState<CheckboxValueType[]>(
 		props.plugin.settings.bookmarkManager.defaultColumnList
 	);
+	const [columns, setColumns] = useState(defaultColumns.filter((column) => {
+		return checkedColumn.includes(column.key as string) || column.key === "action";
+	}));
 
 	const CheckboxGroup = Checkbox.Group;
 	const onColumnChange = async (list: CheckboxValueType[]) => {
 		const newColumns = defaultColumns.filter((column) => {
-			return list.includes(column.key as string);
+			return list.includes(column.key as string) || column.key === "action";
 		});
+
 		setColumns(newColumns);
 		setCheckedColumn(list);
 		props.plugin.settings.bookmarkManager.defaultColumnList = list as any;
