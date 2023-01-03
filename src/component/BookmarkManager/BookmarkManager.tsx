@@ -117,7 +117,7 @@ export default function BookmarkManager(props: Props) {
 				.defaultFilterType as any,
 			filterSearch: true,
 			onFilter: (value, record) => {
-				return record.category.includes(value as string);
+				return record.category.includes(value as string) || (value === "ROOT" && !props.plugin.settings.bookmarkManager.category.contains(record.category[0] ? record.category[0] : ""));
 			},
 		},
 		{
