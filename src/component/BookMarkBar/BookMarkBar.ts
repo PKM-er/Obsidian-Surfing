@@ -65,8 +65,12 @@ export class BookMarkBar {
 		const rootCategory = categories.shift();
 		if (rootCategory) categories.push(rootCategory);
 
+		const bookmarkBarContainerEl = this.BookmarkBarEl.createEl("div", {
+			cls: "wb-bookmark-bar-container"
+		});
+
 		categories?.forEach((item: CategoryType) => {
-			new BookMarkItem(this.BookmarkBarEl, this.plugin, this.view, item, bookmarks).onload();
+			new BookMarkItem(bookmarkBarContainerEl, this.plugin, this.view, item, bookmarks).onload();
 		})
 	}
 

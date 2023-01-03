@@ -467,7 +467,7 @@ input[type="text"].wb-page-search-bar-input:focus-visible {
 .wb-bookmark-bar {
 	display: flex;
 	align-items: center;
-	overflow: scroll;
+	overflow: hidden;
 	padding-bottom: var(--size-2-1);
 	padding-top: var(--size-2-1);
 	padding-left: var(--size-4-2);
@@ -486,7 +486,7 @@ div[data-type^="empty"] .wb-bookmark-bar {
 
 .wb-bookmark-item,
 .wb-bookmark-folder {
-	max-width: 100px;
+	max-width: 120px;
 	text-overflow: hidden;
 	overflow: hidden;
 	margin-right: var(--size-2-2);
@@ -494,6 +494,7 @@ div[data-type^="empty"] .wb-bookmark-bar {
 	border: 1px solid var(--color-base-10);
 	border-radius: var(--radius-s);
 	white-space: nowrap;
+	width: 10%;
 
 	display: flex;
 	align-items: flex-end;
@@ -522,6 +523,17 @@ div[data-type^="empty"] .wb-bookmark-bar {
 }
 
 .wb-bookmark-bar::-webkit-scrollbar {
+	display: none; /* Safari and Chrome */
+}
+
+
+.wb-bookmark-bar-container {
+	display: flex;
+	width: 95%;
+	overflow-x: scroll;
+}
+
+.wb-bookmark-bar-container::-webkit-scrollbar {
 	display: none; /* Safari and Chrome */
 }
 
@@ -590,12 +602,14 @@ div[data-type^="empty"].workspace-leaf-content
 	right: var(--size-4-3);
 	padding: var(--size-2-1);
 	border-radius: var(--radius-s);
+	color: var(--color-red);
 }
 
 .wb-bookmark-manager-icon {
 	height: 18px;
 	width: 18px;
 	display: flex;
+
 }
 
 .wb-refresh-button, .wb-refresh-button .lucide-refresh-cw {
@@ -702,3 +716,4 @@ div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
+

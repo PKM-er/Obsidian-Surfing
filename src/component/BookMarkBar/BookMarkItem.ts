@@ -38,7 +38,7 @@ export class BookMarkItem {
 			text: this.item.label,
 		});
 
-		setIcon(folderIconEl, "folder");
+		setIcon(folderIconEl, "folder-closed");
 
 		let currentPos: DOMRect;
 
@@ -67,7 +67,7 @@ export class BookMarkItem {
 		if (category?.children) category?.children.forEach((child) => {
 			let subMenu: Menu | undefined;
 			menu.addItem((item) =>
-				subMenu = item.setTitle(child.label).setIcon('folder').setSubmenu()
+				subMenu = item.setTitle(child.label).setIcon('folder-closed').setSubmenu()
 			);
 
 			if (!child?.children) {
