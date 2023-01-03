@@ -59,7 +59,7 @@ export class HeaderBar {
 			}
 		}, false);
 
-		new BookmarkSuggester(app, this.plugin, this.searchBar);
+		if (this.plugin.settings.bookmarkManager.openBookMark) new BookmarkSuggester(app, this.plugin, this.searchBar);
 
 		// Use focusin to bubble up to the parent
 		// Rather than just input element itself.
