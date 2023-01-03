@@ -126,7 +126,7 @@ export function doParse(categoryString: string): CategoryType[] {
 				categoryOptions.push(node)
 			} else {
 				const p = getParentNode(level, categoryOptions);
-				p.children = p.children || [];
+				// For menu mode of el-select
 				p?.children?.push(node);
 			}
 		}
