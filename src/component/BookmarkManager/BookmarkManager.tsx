@@ -14,6 +14,7 @@ import {
 	theme,
 } from "antd";
 import React, { KeyboardEventHandler, useEffect, useState } from "react";
+import useStateRef from "react-usestateref";
 import { generateColor, generateTagsOptions, stringToCategory } from "./utils";
 import type { Bookmark, CategoryType } from "../../types/bookmark";
 import { ColumnsType } from "antd/es/table";
@@ -53,7 +54,7 @@ interface Props {
 }
 
 export default function BookmarkManager(props: Props) {
-	const [bookmarks, setBookmarks] = useState(props.bookmarks);
+	const [bookmarks, setBookmarks, bookmarksRef] = useStateRef(props.bookmarks);
 	const [categories, setCategories] = useState(props.categories);
 	const options = generateTagsOptions(bookmarks);
 	const [currentBookmark, setCurrentBookmark] = useState(emptyBookmark);
@@ -200,8 +201,6 @@ export default function BookmarkManager(props: Props) {
 			return list.includes(column.key as string) || column.key === "action";
 		});
 
-		console.log(newColumns);
-
 		setColumns(newColumns);
 		setCheckedColumn(list);
 		props.plugin.settings.bookmarkManager.defaultColumnList = list as any;
@@ -260,18 +259,12 @@ export default function BookmarkManager(props: Props) {
 	};
 
 	const handleDeleteBookmark = (oldBookmark: Bookmark) => {
-		const newBookmarks = JSON.parse(JSON.stringify(bookmarks));
+		const newBookmarks = [...bookmarks];
 
-		for (let i = 0; i < bookmarks.length; i++) {
-			if (bookmarks[i].id === oldBookmark.id) {
-				newBookmarks.splice(i, 1);
-				setBookmarks(newBookmarks);
-				break;
-			}
-		}
+		setBookmarks(newBookmarks.filter((bookmark) => bookmark.id !== oldBookmark.id));
 
 		saveJson({
-			bookmarks: newBookmarks,
+			bookmarks: bookmarksRef.current,
 			categories: props.categories,
 		});
 	};
@@ -359,7 +352,7 @@ export default function BookmarkManager(props: Props) {
 					</Row>
 				</div>
 				<Table
-					dataSource={ bookmarks }
+					dataSource={ bookmarksRef.current }
 					key={ new Date().toISOString() }
 					columns={ columns }
 					pagination={ {
