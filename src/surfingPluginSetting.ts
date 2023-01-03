@@ -58,6 +58,7 @@ obsidian
 const defaultColumnList = [
 	"name",
 	"description",
+	"url",
 	"category",
 	"tags",
 	"created",
