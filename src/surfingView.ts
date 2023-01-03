@@ -33,6 +33,8 @@ export class SurfingView extends ItemView {
 	private searchContainer: OmniSearchContainer;
 	private bookmarkBar: BookMarkBar;
 
+	private loaded = false;
+
 	private doc: Document;
 
 	private omnisearchEnabled: boolean;
@@ -387,7 +389,9 @@ export class SurfingView extends ItemView {
 		})
 
 		this.webviewEl.addEventListener('destroyed', () => {
+
 			if (doc !== this.contentEl.doc) {
+				console.log("Webview destroyed");
 				this.webviewEl.detach();
 				this.createWebview();
 			}
@@ -409,16 +413,15 @@ export class SurfingView extends ItemView {
 		// })
 
 		doc.contains(this.contentEl) ? this.contentEl.appendChild(this.webviewEl) : this.contentEl.onNodeInserted(() => {
+			if (this.loaded) return;
+			else this.loaded = true;
 			this.contentEl.doc === doc ? this.contentEl.appendChild(this.webviewEl) : this.createWebview()
 		})
-
-
 	}
 
 	async onOpen() {
 		// Allow views to replace this views.
 		this.navigation = true;
-
 
 		// Create search bar in the header bar.
 		this.headerBar = new HeaderBar(this.headerEl.children[2], this.plugin, this, true);

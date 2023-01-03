@@ -529,8 +529,6 @@ export default class SurfingPlugin extends Plugin {
 						urlString = url.toString();
 					}
 
-					console.log(target, urlString, features);
-
 					if (decodeURI(urlString) !== urlString) urlString = decodeURI(urlString).toString().replace(/\s/g, "%20");
 
 					// 2. Perform default behavior if the url isn't "http://" or "https://"

@@ -672,3 +672,33 @@ div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
 .cm-scroller .wb-view-content-embeded {
 	height: 500px;
 }
+
+.suggestion-item.wb-bookmark-suggest-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.wb-bookmark-suggest-container {
+	display: flex;
+	gap: 10px;
+
+	max-width: 92%;
+
+}
+
+.wb-bookmark-suggestion-text {
+	font-weight: bolder;
+
+	overflow-x: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wb-bookmark-suggestion-url {
+	opacity: 0.4;
+
+	overflow-x: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
