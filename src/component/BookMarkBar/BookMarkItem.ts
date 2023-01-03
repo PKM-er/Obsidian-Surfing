@@ -72,6 +72,7 @@ export class BookMarkItem {
 
 			if (!child?.children) {
 				const bookmark = this.bookmark.filter((item) => {
+					if (!item.category.length) return false;
 					return item.category[item.category.length - 1] === child.value;
 				});
 
@@ -94,7 +95,8 @@ export class BookMarkItem {
 		});
 
 		const bookmark = this.bookmark.filter((item) => {
-			return item.category[item.category.length - 1].contains(category.value);
+			if (!item.category.length) return false;
+			return item.category[item.category.length - 1]?.contains(category.value);
 		});
 
 		if (bookmark.length > 0) {
