@@ -190,6 +190,7 @@ export default class SurfingPlugin extends Plugin {
 			if (!url) return;
 			if (decodeURI(url) !== url) url = decodeURI(url).toString().replace(/\s/g, "%20");
 
+
 			SurfingView.spawnWebBrowserView(true, { url: url });
 		});
 	}

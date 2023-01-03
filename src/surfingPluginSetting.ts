@@ -35,6 +35,7 @@ export interface SurfingSettings {
 	darkMode: boolean;
 	bookmarkManager: {
 		openBookMark: boolean;
+		saveBookMark: boolean;
 		pagination: string;
 		category: string;
 		defaultColumnList: string[];
@@ -88,6 +89,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	darkMode: false,
 	bookmarkManager: {
 		openBookMark: false,
+		saveBookMark: false,
 		pagination: "12",
 		category: JSON.stringify(defaultCategory),
 		defaultColumnList: defaultColumnList,
