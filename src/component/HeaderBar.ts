@@ -8,21 +8,25 @@ export class HeaderBar {
 	private searchBar: HTMLInputElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>;
 	private view: ItemView;
+	private parentEl: Element;
 	removeChild = true;
 
 	constructor(parent: Element, plugin: SurfingPlugin, view: ItemView, removeChild?: boolean) {
 		this.plugin = plugin;
 		this.view = view;
 
+		this.parentEl = parent;
 		if (removeChild !== undefined) this.removeChild = removeChild;
-		// CSS class removes the gradient at the right of the header bar.
-		parent.addClass("wb-header-bar");
-		// Remove default title from header bar.
-		// Use Obsidian API to remove the title.
-		if (this.removeChild) parent.empty();
+	}
 
-		if (this.plugin.settings.showRefreshButton && removeChild) {
-			const refreshButton = parent.createEl("div", {
+	onLoad() {
+		// CSS class removes the gradient at the right of the header bar.
+		this.parentEl.addClass("wb-header-bar");
+
+		if (this.removeChild) this.parentEl.empty();
+
+		if (this.plugin.settings.showRefreshButton && this.removeChild && this.view.getViewType() !== "empty") {
+			const refreshButton = this.parentEl.createEl("div", {
 				cls: "wb-refresh-button"
 			});
 			refreshButton.addEventListener("click", () => {
@@ -34,7 +38,7 @@ export class HeaderBar {
 
 		// Create search bar in header bar.
 		// Use Obsidian CreateEL method.
-		this.searchBar = parent.createEl("input", {
+		this.searchBar = this.parentEl.createEl("input", {
 			type: "text",
 			placeholder: t("Search with") + this.plugin.settings.defaultSearchEngine + t("or enter address"),
 			cls: "wb-search-bar"

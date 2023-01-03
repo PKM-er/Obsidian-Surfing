@@ -56,5 +56,6 @@ export class BookmarkSuggester extends TextInputSuggest<Bookmark> {
 		if (!item) return;
 
 		SurfingView.spawnWebBrowserView(false, { url: item.url });
+		this.close();
 	}
 }

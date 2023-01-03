@@ -111,6 +111,7 @@ export default class SurfingPlugin extends Plugin {
 		// Check if the "New tab" view has already been processed and has a header bar already.
 		if (!currentView.headerEl.children[2].hasClass("web-browser-header-bar")) {
 			const headerBar = new HeaderBar(currentView.headerEl.children[2], this, currentView);
+			headerBar.onLoad();
 			// Focus on current inputEl
 			if (!this.settings.showSearchBarInPage) headerBar.focus();
 			headerBar.addOnSearchBarEnterListener((url: string) => {
@@ -341,6 +342,8 @@ export default class SurfingPlugin extends Plugin {
 				if (!currentView) return;
 				if (currentView.headerEl.childNodes.length > 4) return;
 				const searchBarEl = new HeaderBar(currentView.headerEl, this, currentView, false);
+				searchBarEl.onLoad();
+
 				searchBarEl.addOnSearchBarEnterListener((url: string) => {
 					SurfingView.spawnWebBrowserView(false, { url });
 				});

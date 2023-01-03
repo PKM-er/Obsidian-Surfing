@@ -422,6 +422,7 @@ export class SurfingView extends ItemView {
 
 		// Create search bar in the header bar.
 		this.headerBar = new HeaderBar(this.headerEl.children[2], this.plugin, this, true);
+		this.headerBar.onLoad();
 
 		// Create favicon image element.
 		this.favicon = document.createElement("img") as HTMLImageElement;
