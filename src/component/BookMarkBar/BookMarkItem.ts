@@ -75,8 +75,6 @@ export class BookMarkItem {
 					return item.category[item.category.length - 1] === child.value;
 				});
 
-				console.log(category, bookmark);
-
 				if (bookmark.length > 0) {
 					bookmark.forEach((bookmarkItem) => {
 						subMenu?.addItem((item) => {
@@ -98,9 +96,6 @@ export class BookMarkItem {
 		const bookmark = this.bookmark.filter((item) => {
 			return item.category[item.category.length - 1].contains(category.value);
 		});
-
-		console.log(category, bookmark);
-
 
 		if (bookmark.length > 0) {
 			bookmark.forEach((bookmarkItem) => {
