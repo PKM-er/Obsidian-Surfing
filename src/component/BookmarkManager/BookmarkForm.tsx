@@ -55,10 +55,11 @@ export function BookmarkForm(props: Props) {
 		if (!selectedOptions || !texts[0]) return null;
 		return texts.map((text, i) => {
 			const option = selectedOptions[i];
+			if (!option?.value) return <span key={ "ROOT" }>{ text }</span>
 			if (i === texts.length - 1) {
-				return <span key={ option.value }>{ text }</span>;
+				return <span key={ option?.value }>{ text }</span>;
 			}
-			return <span key={ option.value }>{ text } / </span>;
+			return <span key={ option?.value }>{ text } / </span>;
 		});
 	};
 

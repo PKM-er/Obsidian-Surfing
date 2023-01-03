@@ -62,7 +62,7 @@ const BookmarkImporter: any = (Props: Props): any => {
 							name: m[2],
 							url: m[1],
 							description: "",
-							category: [],
+							category: [""],
 							tags: "",
 							created: moment().valueOf(),
 							modified: moment().valueOf(),
