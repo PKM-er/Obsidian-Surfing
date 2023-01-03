@@ -59,6 +59,7 @@ export default function BookmarkManager(props: Props) {
 	const options = generateTagsOptions(bookmarks);
 	const [currentBookmark, setCurrentBookmark] = useState(emptyBookmark);
 	const [searchWord, setSearchWord] = useState("");
+	const [currentPage, setCurrentPage] = useState(1);
 
 	const defaultColumns: ColumnsType<Bookmark> = [
 		{
@@ -71,6 +72,7 @@ export default function BookmarkManager(props: Props) {
 						href={ record.url }
 						onClick={ (e) => {
 							e.preventDefault();
+							console.log("clicked", record);
 							SurfingView.spawnWebBrowserView(true, {
 								url: record.url,
 							});
@@ -356,10 +358,15 @@ export default function BookmarkManager(props: Props) {
 					key={ new Date().toISOString() }
 					columns={ columns }
 					pagination={ {
+						defaultCurrent: 1,
+						current: currentPage,
 						defaultPageSize: Number(
 							props.plugin.settings.bookmarkManager.pagination
 						),
 						position: ["bottomCenter"],
+						onChange: (page, pageSize) => {
+							setCurrentPage(page);
+						}
 					} }
 					scroll={ {
 						y: "100%",

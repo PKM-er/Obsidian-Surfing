@@ -90,11 +90,12 @@ export class SurfingView extends ItemView {
 		if (!leafId) {
 			// Check if current leaf is empty view or markdown view.
 			let activeViewLeaf: WorkspaceLeaf | undefined;
-			activeViewLeaf = app.workspace.getActiveViewOfType(MarkdownView)?.leaf
-			if (!activeViewLeaf) activeViewLeaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? app.workspace.getActiveViewOfType(ItemView)?.leaf : undefined
+			activeViewLeaf = app.workspace.getActiveViewOfType(MarkdownView)?.leaf;
+			const currentViewType = app.workspace.getActiveViewOfType(ItemView)?.getViewType();
+			if (!activeViewLeaf) activeViewLeaf = (currentViewType === "empty" || currentViewType === "surfing-bookmark-manager") ? app.workspace.getActiveViewOfType(ItemView)?.leaf : undefined;
 			if (!activeViewLeaf) return;
 
-			const leaf = app.workspace.getActiveViewOfType(ItemView)?.getViewType() === "empty" ? activeViewLeaf : app.workspace.createLeafBySplit(activeViewLeaf) as WorkspaceLeaf;
+			const leaf = currentViewType === "empty" ? activeViewLeaf : app.workspace.createLeafBySplit(activeViewLeaf) as WorkspaceLeaf;
 			localStorage.setItem("web-browser-leaf-id", leaf.id);
 
 			leaf.setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
