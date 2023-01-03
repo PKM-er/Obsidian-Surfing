@@ -41,11 +41,14 @@ export class BookmarkSuggester extends TextInputSuggest<Bookmark> {
 	}
 
 	renderSuggestion(item: Bookmark, el: HTMLElement): void {
-		el.createEl("div", {
+		const bookmarkSuggestContainerEl = el.createEl("div", {
+			cls: "wb-bookmark-suggest-container"
+		});
+		bookmarkSuggestContainerEl.createEl("div", {
 			text: item.name,
 			cls: "wb-bookmark-suggestion-text"
 		})
-		el.createEl("div", {
+		bookmarkSuggestContainerEl.createEl("div", {
 			text: item.url,
 			cls: "wb-bookmark-suggestion-url"
 		})
