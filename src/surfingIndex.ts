@@ -1,12 +1,12 @@
 import {
-	addIcon,
+	addIcon, App,
 	Editor,
 	EventRef,
 	ItemView,
 	MarkdownPreviewRenderer,
 	MarkdownPreviewRendererStatic,
 	MarkdownView,
-	Menu,
+	Menu, Modal, moment,
 	Notice,
 	Plugin, requireApiVersion,
 	setIcon,
@@ -26,6 +26,8 @@ import { InNodeWebView } from "./component/InNodeWebView";
 import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
 import { SurfingBookmarkManagerView, WEB_BROWSER_BOOKMARK_MANAGER_ID } from './surfingBookmarkManager'
 import { EmbededWebView } from "./component/EmbededWebView";
+import { loadJson, saveJson } from "./utils/json";
+import { hashCode, nonElectronGetPageTitle } from "./component/BookmarkManager/utils";
 
 
 export default class SurfingPlugin extends Plugin {
@@ -189,9 +191,8 @@ export default class SurfingPlugin extends Plugin {
 			let url = e.url;
 			if (!url) return;
 			if (decodeURI(url) !== url) url = decodeURI(url).toString().replace(/\s/g, "%20");
-
-
-			SurfingView.spawnWebBrowserView(true, { url: url });
+			if (this.settings.bookmarkManager.saveBookMark) new SaveBookmarkModal(this.app, url, this).open();
+			else SurfingView.spawnWebBrowserView(true, { url: url });
 		});
 	}
 
@@ -767,5 +768,68 @@ export default class SurfingPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+}
+
+class SaveBookmarkModal extends Modal {
+	private url: string;
+	private plugin: SurfingPlugin;
+
+	constructor(app: App, url: string, plugin: SurfingPlugin) {
+		super(app);
+
+		this.url = url;
+		this.app = app;
+		this.plugin = plugin;
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.parentElement?.classList.add("wb-bookmark-modal");
+
+		const titleEl = contentEl.createEl("h2", { text: "Save Bookmark" });
+
+		const btnContainerEl = contentEl.createDiv({ cls: "wb-bookmark-modal-btn-container" });
+
+		const saveBtnEl = btnContainerEl.createEl("button", { text: "Save" });
+		saveBtnEl.onclick = async () => {
+			this.close();
+			const urlData = await nonElectronGetPageTitle(this.url);
+
+			if (!urlData) return;
+
+			const data = await loadJson();
+			const bookmarks = data.bookmarks;
+
+			bookmarks.unshift({
+				id: String(hashCode(this.url)),
+				name: urlData.name || "Untitled",
+				url: this.url,
+				description: urlData.description || "",
+				category: [""],
+				tags: "",
+				created: moment().valueOf(),
+				modified: moment().valueOf(),
+			})
+
+			await saveJson({ bookmarks: bookmarks, categories: data.categories });
+
+			const currentBookmarkView = app.workspace.getActiveViewOfType(SurfingBookmarkManagerView);
+			if (currentBookmarkView) {
+				currentBookmarkView.leaf.rebuildView();
+			}
+		}
+
+		const openBtnEl = btnContainerEl.createEl("button", { text: "Open" });
+		openBtnEl.onclick = () => {
+			this.close();
+
+			SurfingView.spawnWebBrowserView(true, { url: this.url });
+		};
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
 	}
 }

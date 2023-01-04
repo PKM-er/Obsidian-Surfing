@@ -43,14 +43,16 @@ export class SurfingBookmarkManagerView extends ItemView {
 			}
 		}
 
-		ReactDOM.createRoot(this.containerEl).render(
-			<React.StrictMode>
-				<BookmarkManager
-					bookmarks={this.bookmarkData}
-					categories={this.categoryData}
-					plugin={this.plugin}
-				/>
-			</React.StrictMode>
-		);
+		if (this.bookmarkData.length > 0 && this.categoryData.length > 0) {
+			ReactDOM.createRoot(this.containerEl).render(
+				<React.StrictMode>
+					<BookmarkManager
+						bookmarks={ this.bookmarkData }
+						categories={ this.categoryData }
+						plugin={ this.plugin }
+					/>
+				</React.StrictMode>
+			);
+		}
 	}
 }

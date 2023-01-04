@@ -717,3 +717,19 @@ div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
 	white-space: nowrap;
 }
 
+.wb-bookmark-modal h2 {
+	text-align: center;
+}
+
+.wb-bookmark-modal .wb-bookmark-modal-btn-container {
+	display: flex;
+	align-items: center;
+	flex-direction: row;
+	gap: 10px;
+}
+
+.wb-bookmark-modal .modal-content {
+	flex-direction: column;
+	align-items: center;
+}
+
