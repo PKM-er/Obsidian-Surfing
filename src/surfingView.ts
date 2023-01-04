@@ -497,6 +497,7 @@ export class SurfingView extends ItemView {
 					if (currentBookmarkLeaves.length > 0) {
 						currentBookmarkLeaves[0].rebuildView();
 					}
+					this.bookmarkBar?.render(bookmarks, jsonData.categories);
 				} else {
 					new Notice("Bookmark already exists.");
 				}

@@ -9,6 +9,7 @@ export class BookMarkBar {
 	private view: ItemView;
 	private plugin: SurfingPlugin;
 	private BookmarkBarEl: HTMLElement;
+	private BookmarkBarContainerEl: HTMLElement;
 	private bookmarkData: Bookmark[];
 	private categoryData: CategoryType[];
 
@@ -61,17 +62,19 @@ export class BookMarkBar {
 	}
 
 	render(bookmarks: Bookmark[], categories: CategoryType[]) {
+
+		if (this.BookmarkBarContainerEl) this.BookmarkBarContainerEl.detach();
+
 		// Move root to the end;
 		const rootCategory = categories.shift();
 		if (rootCategory) categories.push(rootCategory);
 
-		const bookmarkBarContainerEl = this.BookmarkBarEl.createEl("div", {
+		this.BookmarkBarContainerEl = this.BookmarkBarEl.createEl("div", {
 			cls: "wb-bookmark-bar-container"
 		});
 
 		categories?.forEach((item: CategoryType) => {
-			new BookMarkItem(bookmarkBarContainerEl, this.plugin, this.view, item, bookmarks).onload();
+			new BookMarkItem(this.BookmarkBarContainerEl, this.plugin, this.view, item, bookmarks).onload();
 		})
 	}
-
 }
