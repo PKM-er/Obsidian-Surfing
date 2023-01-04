@@ -16,7 +16,7 @@ import { t } from "./translations/helper";
 import searchBox from "./component/SearchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
 import { OmniSearchContainer } from "./component/OmniSearchContainer";
-import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
+import { BookMarkBar, updateBookmarkBar } from "./component/BookMarkBar/BookMarkBar";
 import { loadJson, saveJson } from "./utils/json";
 import { hashCode } from "./component/BookmarkManager/utils";
 
@@ -33,7 +33,8 @@ export class SurfingView extends ItemView {
 	private webviewEl: HTMLElement;
 	private menu: any;
 	private searchContainer: OmniSearchContainer;
-	private bookmarkBar: BookMarkBar;
+
+	bookmarkBar: BookMarkBar;
 
 	private loaded = false;
 
@@ -493,11 +494,7 @@ export class SurfingView extends ItemView {
 
 					await saveJson({ bookmarks: bookmarks, categories: jsonData.categories });
 
-					const currentBookmarkLeaves = app.workspace.getLeavesOfType("surfing-bookmark-manager");
-					if (currentBookmarkLeaves.length > 0) {
-						currentBookmarkLeaves[0].rebuildView();
-					}
-					this.bookmarkBar?.render(bookmarks, jsonData.categories);
+					updateBookmarkBar(bookmarks, jsonData.categories, true);
 				} else {
 					new Notice("Bookmark already exists.");
 				}

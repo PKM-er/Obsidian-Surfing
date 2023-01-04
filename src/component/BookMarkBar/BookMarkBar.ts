@@ -10,8 +10,8 @@ export class BookMarkBar {
 	private plugin: SurfingPlugin;
 	private BookmarkBarEl: HTMLElement;
 	private BookmarkBarContainerEl: HTMLElement;
-	private bookmarkData: Bookmark[];
-	private categoryData: CategoryType[];
+	private bookmarkData: Bookmark[] = [];
+	private categoryData: CategoryType[] = [];
 
 	constructor(view: ItemView, plugin: SurfingPlugin) {
 		this.view = view;
@@ -75,6 +75,30 @@ export class BookMarkBar {
 
 		categories?.forEach((item: CategoryType) => {
 			new BookMarkItem(this.BookmarkBarContainerEl, this.plugin, this.view, item, bookmarks).onload();
+		})
+	}
+}
+
+export const updateBookmarkBar = (bookmarks: Bookmark[], categories: CategoryType[], refreshBookmarkManager: boolean) => {
+	if (refreshBookmarkManager) {
+		const currentBookmarkLeaves = app.workspace.getLeavesOfType("surfing-bookmark-manager");
+		if (currentBookmarkLeaves.length > 0) {
+			currentBookmarkLeaves[0].rebuildView();
+		}
+	}
+
+	const emptyLeaves = app.workspace.getLeavesOfType("empty");
+	if (emptyLeaves.length > 0) {
+		emptyLeaves.forEach((leaf) => {
+			leaf.rebuildView();
+		})
+	}
+
+	const surfingLeaves = app.workspace.getLeavesOfType("surfing-view");
+	if (surfingLeaves.length > 0) {
+		surfingLeaves.forEach((leaf) => {
+			// @ts-ignore
+			leaf.view?.bookmarkBar?.render(bookmarks, categories);
 		})
 	}
 }

@@ -23,7 +23,7 @@ import { tokenType } from "./types/obsidian";
 import { checkIfWebBrowserAvailable } from "./utils/url";
 import { InPageIconList } from "./component/InPageIconList";
 import { InNodeWebView } from "./component/InNodeWebView";
-import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
+import { BookMarkBar, updateBookmarkBar } from "./component/BookMarkBar/BookMarkBar";
 import { SurfingBookmarkManagerView, WEB_BROWSER_BOOKMARK_MANAGER_ID } from './surfingBookmarkManager'
 import { EmbededWebView } from "./component/EmbededWebView";
 import { loadJson, saveJson } from "./utils/json";
@@ -814,10 +814,7 @@ class SaveBookmarkModal extends Modal {
 
 			await saveJson({ bookmarks: bookmarks, categories: data.categories });
 
-			const currentBookmarkLeaves = app.workspace.getLeavesOfType("surfing-bookmark-manager");
-			if (currentBookmarkLeaves.length > 0) {
-				currentBookmarkLeaves[0].rebuildView();
-			}
+			updateBookmarkBar(bookmarks, data.categories, true);
 		}
 
 		const openBtnEl = btnContainerEl.createEl("button", { text: "Open" });

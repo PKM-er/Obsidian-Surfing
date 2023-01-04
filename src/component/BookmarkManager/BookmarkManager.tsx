@@ -26,6 +26,7 @@ import { saveJson } from "../../utils/json";
 import { SurfingView } from "../../surfingView";
 import { t } from "../../translations/helper";
 import { FilterValue, SorterResult } from "antd/es/table/interface";
+import { updateBookmarkBar } from "../BookMarkBar/BookMarkBar";
 
 const columnOptions = [
 	"name",
@@ -329,6 +330,8 @@ export default function BookmarkManager(props: Props) {
 			bookmarks: bookmarksRef.current,
 			categories: props.categories,
 		});
+
+		updateBookmarkBar(bookmarksRef.current, props.categories, false);
 	};
 
 	const handleImportFinished = async (importedBookmarks: Bookmark[]): Promise<void> => {
@@ -373,6 +376,8 @@ export default function BookmarkManager(props: Props) {
 			bookmarks: bookmarks,
 			categories: props.categories,
 		});
+
+		updateBookmarkBar(bookmarks, props.categories, false);
 	};
 
 	const importProps = {
