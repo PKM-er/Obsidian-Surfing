@@ -787,7 +787,7 @@ class SaveBookmarkModal extends Modal {
 		const { contentEl } = this;
 		contentEl.parentElement?.classList.add("wb-bookmark-modal");
 
-		const titleEl = contentEl.createEl("h2", { text: "Save Bookmark" });
+		contentEl.createEl("h2", { text: "Save Bookmark" });
 
 		const btnContainerEl = contentEl.createDiv({ cls: "wb-bookmark-modal-btn-container" });
 
