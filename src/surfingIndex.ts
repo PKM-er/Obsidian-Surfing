@@ -806,7 +806,7 @@ class SaveBookmarkModal extends Modal {
 				name: urlData.title || "Untitled",
 				url: this.url,
 				description: urlData.description || "",
-				category: [""],
+				category: ["ROOT"],
 				tags: "",
 				created: moment().valueOf(),
 				modified: moment().valueOf(),
@@ -814,9 +814,9 @@ class SaveBookmarkModal extends Modal {
 
 			await saveJson({ bookmarks: bookmarks, categories: data.categories });
 
-			const currentBookmarkView = app.workspace.getActiveViewOfType(SurfingBookmarkManagerView);
-			if (currentBookmarkView) {
-				currentBookmarkView.leaf.rebuildView();
+			const currentBookmarkLeaves = app.workspace.getLeavesOfType("surfing-bookmark-manager");
+			if (currentBookmarkLeaves.length > 0) {
+				currentBookmarkLeaves[0].rebuildView();
 			}
 		}
 

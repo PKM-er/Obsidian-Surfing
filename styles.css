@@ -323,6 +323,15 @@
 	margin-bottom: -1px;
 }
 
+.wb-search-suggestion:has(.wb-bookmark-suggest-item) {
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.wb-search-suggestion::--webkit-scrollbar {
+	display: none;
+}
+
 .wb-search-suggest-item.is-selected {
 	background-color: var(--color-accent);
 }
