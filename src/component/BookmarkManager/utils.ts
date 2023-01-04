@@ -74,7 +74,6 @@ export async function nonElectronGetPageTitle(url: string): Promise<{ title: str
 		};
 	} catch (ex) {
 		console.error(ex);
-
 		return {
 			title: "",
 			name: "",

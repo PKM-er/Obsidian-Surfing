@@ -74,7 +74,6 @@ export default function BookmarkManager(props: Props) {
 						href={ record.url }
 						onClick={ (e) => {
 							e.preventDefault();
-							console.log("clicked", record);
 							SurfingView.spawnWebBrowserView(true, {
 								url: record.url,
 							});
@@ -213,13 +212,11 @@ export default function BookmarkManager(props: Props) {
 	}));
 
 	const handleChange: TableProps<Bookmark>['onChange'] = (pagination, filters, sorter) => {
-		console.log('Various parameters', pagination, filters, sorter);
 		setTagFiltered(filters);
 	};
 
 	useEffect(() => {
 		return () => {
-			console.log(tagFilteredRef.current)
 			setColumns(columns.map(item => {
 				if (item.key == "tags") {
 					return {
