@@ -30,7 +30,14 @@ export const initializeJson = async () => {
 		bookmarkSavePath,
 		JSON.stringify({
 				"bookmarks": [],
-				"categories": []
+				"categories": [
+					{
+						"value": "ROOT",
+						"text": "ROOT",
+						"label": "ROOT",
+						"children": []
+					},
+				]
 			}, null, 2
 		)
 	);

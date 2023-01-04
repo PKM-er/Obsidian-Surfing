@@ -43,7 +43,7 @@ export class SurfingBookmarkManagerView extends ItemView {
 			}
 		}
 
-		if (this.bookmarkData.length > 0 && this.categoryData.length > 0) {
+		if (this.bookmarkData && this.categoryData) {
 			ReactDOM.createRoot(this.containerEl).render(
 				<React.StrictMode>
 					<BookmarkManager
