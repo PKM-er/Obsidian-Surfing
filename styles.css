@@ -576,6 +576,10 @@ div[data-type^="empty"].workspace-leaf-content
 	align-items: center;
 }
 
+.surfing-bookmark-manager-search-bar .ant-input-affix-wrapper {
+	padding: 0 11px;
+}
+
 .surfing-bookmark-manager-header-bar .ant-row {
 	display: flex;
 	align-items: center;
@@ -729,6 +733,7 @@ div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
 }
 
 .wb-bookmark-modal .modal-content {
+	display: flex;
 	flex-direction: column;
 	align-items: center;
 }

@@ -81,5 +81,6 @@ export default {
 	"Action": "操作",
 	"Search from ": "从",
 	" bookmarks": "个书签中搜索",
-	"Save Bookmark When Open URI": "打开 URI 时保存书签"
+	"Save Bookmark When Open URI": "打开 URI 时保存书签",
+	'Copy Current Viewport As Image': "复制当前页面为图片",
 };

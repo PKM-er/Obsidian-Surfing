@@ -84,4 +84,5 @@ export default {
 	"Search from ": "Search from ",
 	" bookmarks": " bookmarks",
 	"Save Bookmark When Open URI": "Save Bookmark When Open URI",
+	'Copy Current Viewport As Image': 'Copy Current Viewport As Image',
 };

@@ -317,7 +317,7 @@ export default function BookmarkManager(props: Props) {
 		setModalVisible(false);
 	};
 
-	const handleSaveBookmark = (newBookmark: Bookmark, previousId: string) => {
+	const handleSaveBookmark = async (newBookmark: Bookmark, previousId: string) => {
 		const isBookmarkExist = props.bookmarks.some((bookmark, index) => {
 			if (
 				bookmark.url === newBookmark.url ||
@@ -341,7 +341,7 @@ export default function BookmarkManager(props: Props) {
 			setModalVisible(false);
 		}
 
-		saveJson({
+		await saveJson({
 			bookmarks: bookmarks,
 			categories: props.categories,
 		});

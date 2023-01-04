@@ -803,7 +803,7 @@ class SaveBookmarkModal extends Modal {
 
 			bookmarks.unshift({
 				id: String(hashCode(this.url)),
-				name: urlData.name || "Untitled",
+				name: urlData.title || "Untitled",
 				url: this.url,
 				description: urlData.description || "",
 				category: [""],

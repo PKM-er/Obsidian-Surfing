@@ -533,6 +533,25 @@ export class SurfingView extends ItemView {
 				)
 			);
 
+			this.menu.append(
+				new MenuItem(
+					{
+						label: t('Copy Current Viewport As Image'),
+						click: async function () {
+							try {
+								// Copy Image to Clipboard
+								webContents.capturePage().then(async (image: any) => {
+									clipboard.writeImage(image);
+								});
+							} catch (err) {
+								console.error('Failed to copy: ', err);
+							}
+
+						}
+					}
+				)
+			);
+
 			// TODO: Support customize menu items.
 			// TODO: Support cut, paste, select All.
 			// Only works when something is selected.
