@@ -87,4 +87,5 @@ export default {
 	'Copy Current Viewport As Image': 'Copy Current Viewport As Image',
 	'Back': 'Back',
 	'Forward': 'Forward',
+	"star": "star",
 };

@@ -4,6 +4,7 @@ import { SurfingView } from "../../surfingView";
 import SurfingPlugin from "../../surfingIndex";
 import { loadJson } from "../../utils/json";
 import type { Bookmark } from "../../types/bookmark";
+import { getComposedUrl } from "../../utils/url";
 
 export class BookmarkSuggester extends TextInputSuggest<Bookmark> {
 	private plugin: SurfingPlugin;
@@ -35,7 +36,19 @@ export class BookmarkSuggester extends TextInputSuggest<Bookmark> {
 		});
 
 		if (!filtered) this.close();
-		if (filtered?.length > 0) return filtered;
+		if (filtered?.length > 0) {
+			filtered.unshift({
+				id: "BOOKMARK",
+				name: inputLowerCase,
+				description: "",
+				url: "",
+				tags: "",
+				category: [],
+				created: 1111111111111,
+				modified: 1111111111111,
+			});
+			return filtered;
+		}
 
 		return filtered ? filtered : [];
 	}
@@ -58,7 +71,16 @@ export class BookmarkSuggester extends TextInputSuggest<Bookmark> {
 	selectSuggestion(item: Bookmark): void {
 		if (!item) return;
 
+		if (item.id === "BOOKMARK") {
+			const finalUrl = getComposedUrl("", item.name);
+			SurfingView.spawnWebBrowserView(false, { url: finalUrl });
+
+			this.close();
+			return;
+		}
+
 		SurfingView.spawnWebBrowserView(false, { url: item.url });
 		this.close();
+		return;
 	}
 }

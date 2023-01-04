@@ -6,14 +6,14 @@ export interface BookmarkFolder {
 }
 
 export interface Bookmark {
-	id: string
-	name: string
-	description: string
-	url: string
-	tags: string
-	category: string[]
-	created: number
-	modified: number
+	id: string,
+	name: string,
+	description: string,
+	url: string,
+	tags: string,
+	category: string[],
+	created: number,
+	modified: number,
 }
 
 export interface FilterType {

@@ -4,7 +4,7 @@ import {
 	htmlToMarkdown,
 	ItemView,
 	MarkdownView,
-	moment,
+	moment, Notice,
 	ViewStateResult,
 	WorkspaceLeaf
 } from "obsidian";
@@ -17,6 +17,8 @@ import searchBox from "./component/SearchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
 import { OmniSearchContainer } from "./component/OmniSearchContainer";
 import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
+import { loadJson, saveJson } from "./utils/json";
+import { hashCode } from "./component/BookmarkManager/utils";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
@@ -450,7 +452,59 @@ export class SurfingView extends ItemView {
 			app.setting.open();
 			//@ts-expect-error, private method
 			app.setting.openTabById('surfing');
-		})
+		});
+		this.addAction("star", t("star"), async () => {
+			const jsonData = await loadJson();
+			const bookmarks = jsonData.bookmarks;
+			try {
+				const isBookmarkExist = bookmarks.some((bookmark) => {
+					if (bookmark.url === this.currentUrl) {
+						return true;
+					} else {
+						return false;
+					}
+				});
+
+				if (!isBookmarkExist) {
+					// @ts-ignore
+					const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
+
+					let description = "";
+					try {
+						webContents.executeJavaScript(`
+							document.querySelector('meta[name="description"]')?.content
+						`).then((result: any) => {
+							if (result) description = result;
+						})
+					} catch (err) {
+						console.error(err);
+					}
+
+					bookmarks.unshift({
+						id: String(hashCode(this.currentUrl)),
+						name: this.currentTitle,
+						url: this.currentUrl,
+						description: description,
+						category: ["ROOT"],
+						tags: "",
+						created: moment().valueOf(),
+						modified: moment().valueOf(),
+					});
+
+					await saveJson({ bookmarks: bookmarks, categories: jsonData.categories });
+
+					const currentBookmarkLeaves = app.workspace.getLeavesOfType("surfing-bookmark-manager");
+					if (currentBookmarkLeaves.length > 0) {
+						currentBookmarkLeaves[0].rebuildView();
+					}
+				} else {
+					new Notice("Bookmark already exists.");
+				}
+			} catch (err) {
+				new Notice("Failed to add bookmark.");
+				console.log(err);
+			}
+		});
 	}
 
 	async setState(state: WebBrowserViewState, result: ViewStateResult) {

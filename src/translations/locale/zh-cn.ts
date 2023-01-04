@@ -85,4 +85,5 @@ export default {
 	'Copy Current Viewport As Image': "复制当前页面为图片",
 	'Back': '返回',
 	'Forward': '前进',
+	"star": "星标",
 };
