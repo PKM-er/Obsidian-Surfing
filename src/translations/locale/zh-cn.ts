@@ -83,4 +83,6 @@ export default {
 	" bookmarks": "个书签中搜索",
 	"Save Bookmark When Open URI": "打开 URI 时保存书签",
 	'Copy Current Viewport As Image': "复制当前页面为图片",
+	'Back': '返回',
+	'Forward': '前进',
 };
