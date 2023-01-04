@@ -29,7 +29,7 @@ export class BookMarkBar {
 			this.bookmarkData = bookmarks;
 			this.categoryData = categories;
 		} catch (e) {
-			if (this.bookmarkData.length === 0) {
+			if (this.bookmarkData?.length === 0 || !this.bookmarkData) {
 				await initializeJson();
 				const { bookmarks, categories } = await loadJson();
 				this.bookmarkData = bookmarks;

@@ -51,7 +51,7 @@ export function isValidURL(str: string): boolean {
 	return regexp.test(str)
 }
 
-async function nonElectronGetPageTitle(url: string): Promise<{ title: string | null, name: string | null, description: string | null }> {
+export async function nonElectronGetPageTitle(url: string): Promise<{ title: string | null, name: string | null, description: string | null }> {
 	try {
 		const html = await request({ url });
 

@@ -115,7 +115,8 @@ export class BookMarkItem {
 	}
 
 	renderBookmark() {
-		const rootBookmark = this.bookmark.filter((item) => (item.category[0] === this.item.value && item.category.length === 1));
+		if (this.bookmark.length === 0) return;
+		const rootBookmark = this.bookmark.filter((item) => (item?.category[0] === this.item?.value && item?.category.length === 1));
 
 		if (rootBookmark?.length > 0) {
 			rootBookmark.forEach((bookmarkItem) => {

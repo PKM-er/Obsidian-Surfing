@@ -9,7 +9,7 @@ import {
 	Popconfirm,
 	Row,
 	Space,
-	Table,
+	Table, TableProps,
 	Tag,
 	theme,
 } from "antd";
@@ -22,9 +22,10 @@ import { CheckboxValueType } from "antd/es/checkbox/Group";
 import { BookmarkForm } from "./BookmarkForm";
 import BookmarkImporter from "./BookmarkImporter";
 import SurfingPlugin from "src/surfingIndex";
-import { loadJson, saveJson } from "../../utils/json";
+import { saveJson } from "../../utils/json";
 import { SurfingView } from "../../surfingView";
 import { t } from "../../translations/helper";
+import { FilterValue } from "antd/es/table/interface";
 
 const columnOptions = [
 	"name",
@@ -60,6 +61,7 @@ export default function BookmarkManager(props: Props) {
 	const [currentBookmark, setCurrentBookmark] = useState(emptyBookmark);
 	const [searchWord, setSearchWord] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
+	const [tagFiltered, setTagFiltered, tagFilteredRef] = useStateRef<Record<string, FilterValue | null>>({});
 
 	const defaultColumns: ColumnsType<Bookmark> = [
 		{
@@ -129,7 +131,20 @@ export default function BookmarkManager(props: Props) {
 				return text.split(" ").map((tag: string) => {
 					const color = generateColor(tag);
 					return (
-						<Tag color={ color } key={ tag }>
+						<Tag color={ color } key={ tag } onClick={ () => {
+							let originalTags = null;
+							if (tagFilteredRef.current.tags) {
+								originalTags = tagFilteredRef.current.tags.slice();
+								if (!originalTags.contains(tag)) originalTags = [...originalTags, tag];
+							} else {
+								originalTags = [tag];
+							}
+
+							setTagFiltered({
+								...tagFilteredRef.current,
+								tags: originalTags,
+							});
+						} }>
 							{ tag.toUpperCase() }
 						</Tag>
 					);
@@ -196,6 +211,26 @@ export default function BookmarkManager(props: Props) {
 	const [columns, setColumns] = useState(defaultColumns.filter((column) => {
 		return checkedColumn.includes(column.key as string) || column.key === "action";
 	}));
+
+	const handleChange: TableProps<Bookmark>['onChange'] = (pagination, filters, sorter) => {
+		console.log('Various parameters', pagination, filters, sorter);
+		setTagFiltered(filters);
+	};
+
+	useEffect(() => {
+		return () => {
+			console.log(tagFilteredRef.current)
+			setColumns(columns.map(item => {
+				if (item.key == "tags") {
+					return {
+						...item,
+						filteredValue: tagFilteredRef.current.tags,
+					};
+				}
+				return item;
+			}));
+		};
+	}, [tagFiltered]);
 
 	const CheckboxGroup = Checkbox.Group;
 	const onColumnChange = async (list: CheckboxValueType[]) => {
@@ -383,6 +418,7 @@ export default function BookmarkManager(props: Props) {
 					sticky={ true }
 					rowKey="id"
 					showSorterTooltip={ false }
+					onChange={ handleChange }
 				></Table>
 				<Modal
 					title="Bookmark"

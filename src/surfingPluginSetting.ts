@@ -804,6 +804,18 @@ export class SurfingSettingTab extends PluginSettingTab {
 			})
 		this.addSettingToMasterSettingsList(tabName, openBookmarkManager.settingEl, t("Open BookmarkBar & Bookmark Manager"));
 
+		const saveBookmark = new Setting(wbContainerEl)
+			.setName(t("Save Bookmark When Open URI"))
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.bookmarkManager.saveBookMark)
+					.onChange(async (value) => {
+						this.plugin.settings.bookmarkManager.saveBookMark = value;
+						this.applySettingsUpdate();
+					});
+			})
+		this.addSettingToMasterSettingsList(tabName, saveBookmark.settingEl, t("Save Bookmark When Open URI"));
+
 		if (!this.plugin.settings.bookmarkManager.openBookMark) return;
 
 		const paginationSetting = new Setting(wbContainerEl)

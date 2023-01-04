@@ -83,4 +83,5 @@ export default {
 	"Action": "Action",
 	"Search from ": "Search from ",
 	" bookmarks": " bookmarks",
+	"Save Bookmark When Open URI": "Save Bookmark When Open URI",
 };

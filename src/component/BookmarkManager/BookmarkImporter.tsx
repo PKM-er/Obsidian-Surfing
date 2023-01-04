@@ -47,20 +47,20 @@ const BookmarkImporter: any = (Props: Props): any => {
 					if (!result) return;
 
 					const regex = /<DT><A HREF="(.*?)".*?>(.*)<\/A>/gm;
-					let m;
+					let bookmarkData;
 
 					const { bookmarks, categories } = await loadJson();
 
-					while ((m = regex.exec(result)) !== null) {
+					while ((bookmarkData = regex.exec(result)) !== null) {
 						// This is necessary to avoid infinite loops with zero-width matches
-						if (m.index === regex.lastIndex) {
+						if (bookmarkData.index === regex.lastIndex) {
 							regex.lastIndex++;
 						}
 
 						const newBookmark: Bookmark = {
-							id: String(hashCode(m[1])),
-							name: m[2],
-							url: m[1],
+							id: String(hashCode(bookmarkData[1])),
+							name: bookmarkData[2],
+							url: bookmarkData[1],
 							description: "",
 							category: [""],
 							tags: "",
