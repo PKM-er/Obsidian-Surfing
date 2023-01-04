@@ -25,7 +25,7 @@ import SurfingPlugin from "src/surfingIndex";
 import { saveJson } from "../../utils/json";
 import { SurfingView } from "../../surfingView";
 import { t } from "../../translations/helper";
-import { FilterValue } from "antd/es/table/interface";
+import { FilterValue, SorterResult } from "antd/es/table/interface";
 
 const columnOptions = [
 	"name",
@@ -61,7 +61,15 @@ export default function BookmarkManager(props: Props) {
 	const [currentBookmark, setCurrentBookmark] = useState(emptyBookmark);
 	const [searchWord, setSearchWord] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
-	const [tagFiltered, setTagFiltered, tagFilteredRef] = useStateRef<Record<string, FilterValue | null>>({});
+	const [tagFiltered, setTagFiltered, tagFilteredRef] = useStateRef<Record<string, FilterValue | null>>({
+		tags: null,
+	});
+	const [categoryFiltered, setCategoryFiltered, categoryFilteredRef] = useStateRef<Record<string, FilterValue | null>>({
+		category: null,
+	});
+	const [sortedInfo, setSortedInfo, sortedInfoRef] = useStateRef<SorterResult<Bookmark>>({
+		order: 'descend',
+	});
 
 	const defaultColumns: ColumnsType<Bookmark> = [
 		{
@@ -87,6 +95,7 @@ export default function BookmarkManager(props: Props) {
 			sorter: (a, b) => {
 				return a.name.localeCompare(b.name);
 			},
+			sortOrder: sortedInfo.columnKey === 'name' ? sortedInfo.order : null,
 		},
 		{
 			title: t("Description"),
@@ -163,6 +172,7 @@ export default function BookmarkManager(props: Props) {
 				return <p>{ moment(text).format("YYYY-MM-DD") }</p>;
 			},
 			sorter: (a, b) => a.created - b.created,
+			sortOrder: sortedInfo.columnKey === 'created' ? sortedInfo.order : null,
 		},
 		{
 			title: t("Modified"),
@@ -171,7 +181,10 @@ export default function BookmarkManager(props: Props) {
 			render: (text: number) => {
 				return <p>{ moment(text).format("YYYY-MM-DD") }</p>;
 			},
-			sorter: (a, b) => a.modified - b.modified,
+			sorter: (a, b) => {
+				return a.modified - b.modified;
+			},
+			sortOrder: sortedInfo.columnKey === 'modified' ? sortedInfo.order : null,
 		},
 		{
 			title: t("Action"),
@@ -207,27 +220,42 @@ export default function BookmarkManager(props: Props) {
 	const [checkedColumn, setCheckedColumn] = useState<CheckboxValueType[]>(
 		props.plugin.settings.bookmarkManager.defaultColumnList
 	);
-	const [columns, setColumns] = useState(defaultColumns.filter((column) => {
+	const [columns, setColumns, columnsRef] = useStateRef(defaultColumns.filter((column) => {
 		return checkedColumn.includes(column.key as string) || column.key === "action";
 	}));
 
 	const handleChange: TableProps<Bookmark>['onChange'] = (pagination, filters, sorter) => {
-		setTagFiltered(filters);
+		setSortedInfo(sorter as SorterResult<Bookmark>);
+
+		if (filters.tags !== undefined) setTagFiltered(filters);
+		else if (filters.category !== undefined) setCategoryFiltered(filters);
 	};
 
 	useEffect(() => {
 		return () => {
-			setColumns(columns.map(item => {
+			setColumns(columnsRef.current.map(item => {
+				if (item.key === sortedInfoRef.current.columnKey) {
+					return {
+						...item,
+						sortOrder: sortedInfoRef.current.order,
+					}
+				}
 				if (item.key == "tags") {
 					return {
 						...item,
 						filteredValue: tagFilteredRef.current.tags,
 					};
 				}
+				if (item.key == "category") {
+					return {
+						...item,
+						filteredValue: tagFilteredRef.current.category,
+					};
+				}
 				return item;
 			}));
 		};
-	}, [tagFiltered]);
+	}, [tagFiltered, categoryFiltered, sortedInfo]);
 
 	const CheckboxGroup = Checkbox.Group;
 	const onColumnChange = async (list: CheckboxValueType[]) => {
