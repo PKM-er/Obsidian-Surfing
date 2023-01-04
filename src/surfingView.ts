@@ -492,9 +492,59 @@ export class SurfingView extends ItemView {
 		const run = debounce((params: any) => {
 			const { Menu, MenuItem } = remote;
 			this.menu = new Menu();
-			// Basic Menu For Webview
-			// TODO: Support adding different commands to the menu.
-			// Possible to use Obsidian Default API?
+
+			const reload = () => {
+				this.leaf?.rebuildView();
+			}
+
+			const navigateBack = () => {
+				// @ts-ignore
+				this.leaf?.history.back();
+			}
+
+			const navigateForward = () => {
+				// @ts-ignore
+				this.leaf?.history.forward();
+			}
+
+			if (!params.selectionText) {
+				this.menu.append(
+					new MenuItem(
+						{
+							label: t('Refresh Current Page'),
+							click: function () {
+								reload();
+							}
+						}
+					)
+				);
+
+				this.menu.append(
+					new MenuItem(
+						{
+							label: t('Back'),
+							click: function () {
+								navigateBack();
+							}
+						}
+					)
+				);
+
+				this.menu.append(
+					new MenuItem(
+						{
+							label: t('Forward'),
+							click: function () {
+								navigateForward();
+							}
+						}
+					)
+				);
+
+				this.menu.append(new MenuItem({ type: 'separator' }));
+			}
+
+
 			this.menu.append(
 				new MenuItem(
 					{
