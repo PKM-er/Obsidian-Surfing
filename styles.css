@@ -481,6 +481,8 @@ input[type="text"].wb-page-search-bar-input:focus-visible {
 	padding-top: var(--size-2-1);
 	padding-left: var(--size-4-2);
 
+	min-height: 32px;
+
 	border-top: 1px solid var(--background-modifier-border);
 	border-bottom: 1px solid var(--background-modifier-border);
 }

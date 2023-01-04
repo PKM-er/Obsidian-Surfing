@@ -48,12 +48,12 @@ export interface SearchEngine {
 	url: string;
 }
 
-const defaultCategory = `计算机
-    算法
-    数据结构
-obsidian
-    surfing
-    dataview
+const defaultCategory = `- Computer
+    - 算法
+    - 数据结构
+- obsidian
+    - surfing
+    - dataview
 `
 
 const defaultColumnList = [
@@ -91,7 +91,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 		openBookMark: false,
 		saveBookMark: false,
 		pagination: "12",
-		category: JSON.stringify(defaultCategory),
+		category: defaultCategory,
 		defaultColumnList: defaultColumnList,
 		defaultFilterType: 'tree',
 	}
@@ -842,15 +842,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 			.addTextArea((text) => {
 				text.setPlaceholder(DEFAULT_SETTINGS.bookmarkManager.category)
 					.setValue(this.plugin.settings.bookmarkManager.category)
-					.onChange(async (value) => {
-						// if(value === ""){
-						//     this.plugin.settings.bookmarkManager.category = DEFAULT_SETTINGS.bookmarkManager.category
-						//     this.applySettingsUpdate();
-						//     this.display()
-						// }
-						this.plugin.settings.bookmarkManager.category = value;
-						this.applySettingsUpdate()
-					})
+					.onChange((value) => {
+						console.log(value);
+						this.plugin.settings.bookmarkManager.category = value === "" ? DEFAULT_SETTINGS.bookmarkManager.category : value;
+						this.applySettingsUpdate();
+					});
 			})
 		this.addSettingToMasterSettingsList(tabName, categorySetting.settingEl, t("Category"))
 
