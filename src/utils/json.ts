@@ -29,7 +29,20 @@ export const initializeJson = async () => {
 	await app.vault.adapter.write(
 		bookmarkSavePath,
 		JSON.stringify({
-				"bookmarks": [],
+				"bookmarks": [
+					{
+						"id": "2014068036",
+						"name": "Obsidian",
+						"url": "https://obsidian.md/",
+						"description": "A awesome note-taking tool",
+						"category": [
+							"ROOT"
+						],
+						"tags": "",
+						"created": 1672840861051,
+						"modified": 1672840861052
+					}
+				],
 				"categories": [
 					{
 						"value": "ROOT",
