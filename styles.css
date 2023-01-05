@@ -577,7 +577,8 @@ div[data-type^="empty"].workspace-leaf-content
 }
 
 .surfing-bookmark-manager {
-	margin: 1em;
+	margin: 0 1em;
+
 	display: flex;
 	flex-direction: column;
 }
@@ -657,7 +658,11 @@ div[data-type^="empty"].workspace-leaf-content
 }
 
 .ant-table-wrapper {
-	height: 85vh;
+	height: 86vh;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th {
+	background-color: var(--background-secondary);
 }
 
 .ant-table {

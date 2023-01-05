@@ -83,6 +83,10 @@ export default function BookmarkManager(props: Props) {
 						href={ record.url }
 						onClick={ (e) => {
 							e.preventDefault();
+							if (e.ctrlKey || e.metaKey) {
+								window.open(record.url, "_blank", "external");
+								return;
+							}
 							SurfingView.spawnWebBrowserView(true, {
 								url: record.url,
 							});
