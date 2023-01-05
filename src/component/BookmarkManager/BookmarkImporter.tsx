@@ -57,12 +57,14 @@ const BookmarkImporter: any = (Props: Props): any => {
 							regex.lastIndex++;
 						}
 
+						const categories = this.plugin.settings.bookmarkManager.defaultCategory.split(",").map((c: any) => c.trim());
+
 						const newBookmark: Bookmark = {
 							id: String(hashCode(bookmarkData[1])),
 							name: bookmarkData[3],
 							url: bookmarkData[1],
 							description: "",
-							category: [""],
+							category: categories.length > 0 ? categories : [""],
 							tags: "",
 							created: moment(bookmarkData[2], "X").valueOf() ?? moment().valueOf(),
 							modified: moment(bookmarkData[2], "X").valueOf() ?? moment().valueOf(),
