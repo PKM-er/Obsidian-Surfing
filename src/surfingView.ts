@@ -24,9 +24,9 @@ export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
 export class SurfingView extends ItemView {
 	plugin: SurfingPlugin;
-	searchBox: searchBox;
-	private currentUrl: string;
-	private currentTitle = "New Tab";
+	private searchBox: searchBox;
+	currentUrl: string;
+	currentTitle = "New Tab";
 
 	headerBar: HeaderBar;
 	private favicon: HTMLImageElement;

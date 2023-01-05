@@ -422,6 +422,38 @@ export default class SurfingPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'copy-surfing-tabs-as-markdown',
+			name: 'Copy Surfing Tabs as Markdown',
+			callback: () => {
+				const surfingLeaves = app.workspace.getLeavesOfType("surfing-view");
+				if (surfingLeaves.length === 0) return;
+
+				surfingLeaves.sort((a, b) => b.activeTime - a.activeTime);
+				let markdown = "";
+				surfingLeaves.forEach((leaf) => {
+					const surfingView = leaf.view as SurfingView;
+					const url = surfingView.currentUrl;
+
+					console.log(surfingView.currentUrl, surfingView.currentTitle);
+					if (!url) return;
+
+					const title = surfingView.currentTitle;
+					if (!title) return;
+					if (markdown.length === 0) markdown = `- [${ title }](<${ url }>)`;
+					else markdown += `\n- [${ title }](<${ url }>)`;
+
+
+				});
+
+				try {
+					navigator.clipboard.writeText(markdown);
+				} catch (e) {
+					new Notice(t('Copy failed, you may focus on surfing view, click the title bar, and try again.'));
+				}
+			}
+		});
+
 	}
 
 	private registerCustomIcon() {

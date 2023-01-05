@@ -88,4 +88,5 @@ export default {
 	'Back': 'Back',
 	'Forward': 'Forward',
 	"star": "star",
+	'Copy failed, you may focus on surfing view, click the title bar, and try again.': 'Copy failed, you may focus on surfing view, click the title bar, and try again.',
 };
