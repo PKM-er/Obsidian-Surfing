@@ -89,4 +89,5 @@ export default {
 	'Forward': 'Forward',
 	"star": "star",
 	'Copy failed, you may focus on surfing view, click the title bar, and try again.': 'Copy failed, you may focus on surfing view, click the title bar, and try again.',
+	"Default Category (Use , to split)": "Default Category (Use , to split)",
 };

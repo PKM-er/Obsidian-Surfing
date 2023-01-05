@@ -830,12 +830,14 @@ class SaveBookmarkModal extends Modal {
 			const data = await loadJson();
 			const bookmarks = data.bookmarks;
 
+			const categories = this.plugin.settings.bookmarkManager.defaultCategory.split(",").map((c) => c.trim());
+
 			bookmarks.unshift({
 				id: String(hashCode(this.url)),
 				name: urlData.title || "Untitled",
 				url: this.url,
 				description: urlData.description || "",
-				category: ["ROOT"],
+				category: categories.length > 0 ? categories : ["ROOT"],
 				tags: "",
 				created: moment().valueOf(),
 				modified: moment().valueOf(),
