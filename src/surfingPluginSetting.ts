@@ -858,7 +858,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 				text.setPlaceholder(DEFAULT_SETTINGS.bookmarkManager.defaultCategory)
 					.setValue(this.plugin.settings.bookmarkManager.defaultCategory)
 					.onChange((value) => {
-						this.plugin.settings.bookmarkManager.defaultCategory = value === "" ? DEFAULT_SETTINGS.bookmarkManager.defaultCategory : value;
+						this.plugin.settings.bookmarkManager.defaultCategory = value;
 						this.applySettingsUpdate();
 					});
 			})
