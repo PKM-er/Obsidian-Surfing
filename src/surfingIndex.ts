@@ -435,15 +435,12 @@ export default class SurfingPlugin extends Plugin {
 					const surfingView = leaf.view as SurfingView;
 					const url = surfingView.currentUrl;
 
-					console.log(surfingView.currentUrl, surfingView.currentTitle);
 					if (!url) return;
 
 					const title = surfingView.currentTitle;
 					if (!title) return;
 					if (markdown.length === 0) markdown = `- [${ title }](<${ url }>)`;
 					else markdown += `\n- [${ title }](<${ url }>)`;
-
-
 				});
 
 				try {
