@@ -481,12 +481,14 @@ export class SurfingView extends ItemView {
 						console.error(err);
 					}
 
+					const categories = this.plugin.settings.bookmarkManager.defaultCategory.split(",").map((c) => c.trim());
+
 					bookmarks.unshift({
 						id: String(hashCode(this.currentUrl)),
 						name: this.currentTitle,
 						url: this.currentUrl,
 						description: description,
-						category: ["ROOT"],
+						category: categories.length > 0 ? categories : ["ROOT"],
 						tags: "",
 						created: moment().valueOf(),
 						modified: moment().valueOf(),

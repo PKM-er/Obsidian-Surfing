@@ -87,4 +87,5 @@ export default {
 	'Forward': '前进',
 	"star": "星标",
 	'Copy failed, you may focus on surfing view, click the title bar, and try again.': '复制失败，你可能聚焦到了 Surfing 视图，点击标题栏，然后再试一次。',
+	"Default Category (Use , to split)": "默认分类 (用,分层)",
 };

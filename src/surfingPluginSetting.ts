@@ -38,6 +38,7 @@ export interface SurfingSettings {
 		saveBookMark: boolean;
 		pagination: string;
 		category: string;
+		defaultCategory: string;
 		defaultColumnList: string[];
 		defaultFilterType: string;
 	}
@@ -92,6 +93,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 		saveBookMark: false,
 		pagination: "12",
 		category: defaultCategory,
+		defaultCategory: "ROOT",
 		defaultColumnList: defaultColumnList,
 		defaultFilterType: 'tree',
 	}
@@ -804,6 +806,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 			})
 		this.addSettingToMasterSettingsList(tabName, openBookmarkManager.settingEl, t("Open BookmarkBar & Bookmark Manager"));
 
+		if (!this.plugin.settings.bookmarkManager.openBookMark) return;
+
 		const saveBookmark = new Setting(wbContainerEl)
 			.setName(t("Save Bookmark When Open URI"))
 			.addToggle((toggle) => {
@@ -816,7 +820,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 			})
 		this.addSettingToMasterSettingsList(tabName, saveBookmark.settingEl, t("Save Bookmark When Open URI"));
 
-		if (!this.plugin.settings.bookmarkManager.openBookMark) return;
 
 		const paginationSetting = new Setting(wbContainerEl)
 			.setName(t("Pagination"))
@@ -843,12 +846,24 @@ export class SurfingSettingTab extends PluginSettingTab {
 				text.setPlaceholder(DEFAULT_SETTINGS.bookmarkManager.category)
 					.setValue(this.plugin.settings.bookmarkManager.category)
 					.onChange((value) => {
-						console.log(value);
 						this.plugin.settings.bookmarkManager.category = value === "" ? DEFAULT_SETTINGS.bookmarkManager.category : value;
 						this.applySettingsUpdate();
 					});
 			})
-		this.addSettingToMasterSettingsList(tabName, categorySetting.settingEl, t("Category"))
+		this.addSettingToMasterSettingsList(tabName, categorySetting.settingEl, t("Category"));
+
+		const defaultCategory = new Setting(wbContainerEl)
+			.setName(t("Default Category (Use , to split)"))
+			.addText((text) => {
+				text.setPlaceholder(DEFAULT_SETTINGS.bookmarkManager.defaultCategory)
+					.setValue(this.plugin.settings.bookmarkManager.defaultCategory)
+					.onChange((value) => {
+						this.plugin.settings.bookmarkManager.defaultCategory = value === "" ? DEFAULT_SETTINGS.bookmarkManager.defaultCategory : value;
+						this.applySettingsUpdate();
+					});
+			})
+		this.addSettingToMasterSettingsList(tabName, defaultCategory.settingEl, t("Default Category (Use , to split)"));
+
 
 		const defaultColumnList = new Setting(wbContainerEl)
 			.setName(t("Default Column List"))
