@@ -46,7 +46,7 @@ const BookmarkImporter: any = (Props: Props): any => {
 					const result = reader.result as string;
 					if (!result) return;
 
-					const regex = /<DT><A HREF="(.*?)".*?>(.*)<\/A>/gm;
+					const regex = /<DT><A HREF="(.*?)"\s*ADD_DATE="(.*?)".*?>(.*)<\/A>/gm;
 					let bookmarkData;
 
 					const { bookmarks, categories } = await loadJson();
@@ -59,13 +59,13 @@ const BookmarkImporter: any = (Props: Props): any => {
 
 						const newBookmark: Bookmark = {
 							id: String(hashCode(bookmarkData[1])),
-							name: bookmarkData[2],
+							name: bookmarkData[3],
 							url: bookmarkData[1],
 							description: "",
 							category: [""],
 							tags: "",
-							created: moment().valueOf(),
-							modified: moment().valueOf(),
+							created: moment(bookmarkData[2], "X").valueOf() ?? moment().valueOf(),
+							modified: moment(bookmarkData[2], "X").valueOf() ?? moment().valueOf(),
 						};
 						try {
 							await handleSaveBookmark(newBookmark, bookmarks);
