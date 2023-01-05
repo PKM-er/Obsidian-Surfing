@@ -604,8 +604,6 @@ export default class SurfingPlugin extends Plugin {
 			registerDomEvents: (next) =>
 				function (el: HTMLElement, instance: { getFile?(): TFile; }, ...args: unknown[]) {
 					el?.on("click", ".external-link", (event: MouseEvent, targetEl: HTMLElement) => {
-						event.stopPropagation();
-						event.preventDefault();
 						if (targetEl) {
 							const url = targetEl.getAttribute("href");
 							if (url) {
