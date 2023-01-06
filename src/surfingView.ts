@@ -505,6 +505,18 @@ export class SurfingView extends ItemView {
 				console.log(err);
 			}
 		});
+		this.addAction("book", t("Send to ReadWise"), async () => {
+			const sendToReadWise = (title: string, url: string) => {
+				open('https://readwise.io/save?title=' + encodeURIComponent(title) + '&url=' + encodeURIComponent(url))
+			}
+
+			try {
+				await sendToReadWise(this.currentTitle, this.currentUrl)
+				new Notice("Save success!")
+			} catch (err) {
+				new Notice("Save failed!")
+			}
+		});
 	}
 
 	async setState(state: WebBrowserViewState, result: ViewStateResult) {

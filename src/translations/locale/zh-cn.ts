@@ -88,4 +88,6 @@ export default {
 	"star": "星标",
 	'Copy failed, you may focus on surfing view, click the title bar, and try again.': '复制失败，你可能聚焦到了 Surfing 视图，点击标题栏，然后再试一次。',
 	"Default Category (Use , to split)": "默认分类 (用,分层)",
+	"Send to ReadWise": "发送到 ReadWise",
+	"Add a action in page haader to Send to ReadWise.": "在页面标题栏中添加一个动作来发送到 ReadWise。",
 };
