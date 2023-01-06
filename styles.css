@@ -11,6 +11,10 @@
 	background-clip: content-box;
 }
 
+.wb-view-content:has(.wb-bookmark-bar) .wb-frame {
+	height: calc(100% - 32px);
+}
+
 .wb-header-bar::after {
 	background: transparent !important;
 }

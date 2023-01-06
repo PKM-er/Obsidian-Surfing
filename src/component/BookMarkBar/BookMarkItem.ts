@@ -83,6 +83,10 @@ export class BookMarkItem {
 								.setTitle(bookmarkItem.name)
 								.onClick((e: MouseEvent) => {
 									// @ts-ignore
+									if (e.shiftKey) {
+										window.open(bookmarkItem.url, "_blank", "external");
+										return;
+									}
 									if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
 									else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
 								})
@@ -105,7 +109,10 @@ export class BookMarkItem {
 					item.setIcon('surfing')
 						.setTitle(bookmarkItem.name)
 						.onClick((e: MouseEvent) => {
-							// @ts-ignore
+							if (e.shiftKey) {
+								window.open(bookmarkItem.url, "_blank", "external");
+								return;
+							}
 							if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
 							else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
 						})
@@ -134,7 +141,10 @@ export class BookMarkItem {
 					text: bookmarkItem.name,
 				});
 				bookmarkEl.onclick = (e: MouseEvent) => {
-					// @ts-ignore
+					if (e.shiftKey) {
+						window.open(bookmarkItem.url, "", "external");
+						return;
+					}
 					if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
 					else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
 				}
