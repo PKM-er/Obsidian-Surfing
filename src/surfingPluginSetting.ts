@@ -36,6 +36,7 @@ export interface SurfingSettings {
 	bookmarkManager: {
 		openBookMark: boolean;
 		saveBookMark: boolean;
+		sendToReadWise: boolean;
 		pagination: string;
 		category: string;
 		defaultCategory: string;
@@ -91,6 +92,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	bookmarkManager: {
 		openBookMark: false,
 		saveBookMark: false,
+		sendToReadWise: false,
 		pagination: "12",
 		category: defaultCategory,
 		defaultCategory: "ROOT",
@@ -819,6 +821,19 @@ export class SurfingSettingTab extends PluginSettingTab {
 					});
 			})
 		this.addSettingToMasterSettingsList(tabName, saveBookmark.settingEl, t("Save Bookmark When Open URI"));
+
+		const sendToReadWise = new Setting(wbContainerEl)
+			.setName(t("Send to ReadWise"))
+			.setDesc(t("Add a action in page haader to Send to ReadWise."))
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.bookmarkManager.sendToReadWise)
+					.onChange(async (value) => {
+						this.plugin.settings.bookmarkManager.sendToReadWise = value;
+						this.applySettingsUpdate();
+					});
+			})
+		this.addSettingToMasterSettingsList(tabName, sendToReadWise.settingEl, t("Send to ReadWise"));
 
 
 		const paginationSetting = new Setting(wbContainerEl)
