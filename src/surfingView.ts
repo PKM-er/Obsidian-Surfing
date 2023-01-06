@@ -505,7 +505,7 @@ export class SurfingView extends ItemView {
 				console.log(err);
 			}
 		});
-		this.addAction("book", t("Send to ReadWise"), async () => {
+		if (this.plugin.settings.bookmarkManager.sendToReadWise) this.addAction("book", t("Send to ReadWise"), async () => {
 			const sendToReadWise = (title: string, url: string) => {
 				open('https://readwise.io/save?title=' + encodeURIComponent(title) + '&url=' + encodeURIComponent(url))
 			}
