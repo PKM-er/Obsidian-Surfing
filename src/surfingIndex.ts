@@ -605,11 +605,11 @@ export default class SurfingPlugin extends Plugin {
 				function (el: HTMLElement, instance: { getFile?(): TFile; }, ...args: unknown[]) {
 					el?.on("click", ".external-link", (event: MouseEvent, targetEl: HTMLElement) => {
 						event.preventDefault();
-						
+
 						if (targetEl) {
 							const url = targetEl.getAttribute("href");
 							if (url) {
-								if (event.ctrlKey) {
+								if (event.ctrlKey || event.metaKey) {
 									window.open(url, '_blank', 'external');
 
 									preventSameUrl();
