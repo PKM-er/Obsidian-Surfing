@@ -91,5 +91,6 @@ export default {
 	'Copy failed, you may focus on surfing view, click the title bar, and try again.': 'Copy failed, you may focus on surfing view, click the title bar, and try again.',
 	"Default Category (Use , to split)": "Default Category (Use , to split)",
 	"Send to ReadWise": "Send to ReadWise",
-	"Add a action in page haader to Send to ReadWise.": "Add a action in page haader to Send to ReadWise."
+	"Add a action in page haader to Send to ReadWise.": "Add a action in page haader to Send to ReadWise.",
+	'Disable / to search when on these sites': 'Disable / to search when on these sites',
 };

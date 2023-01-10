@@ -19,6 +19,7 @@ export type SearchOptionInfo = { name: string, description: string, options?: Dr
 export interface SurfingSettings {
 	defaultSearchEngine: string;
 	customSearchEngine: SearchEngine[];
+	ignoreList: string[];
 	alwaysShowCustomSearch: boolean;
 	showOtherSearchEngines: boolean;
 	showSearchBarInPage: boolean;
@@ -75,6 +76,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 		name: 'duckduckgo',
 		url: 'https://duckduckgo.com/?q=',
 	}],
+	ignoreList: ["notion", "craft"],
 	alwaysShowCustomSearch: false,
 	showOtherSearchEngines: false,
 	showSearchBarInPage: false,
@@ -481,6 +483,20 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.showOtherSearchEngines = value;
 						this.applySettingsUpdate();
 					});
+			})
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
+
+		settingName = t('Disable / to search when on these sites');
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addText((text) => {
+				text.setPlaceholder(DEFAULT_SETTINGS.ignoreList.join(","))
+					.setValue(this.plugin.settings.ignoreList.join(","))
+					.onChange(async (value) => {
+						this.plugin.settings.ignoreList = value.split(",");
+						this.applySettingsUpdate()
+					})
 			})
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);

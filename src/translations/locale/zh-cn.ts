@@ -90,4 +90,5 @@ export default {
 	"Default Category (Use , to split)": "默认分类 (用,分层)",
 	"Send to ReadWise": "发送到 ReadWise",
 	"Add a action in page haader to Send to ReadWise.": "在页面标题栏中添加一个动作来发送到 ReadWise。",
+	'Disable / to search when on these sites': '当在这些网站中禁止按 / 来搜索的功能',
 };
