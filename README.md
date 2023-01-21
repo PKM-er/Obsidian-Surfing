@@ -16,6 +16,12 @@ have be possible without it.
 
 ![](assets/obsidian-web-browser.png)
 
+## TODO
+
+- [ ] Support extensions
+- [ ] Support custom CSS
+- [ ] Support custom JS
+
 ## Feature
 
 - Core Feature
