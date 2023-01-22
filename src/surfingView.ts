@@ -56,7 +56,7 @@ export class SurfingView extends ItemView {
 		const pluginSettings = app.plugins.getPlugin("surfing").settings;
 		const isOpenInSameTab = pluginSettings.openInSameTab;
 		const highlightInSameTab = pluginSettings.highlightInSameTab;
-		if (!isOpenInSameTab) {
+		if (!isOpenInSameTab || state.url.startsWith("file://")) {
 			if (state.url.contains("bilibili")) {
 				for (let i = 0; i < app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID).length; i++) {
 					if (app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID)[i].getViewState().state.url.split('?t=')[0] === state.url.split('?t=')[0]) {
