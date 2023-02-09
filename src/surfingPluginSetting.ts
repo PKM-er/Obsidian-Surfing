@@ -105,31 +105,31 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
 	{
-		name: 'google',
+		name: 'Google',
 		url: 'https://www.google.com/search?q=',
 	},
 	{
-		name: 'bing',
+		name: 'Bing',
 		url: 'https://www.bing.com/search?q=',
 	},
 	{
-		name: 'duckduckgo',
+		name: 'Duckduckgo',
 		url: 'https://duckduckgo.com/?q=',
 	},
 	{
-		name: 'yahoo',
+		name: 'Yahoo',
 		url: 'https://search.yahoo.com/search?p=',
 	},
 	{
-		name: 'baidu',
+		name: 'Baidu',
 		url: 'https://www.baidu.com/s?wd=',
 	},
 	{
-		name: 'yandex',
+		name: 'Yandex',
 		url: 'https://yandex.com/search/?text=',
 	},
 	{
-		name: 'wikipeida',
+		name: 'Wikipedia',
 		url: 'https://en.wikipedia.org/w/index.php?search=',
 	}
 ];
