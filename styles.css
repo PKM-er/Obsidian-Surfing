@@ -71,6 +71,14 @@
 	margin-right: auto;
 }
 
+.workspace-split:not(.mod-root) .wb-page-search-bar-input-container {
+	width: 250px;
+}
+
+.workspace-split:not(.mod-root) .wb-page-search-bar-input {
+	width: 250px;
+}
+
 .wb-page-search-bar {
 	flex-direction: column-reverse;
 }

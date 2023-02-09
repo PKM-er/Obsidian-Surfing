@@ -249,7 +249,7 @@ export class SurfingView extends ItemView {
 
 				// TODO: Allow set hotkey in webview;
 				if (emulatedKeyboardEvent.key === '/') {
-					if (!this.plugin.settings.ignoreList.find((item: string) => this.currentUrl.contains(item))) {
+					if (!this.plugin.settings.ignoreList.find((item: string) => this.currentUrl.contains(item.toLowerCase()))) {
 						webContents.executeJavaScript(`
 											document.activeElement instanceof HTMLInputElement
 										`, true).then((result: any) => {
