@@ -28,6 +28,8 @@ import { SurfingBookmarkManagerView, WEB_BROWSER_BOOKMARK_MANAGER_ID } from './s
 import { EmbededWebView } from "./component/EmbededWebView";
 import { loadJson, saveJson } from "./utils/json";
 import { hashCode, nonElectronGetPageTitle } from "./component/BookmarkManager/utils";
+import { TabTreeView, WEB_BROWSER_TAB_TREE_ID } from "./component/TabTreeView/TabTreeView";
+import './App.css';
 
 
 export default class SurfingPlugin extends Plugin {
@@ -44,6 +46,7 @@ export default class SurfingPlugin extends Plugin {
 
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
+		this.registerView(WEB_BROWSER_TAB_TREE_ID, (leaf) => new TabTreeView(leaf, this));
 		if (this.settings.bookmarkManager.openBookMark) this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this));
 
 		try {
@@ -52,6 +55,7 @@ export default class SurfingPlugin extends Plugin {
 			new Notice(`File extensions ${ HTML_FILE_EXTENSIONS } had been registered by other plugin!`);
 		}
 
+		this.openTabTreeView();
 		this.updateEmptyLeaves(false);
 		this.registerContextMenu();
 		this.registerCustomURI();
@@ -83,6 +87,8 @@ export default class SurfingPlugin extends Plugin {
 
 	onunload() {
 		this.app.workspace.detachLeavesOfType(WEB_BROWSER_VIEW_ID);
+		this.app.workspace.detachLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID);
+		this.app.workspace.detachLeavesOfType(WEB_BROWSER_TAB_TREE_ID);
 		this.app.workspace.offref(this.onLayoutChangeEventRef);
 
 		// Clean up header bar added to "New tab" views when plugin is disabled.
@@ -94,6 +100,19 @@ export default class SurfingPlugin extends Plugin {
 			this.refreshAllRelatedView();
 			this.unRegisterEmbededHTML();
 		}
+	}
+
+	private openTabTreeView() {
+		this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
+	}
+
+	onLayoutReady(): void {
+		if (this.app.workspace.getLeavesOfType(WEB_BROWSER_TAB_TREE_ID).length) {
+			return;
+		}
+		this.app.workspace.getLeftLeaf(false).setViewState({
+			type: WEB_BROWSER_TAB_TREE_ID,
+		});
 	}
 
 	private registerRibbon() {
