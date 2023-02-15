@@ -1,5 +1,7 @@
 .app {
 	height: 100%;
+	margin: var(--size-4-2);
+	border-radius: var(--size-2-2);
 }
 
 .treeRoot {
@@ -15,10 +17,16 @@
 }
 
 .dropTarget {
-	background-color: #e8f0fe;
+	background-color: var(--color-accent);
 }
 
 ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+ul li {
 	list-style: none;
 	margin: 0;
 	padding: 0;

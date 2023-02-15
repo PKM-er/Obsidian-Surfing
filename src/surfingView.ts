@@ -30,7 +30,7 @@ export class SurfingView extends ItemView {
 
 	headerBar: HeaderBar;
 	favicon: HTMLImageElement;
-	private webviewEl: HTMLElement;
+	webviewEl: HTMLElement;
 	private menu: any;
 	private searchContainer: OmniSearchContainer;
 

@@ -8,7 +8,7 @@ type Props = {
 
 export const TypeIcon: React.FC<Props> = (props) => {
 	if (props.droppable) {
-		return <FolderAddOutlined size={ 24 }/>;
+		return <FileTextOutlined size={ 24 }/>;
 	}
 
 	switch (props.fileType) {

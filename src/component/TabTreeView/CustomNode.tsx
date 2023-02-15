@@ -12,21 +12,40 @@ type Props = {
 	isOpen: boolean;
 	hasChild: boolean;
 	onToggle: (id: NodeModel["id"]) => void;
+	onSelect: (node: NodeModel) => void;
+	isSelected: boolean;
 };
 
 export const CustomNode: React.FC<Props> = (props) => {
 	const { droppable, data } = props.node;
 	const indent = props.depth * 24;
 
+	const { Paragraph } = Typography;
+
 	const handleToggle = (e: React.MouseEvent) => {
 		e.stopPropagation();
 		props.onToggle(props.node.id);
 	};
 
+	const handleSelect = () => props.onSelect(props.node);
+
+	const handleClick = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		const leafId = String(props.node.id);
+		const leaf = app.workspace.getLeafById(leafId);
+		app.workspace.setActiveLeaf(leaf);
+		handleSelect();
+		// app.workspace.revealLeaf(leaf);
+	}
+
+
 	return (
 		<div
-			className={ `tree-node ${ styles.root }` }
+			className={ `tree-node ${ styles.root } ${
+				props.isSelected ? styles.isSelected : ""
+			}` }
 			style={ { paddingInlineStart: indent } }
+			onClick={ handleClick }
 		>
 			<div
 				className={ `${ styles.expandIconWrapper } ${
@@ -41,7 +60,13 @@ export const CustomNode: React.FC<Props> = (props) => {
 				<TypeIcon droppable={ droppable || false } fileType={ data?.fileType }/>
 			</div>
 			<div className={ styles.labelGridItem }>
-				<Typography>{ `${ props.node.text }` }</Typography>
+				<Paragraph ellipsis={ {
+					rows: 1,
+					expandable: false,
+					tooltip: true,
+				} }
+						   style={ { marginBottom: 0 } }
+				>{ `${ props.node.text }` }</Paragraph>
 			</div>
 		</div>
 	);
