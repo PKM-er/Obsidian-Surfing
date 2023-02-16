@@ -5,6 +5,8 @@ import { NodeModel } from "@minoru/react-dnd-treeview";
 import { CustomData } from "./types";
 import { TypeIcon } from "./TypeIcon";
 import styles from './CustomNode.module.css';
+import { Menu, Notice } from "obsidian";
+import { random, SaveWorkspaceModal } from "./workspace";
 
 type Props = {
 	node: NodeModel<CustomData>;
@@ -16,9 +18,11 @@ type Props = {
 	isSelected: boolean;
 };
 
+const TREE_X_OFFSET = 24;
+
 export const CustomNode: React.FC<Props> = (props) => {
 	const { droppable, data } = props.node;
-	const indent = props.depth * 24;
+	const indent = props.depth * TREE_X_OFFSET;
 
 	const { Paragraph } = Typography;
 
@@ -31,11 +35,27 @@ export const CustomNode: React.FC<Props> = (props) => {
 
 	const handleClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
-		const leafId = String(props.node.id);
-		const leaf = app.workspace.getLeafById(leafId);
+		const leaf = app.workspace.getLeafById(String(props.node.id));
+		if (!leaf) return;
+
 		app.workspace.setActiveLeaf(leaf);
 		handleSelect();
 		// app.workspace.revealLeaf(leaf);
+	}
+
+	const handleContextMenu = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		e.preventDefault();
+
+		const menu = new Menu();
+		menu.addItem((item) => {
+			item.setTitle("Not Ready Yet")
+				.setIcon("surfing")
+				.onClick(() => {
+					new Notice("Not Ready Yet");
+				});
+		});
+		menu.showAtPosition({ x: e.clientX, y: e.clientY });
 	}
 
 
@@ -46,6 +66,7 @@ export const CustomNode: React.FC<Props> = (props) => {
 			}` }
 			style={ { paddingInlineStart: indent } }
 			onClick={ handleClick }
+			onContextMenu={ handleContextMenu }
 		>
 			<div
 				className={ `${ styles.expandIconWrapper } ${
@@ -63,7 +84,7 @@ export const CustomNode: React.FC<Props> = (props) => {
 				<Paragraph ellipsis={ {
 					rows: 1,
 					expandable: false,
-					tooltip: true,
+					tooltip: false,
 				} }
 						   style={ { marginBottom: 0 } }
 				>{ `${ props.node.text }` }</Paragraph>

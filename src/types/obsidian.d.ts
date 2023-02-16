@@ -17,6 +17,10 @@ declare module "obsidian" {
 		getTheme: () => string;
 	}
 
+	interface settings {
+		applySettingsUpdate: () => void;
+	}
+
 	export interface WorkspaceLeaf {
 		id: string
 

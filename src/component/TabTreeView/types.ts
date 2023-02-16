@@ -1,5 +1,5 @@
 export type CustomData = {
 	fileType: string;
 	fileSize: string;
-	icon: HTMLImageElement;
+	icon: HTMLImageElement | string;
 };

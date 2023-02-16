@@ -11,6 +11,8 @@ import {
 import { t } from "./translations/helper";
 import { clipboard } from "electron";
 import SurfingPlugin from "./surfingIndex";
+import { NodeModel } from "@minoru/react-dnd-treeview";
+import { CustomData } from "./component/TabTreeView/types";
 
 type settingSearchInfo = { containerEl: HTMLElement, name: string, description: string, options: SearchOptionInfo[], alias?: string }
 type TabContentInfo = { content: HTMLElement, heading: HTMLElement, navButton: HTMLElement }
@@ -43,7 +45,8 @@ export interface SurfingSettings {
 		defaultCategory: string;
 		defaultColumnList: string[];
 		defaultFilterType: string;
-	}
+	},
+	treeData: NodeModel<CustomData>[]
 }
 
 export interface SearchEngine {
@@ -100,7 +103,8 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 		defaultCategory: "ROOT",
 		defaultColumnList: defaultColumnList,
 		defaultFilterType: 'tree',
-	}
+	},
+	treeData: [],
 }
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
@@ -166,7 +170,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	applySettingsUpdate() {
+	public applySettingsUpdate() {
 		clearTimeout(this.applyDebounceTimer);
 		const plugin = this.plugin;
 		this.applyDebounceTimer = window.setTimeout(() => {
