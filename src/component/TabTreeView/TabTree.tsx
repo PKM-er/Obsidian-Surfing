@@ -12,15 +12,17 @@ import { CustomNode } from "./CustomNode";
 import { Placeholder } from "./Placeholder";
 import styles from './TabTree.module.css';
 import { CustomDragPreview } from "./CustomDragPreview";
-import { ItemView } from "obsidian";
+import { ItemView, Menu } from "obsidian";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "../../surfingView";
+import { random, SaveWorkspaceModal } from "./workspace";
+import { CrownTwoTone } from "@ant-design/icons";
 
 interface Props {
 	plugin: SurfingPlugin;
 }
 
 export default function TabTree(props: Props) {
-	const [treeData, setTreeData] = useState<NodeModel<CustomData>[]>([]);
+	const [treeData, setTreeData] = useState<NodeModel<CustomData>[]>(props.plugin.settings.treeData || []);
 	const handleDrop = (newTree: NodeModel<CustomData>[]) => setTreeData(newTree);
 
 	const [selectedNode, setSelectedNode] = useState<NodeModel<CustomData> | null>(null);
@@ -28,7 +30,50 @@ export default function TabTree(props: Props) {
 		setSelectedNode(node as NodeModel<CustomData>);
 	};
 
+
+	const handleContextMenu = (e: React.MouseEvent) => {
+		const menu = new Menu();
+		menu.addItem((item) => {
+			item.setTitle("New Group")
+				.setIcon("folder")
+				.onClick(() => {
+					new SaveWorkspaceModal(props.plugin.app, props.plugin, (result) => {
+						const newGroup = {
+							"id": random(16),
+							"parent": 0,
+							"droppable": true,
+							"text": result,
+							"data": {
+								"fileType": "workspace",
+								"fileSize": "",
+								"icon": "folder",
+							}
+						};
+						setTreeData([...treeData, newGroup]);
+					}).open();
+				});
+		});
+		menu.showAtPosition({ x: e.clientX, y: e.clientY });
+	};
+
 	React.useEffect(() => {
+		const leafIndex = treeData.findIndex((node) => node.data?.fileType === "site");
+		if (leafIndex === -1) return;
+		const leafId = String(treeData[leafIndex].id);
+		const leaf = app.workspace.getLeafById(leafId);
+		if (!leaf) {
+			setTreeData([]);
+			props.plugin.settings.treeData = [];
+			props.plugin.settingsTab.applySettingsUpdate();
+			return;
+		}
+		if (!treeData) return;
+		props.plugin.settings.treeData = treeData;
+		props.plugin.settingsTab.applySettingsUpdate();
+	}, [treeData])
+
+	React.useEffect(() => {
+		if (treeData.length > 0) return;
 		const leaves = props.plugin.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
 		const nodes = leaves.map((leaf) => ({
 			"id": leaf.id,
@@ -69,6 +114,7 @@ export default function TabTree(props: Props) {
 	}, []);
 
 	const updateTabsData = React.useCallback((activeView: SurfingView) => {
+		//@ts-ignore
 		setTreeData((prevTreeData) => {
 			const existingNodeIndex = prevTreeData.findIndex(node => node.id === activeView.leaf.id);
 			if (existingNodeIndex !== -1) {
@@ -117,49 +163,65 @@ export default function TabTree(props: Props) {
 			(activeView as SurfingView).webviewEl.addEventListener("dom-ready", () => {
 				updateTabsData(activeView as SurfingView);
 			});
+			return;
+		}
+
+		const leaves = props.plugin.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
+		if (leaves.length === 0) {
+			setTreeData([]);
+			return;
 		}
 	});
 
-
 	return (
-		<DndProvider backend={ MultiBackend } options={ getBackendOptions() }>
-			<div className={ styles.app }>
-				<Tree
-					tree={ treeData }
-					rootId={ 0 }
-					render={ (node, { depth, isOpen, hasChild, onToggle }) => (
-						<CustomNode
-							node={ node }
-							depth={ depth }
-							isOpen={ isOpen }
-							onToggle={ onToggle }
-							hasChild={ hasChild }
-							isSelected={ node.id === selectedNode?.id }
-							onSelect={ handleSelect }
-						/>
-					) }
-					dragPreviewRender={ (monitorProps) => (
-						<CustomDragPreview monitorProps={ monitorProps }/>
-					) }
-					onDrop={ handleDrop }
-					classes={ {
-						root: styles.treeRoot,
-						draggingSource: styles.draggingSource,
-						placeholder: styles.placeholderContainer
-					} }
-					sort={ false }
-					insertDroppableFirst={ false }
-					canDrop={ (tree, { dragSource, dropTargetId, dropTarget }) => {
-						if (dragSource?.parent === dropTargetId) {
-							return true;
-						}
-					} }
-					dropTargetOffset={ 10 }
-					placeholderRender={ (node, { depth }) => (
-						<Placeholder node={ node } depth={ depth }/>
-					) }
-				/>
+		treeData.length > 0 ? (
+			<DndProvider backend={ MultiBackend } options={ getBackendOptions() }>
+				<div className={ styles.app } onContextMenu={ handleContextMenu }>
+					<Tree
+						tree={ treeData }
+						rootId={ 0 }
+						render={ (node, { depth, isOpen, hasChild, onToggle }) => (
+							<CustomNode
+								node={ node }
+								depth={ depth }
+								isOpen={ isOpen }
+								onToggle={ onToggle }
+								hasChild={ hasChild }
+								isSelected={ node.id === selectedNode?.id }
+								onSelect={ handleSelect }
+							/>
+						) }
+						dragPreviewRender={ (monitorProps) => (
+							<CustomDragPreview monitorProps={ monitorProps }/>
+						) }
+						onDrop={ handleDrop }
+						classes={ {
+							root: styles.treeRoot,
+							draggingSource: styles.draggingSource,
+							placeholder: styles.placeholderContainer
+						} }
+						sort={ false }
+						insertDroppableFirst={ false }
+						canDrop={ (tree, { dragSource, dropTargetId }) => {
+							if (dragSource?.parent === dropTargetId) {
+								return true;
+							}
+						} }
+						dropTargetOffset={ 10 }
+						placeholderRender={ (node, { depth }) => (
+							<Placeholder node={ node } depth={ depth }/>
+						) }
+					/>
+				</div>
+			</DndProvider>
+		) : (<div className={ `${ styles.app } tab-tree-empty-container` }>
+			<div className={ `tab-tree-empty-state` }>
+				<CrownTwoTone size={ 64 } width={ 64 } height={ 64 }/>
+				<span>
+				{ "No surfing tabs open" }
+			</span>
 			</div>
-		</DndProvider>
+		</div>)
+
 	);
 }

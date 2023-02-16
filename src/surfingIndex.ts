@@ -34,6 +34,7 @@ import './App.css';
 
 export default class SurfingPlugin extends Plugin {
 	settings: SurfingSettings;
+	settingsTab: SurfingSettingTab;
 	private onLayoutChangeEventRef: EventRef;
 	private applyURLDebounceTimer = 0;
 	private urlOpened = false;
@@ -42,7 +43,8 @@ export default class SurfingPlugin extends Plugin {
 		await this.loadSettings();
 		this.checkWebBrowser();
 
-		this.addSettingTab(new SurfingSettingTab(this.app, this));
+		this.settingsTab = new SurfingSettingTab(this.app, this)
+		this.addSettingTab(this.settingsTab);
 
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));

@@ -771,3 +771,23 @@ div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
 	height: var(--icon-xs);
 }
 
+.tab-tree-empty-container svg {
+	width: var(--icon-xl);
+	height: var(--icon-xl);
+	opacity: 50%;
+}
+
+.tab-tree-empty-container {
+	display: flex;
+	align-items: center;
+	text-align: center;
+	justify-content: center;
+}
+
+.tab-tree-empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1em;
+	opacity: 30%;
+}
