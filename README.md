@@ -1,9 +1,5 @@
 ## Surfing
 
-> This fork is maintained by Boninall, it is for personal use only. If you want to use it,
-> add `quorafind/obsidian-surfing` rather than original one.
-> Original fork is [here](https://github.com/Trikzon/obsidian-web-browser).
-
 [中文文档](README-ZH.md) ｜ [English Doc](README.md)
 
 ## Introduction
@@ -86,6 +82,8 @@ the current browser URL within Obsidain.
 
 ## Support
 
-You can support original author `Trikzon` :
+If you are enjoying this plugin then please support my work and enthusiasm by buying me a coffee
+on [https://www.buymeacoffee.com/boninall](https://www.buymeacoffee.com/boninall).
+.
 
-[<img src="https://user-images.githubusercontent.com/14358394/115450238-f39e8100-a21b-11eb-89d0-fa4b82cdbce8.png" width="200">](https://ko-fi.com/trikzon)
+<a href="https://www.buymeacoffee.com/boninall"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=boninall&button_colour=6495ED&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00"></a>
