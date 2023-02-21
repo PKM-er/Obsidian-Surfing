@@ -791,3 +791,15 @@ div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
 	gap: 1em;
 	opacity: 30%;
 }
+
+div[data-type^="surfing-tab-tree"] ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+div[data-type^="surfing-tab-tree"] ul li {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}

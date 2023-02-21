@@ -77,12 +77,6 @@
 .surfing_dropTarget_zUmbJa {
   background-color: var(--color-accent);
 }
-ul,
-ul li {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
 
 /* esbuild-css-modules-plugin-namespace:.\src\component\TabTreeView\CustomDragPreview.module.css?esbuild-css-modules-plugin-built */
 .surfing_root_YLpzFq {
@@ -738,4 +732,14 @@ div[data-type^=surfing-bookmark-manager] .ant-table-thead {
   align-items: center;
   gap: 1em;
   opacity: 30%;
+}
+div[data-type^=surfing-tab-tree] ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+div[data-type^=surfing-tab-tree] ul li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
