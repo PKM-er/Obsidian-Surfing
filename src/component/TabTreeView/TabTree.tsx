@@ -187,7 +187,7 @@ export default function TabTree(props: Props) {
 
 	return (
 		treeData.length > 0 ? (
-			<div ref={ handleRef }>
+			<div ref={ handleRef } className={ styles.container }>
 				<DndProvider backend={ MultiBackend } options={ getBackendOptions(
 					{
 						html5: {

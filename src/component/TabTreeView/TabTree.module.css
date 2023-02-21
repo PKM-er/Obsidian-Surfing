@@ -4,6 +4,10 @@
 	border-radius: var(--size-2-2);
 }
 
+.container {
+	height: 100%;
+}
+
 .treeRoot {
 	height: 100%;
 }
