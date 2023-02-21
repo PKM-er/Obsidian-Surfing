@@ -60,6 +60,12 @@ the current browser URL within Obsidain.
    click this link(will copy bookmarklets code), then create bookmarklets by yourself.
 3. Now you can click on the bookmark to open the current page of your browser in Obsidian.
 
+### Use Quickadd to search selection in ChatGPT in Surfing
+
+1. Create a macro based on this
+   script: [search-in-surfing](https://gist.github.com/Quorafind/c70c6c698feeed66465d59efc39e4e1c)
+2. Open ChatGPT in surfing, and select some text, then run the macro.
+
 ## Installation
 
 - Not ready for market yet

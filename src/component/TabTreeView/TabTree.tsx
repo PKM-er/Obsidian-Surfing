@@ -21,9 +21,20 @@ interface Props {
 	plugin: SurfingPlugin;
 }
 
+export const useDndProvider = () => {
+	const [dndArea, setDndArea] = useState<Node | undefined>();
+	const handleRef = React.useCallback((node: Node | undefined | null) => setDndArea(node as Node), []);
+	const html5Options = React.useMemo(
+		() => ({ rootElement: dndArea }),
+		[dndArea]
+	);
+	return { dndArea, handleRef, html5Options };
+};
+
 export default function TabTree(props: Props) {
 	const [treeData, setTreeData] = useState<NodeModel<CustomData>[]>(props.plugin.settings.treeData || []);
 	const handleDrop = (newTree: NodeModel<CustomData>[]) => setTreeData(newTree);
+	const { dndArea, handleRef, html5Options } = useDndProvider();
 
 	const [selectedNode, setSelectedNode] = useState<NodeModel<CustomData> | null>(null);
 	const handleSelect = (node: NodeModel) => {
@@ -55,6 +66,7 @@ export default function TabTree(props: Props) {
 		});
 		menu.showAtPosition({ x: e.clientX, y: e.clientY });
 	};
+
 
 	React.useEffect(() => {
 		const leafIndex = treeData.findIndex((node) => node.data?.fileType === "site");
@@ -175,45 +187,54 @@ export default function TabTree(props: Props) {
 
 	return (
 		treeData.length > 0 ? (
-			<DndProvider backend={ MultiBackend } options={ getBackendOptions() }>
-				<div className={ styles.app } onContextMenu={ handleContextMenu }>
-					<Tree
-						tree={ treeData }
-						rootId={ 0 }
-						render={ (node, { depth, isOpen, hasChild, onToggle }) => (
-							<CustomNode
-								node={ node }
-								depth={ depth }
-								isOpen={ isOpen }
-								onToggle={ onToggle }
-								hasChild={ hasChild }
-								isSelected={ node.id === selectedNode?.id }
-								onSelect={ handleSelect }
-							/>
-						) }
-						dragPreviewRender={ (monitorProps) => (
-							<CustomDragPreview monitorProps={ monitorProps }/>
-						) }
-						onDrop={ handleDrop }
-						classes={ {
-							root: styles.treeRoot,
-							draggingSource: styles.draggingSource,
-							placeholder: styles.placeholderContainer
-						} }
-						sort={ false }
-						insertDroppableFirst={ false }
-						canDrop={ (tree, { dragSource, dropTargetId }) => {
-							if (dragSource?.parent === dropTargetId) {
-								return true;
-							}
-						} }
-						dropTargetOffset={ 10 }
-						placeholderRender={ (node, { depth }) => (
-							<Placeholder node={ node } depth={ depth }/>
-						) }
-					/>
-				</div>
-			</DndProvider>
+			<div ref={ handleRef }>
+				<DndProvider backend={ MultiBackend } options={ getBackendOptions(
+					{
+						html5: {
+							rootElement: dndArea
+						}
+					}
+				) }>
+					<div className={ styles.app } onContextMenu={ handleContextMenu }>
+						<Tree
+							tree={ treeData }
+							rootId={ 0 }
+							render={ (node, { depth, isOpen, hasChild, onToggle }) => (
+								<CustomNode
+									node={ node }
+									depth={ depth }
+									isOpen={ isOpen }
+									onToggle={ onToggle }
+									hasChild={ hasChild }
+									isSelected={ node.id === selectedNode?.id }
+									onSelect={ handleSelect }
+								/>
+							) }
+							dragPreviewRender={ (monitorProps) => (
+								<CustomDragPreview monitorProps={ monitorProps }/>
+							) }
+							onDrop={ handleDrop }
+							classes={ {
+								root: styles.treeRoot,
+								draggingSource: styles.draggingSource,
+								placeholder: styles.placeholderContainer
+							} }
+							sort={ false }
+							insertDroppableFirst={ false }
+							canDrop={ (tree, { dragSource, dropTargetId }) => {
+								if (dragSource?.parent === dropTargetId) {
+									return true;
+								}
+							} }
+							dropTargetOffset={ 10 }
+							placeholderRender={ (node, { depth }) => (
+								<Placeholder node={ node } depth={ depth }/>
+							) }
+						/>
+					</div>
+				</DndProvider>
+			</div>
+
 		) : (<div className={ `${ styles.app } tab-tree-empty-container` }>
 			<div className={ `tab-tree-empty-state` }>
 				<CrownTwoTone size={ 64 } width={ 64 } height={ 64 }/>
