@@ -52,9 +52,6 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 		const url = (currentSearchEngine ? currentSearchEngine.url : SEARCH_ENGINES[0].url);
 
 		const finalUrl = getComposedUrl(url, currentInputValue);
-
-		console.log(finalUrl);
-
 		SurfingView.spawnWebBrowserView(false, {url: finalUrl});
 	}
 }
