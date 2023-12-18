@@ -1,8 +1,8 @@
 {
 	"id": "surfing",
 	"name": "Surfing",
-	"version": "0.8.16",
-	"minAppVersion": "1.0.0",
+	"version": "0.9.0",
+	"minAppVersion": "1.4.0",
 	"description": "Surf the Net in Obsidian.",
 	"author": "Boninall & Windily-cloud",
 	"authorUrl": "https://github.com/Quorafind",

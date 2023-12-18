@@ -854,7 +854,9 @@ export class SurfingView extends ItemView {
 		} else if ((!(url.startsWith("file://") || (/\.htm(l)?/g.test(url))) && !urlRegEx2.test(encodeURI(url))) || !(/^(https?|file):\/\//g.test(url))) {
 			// If url is not a valid FILE url, search it with search engine.
 			const allSearchEngine = [...SEARCH_ENGINES, ...this.plugin.settings.customSearchEngine];
-			const currentSearchEngine = allSearchEngine.find((engine) => engine.name === this.plugin.settings.defaultSearchEngine);
+			const currentSearchEngine = allSearchEngine.find((engine) => engine.name.toLowerCase() === this.plugin.settings.defaultSearchEngine);
+			console.log(currentSearchEngine, allSearchEngine, this.plugin.settings.defaultSearchEngine)
+
 			// @ts-ignore
 			url = (currentSearchEngine ? currentSearchEngine.url : SEARCH_ENGINES[0].url) + url;
 		}

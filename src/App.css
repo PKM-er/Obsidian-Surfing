@@ -810,6 +810,10 @@ div[data-type^="surfing-tab-tree"] ul li {
 	width: 800px;
 }
 
-.surfing-hover-popover .surfing-hover-popover-container, .surfing-hover-popover .wb-view-content.node-insert-event {
+.surfing-embed-website {
+	height: 800px;
+}
+
+.surfing-hover-popover .surfing-hover-popover-container, .surfing-hover-popover .wb-view-content.node-insert-event, .surfing-embed-website .surfing-embed-website-container, .surfing-embed-website .surfing-embed-website-container .wb-view-content.node-insert-event {
 	height: 100%;
 }
