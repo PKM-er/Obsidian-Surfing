@@ -22,6 +22,7 @@ export interface SurfingSettings {
 	defaultSearchEngine: string;
 	customSearchEngine: SearchEngine[];
 	ignoreList: string[];
+	hoverPopover: boolean;
 	alwaysShowCustomSearch: boolean;
 	showOtherSearchEngines: boolean;
 	showSearchBarInPage: boolean;
@@ -79,6 +80,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 		name: 'duckduckgo',
 		url: 'https://duckduckgo.com/?q=',
 	}],
+	hoverPopover: true,
 	ignoreList: ["notion", "craft"],
 	alwaysShowCustomSearch: false,
 	showOtherSearchEngines: false,
@@ -373,6 +375,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 	private generateGeneralSettings(tabName: string, wbContainerEl: HTMLElement) {
 		this.addOpenInSameTab(tabName, wbContainerEl);
+		this.addHoverPopover(tabName, wbContainerEl);
+
 		this.addRefreshButton(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
 		this.addMarkdownPath(tabName, wbContainerEl);
@@ -680,6 +684,24 @@ export class SurfingSettingTab extends PluginSettingTab {
 			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
+	}
+
+	private addHoverPopover(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = 'Hover Popover';
+		const settingDesc = 'Show a popover when hover on the link.';
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(settingDesc)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.hoverPopover)
+					.onChange(async (value) => {
+						this.plugin.settings.hoverPopover = value;
+						this.applySettingsUpdate();
+					});
+			});
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName, settingDesc);
 	}
 
 	private addReplaceIframeInCanvas(tabName: string, wbContainerEl: HTMLElement) {
