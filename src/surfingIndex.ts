@@ -257,6 +257,33 @@ export default class SurfingPlugin extends Plugin {
 									window.open(token.text, '_blank', 'external')
 								})
 						})
+
+						if(app.plugins.getPlugin('obsidian-hover-editor')) {
+							menu.addItem((item) => {
+								item.setIcon('surfing')
+									.setTitle('Open With Hover Editor')
+									.onClick(async () => {
+										const hoverEditorPlugin = app.plugins.getPlugin('obsidian-hover-editor');
+
+										if (!hoverEditorPlugin) {
+											new Notice('Please install obsidian-hover-editor plugin first');
+											return;
+										}
+
+										const leaf = await app.plugins.getPlugin('obsidian-hover-editor')?.spawnPopover(view.contentEl);
+
+										if (!leaf) return;
+
+										leaf.setViewState({
+											type: "surfing-view",
+											active: true,
+											state: {
+												url: token.text
+											}
+										})
+									})
+							});
+						}
 					}
 
 					return;
