@@ -22,6 +22,7 @@ import { hashCode } from "./component/BookmarkManager/utils";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
+
 export class SurfingView extends ItemView {
 	plugin: SurfingPlugin;
 	private searchBox: searchBox;

@@ -803,3 +803,13 @@ div[data-type^="surfing-tab-tree"] ul li {
 	margin: 0;
 	padding: 0;
 }
+
+
+.surfing-hover-popover {
+	height: 800px;
+	width: 800px;
+}
+
+.surfing-hover-popover .surfing-hover-popover-container, .surfing-hover-popover .wb-view-content.node-insert-event {
+	height: 100%;
+}
