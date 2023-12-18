@@ -134,7 +134,7 @@ export default class SurfingPlugin extends Plugin {
 	private addHeaderAndSearchBar(currentView: ItemView) {
 		if (!currentView) return;
 		// Check if new leaf's view is empty, else return.
-		if (currentView.getViewType() != "empty") return;
+		if (currentView.getViewType() != "empty" && currentView.getViewType() !== 'home-tab-view') return;
 		// Check if the "New tab" view has already been processed and has a header bar already.
 		if (!currentView.headerEl.children[2].hasClass("web-browser-header-bar")) {
 			const headerBar = new HeaderBar(currentView.headerEl.children[2], this, currentView);
@@ -146,6 +146,7 @@ export default class SurfingPlugin extends Plugin {
 			});
 		}
 
+		if(app.plugins.getPlugin('home-tab')) return;
 		const emptyStateEl = (currentView.contentEl.children[0] as HTMLElement).hasClass("empty-state") ? currentView.contentEl.children[0] as HTMLElement : null;
 		if (!emptyStateEl) return;
 		if (!emptyStateEl.hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
@@ -176,7 +177,7 @@ export default class SurfingPlugin extends Plugin {
 		if (!currentView) return;
 
 		// Check if new leaf's view is empty, else return.
-		if (currentView.getViewType() != "empty") return;
+		if (currentView.getViewType() != "empty" && currentView.getViewType() !== 'home-tab-view') return;
 
 		// Check if the "New tab" view has already been processed and has a header bar already.
 		if (currentView.headerEl.children[2].hasClass("wb-header-bar")) {
@@ -184,6 +185,12 @@ export default class SurfingPlugin extends Plugin {
 			currentView.headerEl.children[2].removeClass("wb-header-bar");
 		}
 
+		// Remove config icon
+		if (currentView.contentEl.children[1]?.hasClass("surfing-settings-icon")) {
+			currentView.contentEl.children[1]?.detach();
+		}
+
+		if(app.plugins.getPlugin('home-tab')) return;
 		// Remove in page search bar
 		if (currentView.contentEl.children[0].hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
 			currentView.contentEl.children[0].children[1]?.detach();
@@ -192,16 +199,16 @@ export default class SurfingPlugin extends Plugin {
 			currentView.contentEl.children[0].removeClass("wb-page-search-bar");
 		}
 
-		// Remove config icon
-		if (currentView.contentEl.children[1]?.hasClass("surfing-settings-icon")) {
-			currentView.contentEl.children[1]?.detach();
-		}
+
 	}
 
 	// Update all leaf contains empty view when restart Obsidian
 	private updateEmptyLeaves(removeHeader?: boolean) {
 		const emptyLeaves = this.app.workspace.getLeavesOfType("empty");
-		emptyLeaves.forEach((leaf) => {
+		const homeTabLeaves = this.app.workspace.getLeavesOfType("home-tab-view");
+
+		const targetLeaves = [...emptyLeaves, ...homeTabLeaves];
+		targetLeaves.forEach((leaf) => {
 			if (leaf.view instanceof ItemView) {
 				if (!removeHeader) this.addHeaderAndSearchBar(leaf.view);
 				if (removeHeader) this.removeHeaderAndSearchBar(leaf.view);
@@ -717,6 +724,7 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	private patchEmptyView() {
+
 		const patchEmptyView = () => {
 			const leaf = app.workspace.getLeavesOfType("empty").first();
 			const view = leaf?.view;
