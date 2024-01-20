@@ -8,7 +8,7 @@ An [Obsidian](https://obsidian.md/) plugin that allows you to browse the web wit
 
 The core functionality of the plugin, rendering a web view, is greatly influenced
 by [Ellpeck's Obsidian Custom Frames](https://github.com/Ellpeck/ObsidianCustomFrames) plugin and this plugin wouldn't
-have be possible without it.
+have been possible without it.
 
 ![](assets/obsidian-web-browser.png)
 
