@@ -154,6 +154,12 @@ export class SurfingView extends ItemView {
 		return WEB_BROWSER_VIEW_ID;
 	}
 
+	openInpecter() {
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
+		webContents.openDevTools();
+	}
+
 	createWebview = () => {
 		this.contentEl.empty();
 
