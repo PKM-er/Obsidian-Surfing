@@ -107,14 +107,8 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
             }
             case 'file': {
                 const file = this.files.find((file) => file.path === item);
-                console.log(file, this.view.leaf);
                 if (file) {
-                    await this.view.leaf.setViewState({
-                        type: 'markdown',
-                        state: {
-                            file: file.path,
-                        },
-                    });
+                    await this.view.leaf.openFile(file);
                 }
                 break;
             }
