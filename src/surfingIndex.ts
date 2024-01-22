@@ -148,6 +148,11 @@ export default class SurfingPlugin extends Plugin {
 		}
 
 		if (app.plugins.getPlugin('home-tab')) return;
+		if (this.settings.randomBackground) {
+			currentView.contentEl.toggleClass("wb-random-background", true);
+		}
+		// @ts-ignore
+		currentView.titleEl.setText('Surfing');
 		const emptyStateEl = (currentView.contentEl.children[0] as HTMLElement).hasClass("empty-state") ? currentView.contentEl.children[0] as HTMLElement : null;
 		if (!emptyStateEl) return;
 		if (!emptyStateEl.hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
@@ -795,8 +800,10 @@ export default class SurfingPlugin extends Plugin {
 	private patchEmptyView() {
 
 		const patchEmptyView = () => {
-			const leaf = app.workspace.getLeavesOfType("empty").first();
+			const leaf = this.app.workspace.getLeavesOfType("empty").first();
 			const view = leaf?.view;
+			// eslint-disable-next-line @typescript-eslint/no-this-alias
+			const self = this;
 
 			if (!view) return false;
 
@@ -805,7 +812,7 @@ export default class SurfingPlugin extends Plugin {
 				around(EmptyView.prototype, {
 					onOpen: (next) =>
 						function (...args: any) {
-							const pluginSetting = app.plugins.getPlugin("surfing").settings;
+							const pluginSetting = self.app.plugins.getPlugin("surfing").settings;
 							if (!this.contentEl.querySelector(".wb-bookmark-bar") && pluginSetting.bookmarkManager.openBookMark) {
 								this.contentEl.classList.add("mod-wb-bookmark-bar");
 								new BookMarkBar(this, this.plugin).onload();
@@ -816,9 +823,9 @@ export default class SurfingPlugin extends Plugin {
 								});
 								iconEl.addEventListener('click', () => {
 									//@ts-expect-error, private method
-									app.setting.open();
+									self.app.setting.open();
 									//@ts-expect-error, private method
-									app.setting.openTabById('surfing');
+									self.app.setting.openTabById('surfing');
 								});
 								setIcon(iconEl, 'settings');
 							}
@@ -848,6 +855,8 @@ export default class SurfingPlugin extends Plugin {
 	private patchCanvasNode() {
 		const patchUrlNode = () => {
 			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
+			// eslint-disable-next-line @typescript-eslint/no-this-alias
+			const self = this;
 
 			if (!canvasView) return false;
 			const findNode = (map: any) => {
@@ -870,7 +879,7 @@ export default class SurfingPlugin extends Plugin {
 						// TODO: Move this with surfing view's constructor to prevent multiple htmlelement
 						if (this.canvas.isDragging) return;
 
-						new InNodeWebView(this, this?.canvas).onload();
+						new InNodeWebView(this, self, this?.canvas).onload();
 					};
 				},
 			});

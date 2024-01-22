@@ -27,7 +27,7 @@ export class SurfingView extends ItemView {
 	plugin: SurfingPlugin;
 	private searchBox: searchBox;
 	currentUrl: string;
-	currentTitle = "New Tab";
+	currentTitle = "Surfing";
 
 	headerBar: HeaderBar;
 	favicon: HTMLImageElement;

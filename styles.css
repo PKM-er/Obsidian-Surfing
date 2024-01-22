@@ -200,6 +200,14 @@
 	padding-top: 100px;
 }
 
+.wb-random-background .empty-state {
+	background: url("https://source.unsplash.com/random/1920x1080/?city") no-repeat center center;
+}
+
+.wb-random-background .empty-state input {
+	filter: opacity(0.8);
+}
+
 .wb-search-bar-container {
 	margin-left: auto;
 	margin-right: auto;
