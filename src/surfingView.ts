@@ -170,6 +170,8 @@ export class SurfingView extends ItemView {
 		const doc = this.contentEl.doc;
 		this.webviewEl = doc.createElement('webview');
 		this.webviewEl.setAttribute("allowpopups", "");
+		// @ts-ignore
+		this.webviewEl.partition = "persist:surfing-vault-" + this.app.appId;
 		this.webviewEl.addClass("wb-frame");
 		this.contentEl.appendChild(this.webviewEl);
 
@@ -180,7 +182,7 @@ export class SurfingView extends ItemView {
 		});
 
 
-		this.webviewEl.addEventListener("dom-ready", (event: any) => {
+		this.webviewEl.addEventListener("dom-ready", async (event: any) => {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 
@@ -196,46 +198,8 @@ export class SurfingView extends ItemView {
 				};
 			});
 
-			this.registerContextMenuInWebcontents();
-
-			// TODO: Try to improve this dark mode.
-			try {
-				webContents.executeJavaScript(`
-										window.getComputedStyle( document.body ,null).getPropertyValue('background-color');
-				`, true).then((result: any) => {
-					const colorArr = result.slice(
-						result.indexOf("(") + 1,
-						result.indexOf(")")
-					).split(", ");
-
-					const brightness = Math.sqrt(colorArr[0] ** 2 * 0.241 + colorArr[1] ** 2 * 0.691 + colorArr[2] ** 2 * 0.068);
-
-					// If the background color is dark, set the theme to dark.
-					if (brightness > 120 && this.plugin.settings.darkMode) {
-						webContents.insertCSS(`
-							html {
-								filter: invert(90%) hue-rotate(180deg);
-							}
-
-							img, svg, div[class*="language-"] {
-								filter: invert(110%) hue-rotate(180deg);
-								opacity: .8;
-							}
-							
-							video, canvas {
-								filter: invert(110%) hue-rotate(180deg);
-								opacity: 1;
-							}
-						`);
-					}
-				});
-			} catch (err) {
-				console.error('Failed to get background color: ', err);
-			}
-
-			// webContents.on('found-in-page', (event: any, result: any) => {
-			// 	if (result.finalUpdate) webContents.stopFindInPage('clearSelection')
-			// })
+			await this.registerContextMenuInWebcontents(webContents);
+			await this.registerJavascriptInWebcontents(webContents);
 
 			// For getting keyboard event from webview
 			webContents.on('before-input-event', (event: any, input: any) => {
@@ -327,13 +291,6 @@ export class SurfingView extends ItemView {
 							let link = "";
 							if ("${highlightFormat}".includes("{TIME")) {
 								link = "${getCurrentTime()}";
-								// // eslint-disable-next-line no-useless-escape
-								// const timeString = "${highlightFormat}".match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
-								// if (timeString) {
-								// 	// eslint-disable-next-line no-useless-escape
-								// 	const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
-								// 	link = "${highlightFormat}".replace(timeString, momentTime);
-								// }
 							}
 							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
 						
@@ -539,7 +496,7 @@ export class SurfingView extends ItemView {
 		}
 	}
 
-	createMenu = (webContents: any, event: any, params: any) => {
+	createMenu = (webContents: any, params: any) => {
 		if (this.menu) {
 			this.menu?.close();
 		}
@@ -753,289 +710,160 @@ export class SurfingView extends ItemView {
 		}
 
 		this.menu.showAtPosition({
-			x: event.x,
-			y: event.y
+			x: params.x,
+			y: params.y
 		});
 	};
 
-	registerContextMenuInWebcontents() {
-		// @ts-ignore
-		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
-
-		this.webviewEl.addEventListener('context-menu', (e: any) => {
-			e.preventDefault();
-			e.stopPropagation();
-			e.stopImmediatePropagation();
-
-			if (e.params.selectionText) {
-				const {Menu} = remote;
-				const menu = new Menu();
-				menu.popup(webContents);
-				menu.closePopup();
-			}
-
-			this.createMenu(webContents, e.params, e.params);
-		});
-
+	async registerContextMenuInWebcontents(webContents: any) {
 		webContents.executeJavaScript(`
+			window.addEventListener('contextmenu', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				e.stopImmediatePropagation();
+				window.myPostPort?.postMessage('contextmenu ' + e.clientX + ' ' + e.clientY);
+			 })
+		 `);
+
+		await webContents.executeJavaScript(`
 			window.addEventListener("message", (e) => {
 				window.myPostPort = e.ports[0];
 			})
 			document.addEventListener('click', (e) => {
-				window.myPostPort.postMessage('click');
+				window.myPostPort?.postMessage('click');
 			});
 			document.addEventListener('scroll', (e) => {
-				window.myPostPort.postMessage('scroll');
-			});
-			
-		`).then((result: any) => {
-			const ch = new MessageChannel();
-			ch.port1.onmessage = (e: any) => {
-				if (this.menu) {
+				window.myPostPort?.postMessage('scroll');
+			});0
 
-					this.menu.close();
+		`);
+
+		const ch = new MessageChannel();
+		ch.port1.onmessage = (e: any) => {
+			if (e.data === 'contextmenu' || e.data?.startsWith('contextmenu')) {
+				this.menu?.close();
+				const {x, y} = e.data.split(' ').length > 1 ? {
+					x: e.data.split(' ')[1],
+					y: e.data.split(' ')[2]
+				} : {x: e.x, y: e.y};
+				const realRect = this.webviewEl.getClientRects();
+				const rect: {
+					x: number,
+					y: number
+				} = {
+					x: parseInt(x, 10) + realRect[0].x,
+					y: parseInt(y, 10) + realRect[0].y
+				};
+
+				const pageUrl = this.currentUrl;
+				let selectionText = "";
+				try {
+					webContents.executeJavaScript(`window.getSelection().toString()`, true).then((result: any) => {
+						selectionText = result;
+
+						console.log(rect, pageUrl, selectionText);
+
+						this.createMenu(webContents, {
+							...rect,
+							pageURL: pageUrl,
+							selectionText: selectionText
+						});
+					});
+				} catch (err) {
+					console.error('Failed to copy: ', err);
 				}
-			};
-
-			(this.webviewEl as any).contentWindow.postMessage(`test`, '*', [ch.port2]);
-		});
 
 
-		// const run = debounce((params: any) => {
-		// 	const {Menu, MenuItem} = remote;
-		// 	this.menu = new Menu();
-		//
-		// 	const reload = () => {
-		// 		this.leaf?.rebuildView();
-		// 	};
-		//
-		// 	const navigateBack = () => {
-		// 		// @ts-ignore
-		// 		this.leaf?.history.back();
-		// 	};
-		//
-		// 	const navigateForward = () => {
-		// 		// @ts-ignore
-		// 		this.leaf?.history.forward();
-		// 	};
-		//
-		// 	if (!params.selectionText) {
-		// 		this.menu.append(
-		// 			new MenuItem(
-		// 				{
-		// 					label: t('Refresh Current Page'),
-		// 					click: function () {
-		// 						reload();
-		// 					}
-		// 				}
-		// 			)
-		// 		);
-		//
-		// 		this.menu.append(
-		// 			new MenuItem(
-		// 				{
-		// 					label: t('Back'),
-		// 					click: function () {
-		// 						navigateBack();
-		// 					}
-		// 				}
-		// 			)
-		// 		);
-		//
-		// 		this.menu.append(
-		// 			new MenuItem(
-		// 				{
-		// 					label: t('Forward'),
-		// 					click: function () {
-		// 						navigateForward();
-		// 					}
-		// 				}
-		// 			)
-		// 		);
-		//
-		// 		this.menu.append(new MenuItem({type: 'separator'}));
-		// 	}
-		//
-		//
-		// 	this.menu.append(
-		// 		new MenuItem(
-		// 			{
-		// 				label: t('Open Current URL In External Browser'),
-		// 				click: function () {
-		// 					window.open(params.pageURL, "_blank");
-		// 				}
-		// 			}
-		// 		)
-		// 	);
-		//
-		// 	this.menu.append(
-		// 		new MenuItem(
-		// 			{
-		// 				label: t('Save Current Page As Markdown'),
-		// 				click: async function () {
-		// 					try {
-		// 						webContents.executeJavaScript(`
-		// 									document.body.outerHTML
-		// 								`, true).then(async (result: any) => {
-		// 							const url = params.pageURL.replace(/\?(.*)/g, "");
-		// 							const parseContent = result.replaceAll(/src="(?!(https|http))([^"]*)"/g, "src=\"" + url + "$2\"");
-		// 							const content = htmlToMarkdown(parseContent);
-		// 							// @ts-ignore
-		// 							const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
-		// 							const file = await app.vault.create((app.plugins.getPlugin("surfing").settings.markdownPath ? app.plugins.getPlugin("surfing").settings.markdownPath + "/" : "/") + currentTitle + ".md", content);
-		// 							await app.workspace.openLinkText(file.path, "", true);
-		// 						});
-		// 						console.log('Page Title copied to clipboard');
-		// 					} catch (err) {
-		// 						console.error('Failed to copy: ', err);
-		// 					}
-		//
-		// 				}
-		// 			}
-		// 		)
-		// 	);
-		//
-		// 	this.menu.append(
-		// 		new MenuItem(
-		// 			{
-		// 				label: t('Copy Current Viewport As Image'),
-		// 				click: async function () {
-		// 					try {
-		// 						// Copy Image to Clipboard
-		// 						webContents.capturePage().then(async (image: any) => {
-		// 							clipboard.writeImage(image);
-		// 						});
-		// 					} catch (err) {
-		// 						console.error('Failed to copy: ', err);
-		// 					}
-		//
-		// 				}
-		// 			}
-		// 		)
-		// 	);
-		//
-		// 	// TODO: Support customize menu items.
-		// 	// TODO: Support cut, paste, select All.
-		// 	// Only works when something is selected.
-		// 	if (params.selectionText) {
-		// 		this.menu.append(new MenuItem({type: 'separator'}));
-		// 		this.menu.append(new MenuItem({
-		// 			label: t('Search Text'), click: function () {
-		// 				try {
-		// 					SurfingView.spawnWebBrowserView(true, {url: params.selectionText});
-		// 					console.log('Page URL copied to clipboard');
-		// 				} catch (err) {
-		// 					console.error('Failed to copy: ', err);
-		// 				}
-		// 			}
-		// 		}));
-		// 		this.menu.append(new MenuItem({type: 'separator'}));
-		// 		this.menu.append(new MenuItem({
-		// 			label: t('Copy Plain Text'), click: function () {
-		// 				try {
-		// 					webContents.copy();
-		// 					console.log('Page URL copied to clipboard');
-		// 				} catch (err) {
-		// 					console.error('Failed to copy: ', err);
-		// 				}
-		// 			}
-		// 		}));
-		// 		const highlightFormat = this.plugin.settings.highlightFormat;
-		// 		this.menu.append(new MenuItem({
-		// 			label: t('Copy Link to Highlight'), click: function () {
-		// 				try {
-		// 					// eslint-disable-next-line no-useless-escape
-		// 					let tempText = encodeURIComponent(params.selectionText);
-		// 					const chineseRegex = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
-		// 					const englishSentence = params.selectionText.split('\n');
-		//
-		// 					if (params.selectionText.match(chineseRegex)?.length > 50) {
-		// 						if (englishSentence.length > 1) {
-		// 							const fistSentenceWords = englishSentence[0];
-		// 							const lastSentenceWords = englishSentence[englishSentence.length - 1];
-		//
-		// 							tempText = encodeURIComponent(fistSentenceWords.slice(0, 3)) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 4, lastSentenceWords.length));
-		// 						} else {
-		// 							tempText = encodeURIComponent(params.selectionText.substring(0, 8)) + "," + encodeURIComponent(params.selectionText.substring(params.selectionText.length - 8, params.selectionText.length));
-		// 						}
-		// 					} else if (englishSentence.length > 1) {
-		//
-		// 						const fistSentenceWords = englishSentence[0].split(' ');
-		// 						const lastSentenceWords = englishSentence[englishSentence.length - 1].split(' ');
-		//
-		// 						tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
-		// 						// tempText = encodeURIComponent(englishWords.slice(0, 2).join(' ')) + "," + encodeURIComponent(englishWords.slice(englishWords.length - 1, englishWords.length).join(' '));
-		// 					}
-		//
-		// 					const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
-		// 					const selectionText = params.selectionText.replace(/\n/g, " ");
-		// 					let link = "";
-		// 					if (highlightFormat.contains("{TIME")) {
-		// 						// eslint-disable-next-line no-useless-escape
-		// 						const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
-		// 						if (timeString) {
-		// 							// eslint-disable-next-line no-useless-escape
-		// 							const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
-		// 							link = highlightFormat.replace(timeString, momentTime);
-		// 						}
-		// 					}
-		// 					link = (link != "" ? link : highlightFormat).replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText);
-		// 					clipboard.writeText(link);
-		// 				} catch (err) {
-		// 					console.error('Failed to copy: ', err);
-		// 				}
-		// 			}
-		// 		}));
-		//
-		// 		this.menu.popup(webContents);
-		// 	}
-		//
-		// 	if (params.pageURL?.contains("bilibili.com/")) {
-		// 		this.menu.append(new MenuItem({
-		// 			label: t('Copy Video Timestamp'), click: function () {
-		// 				try {
-		// 					webContents.executeJavaScript(`
-		// 									var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
-		// 									var timeYMSArr=time.split(':');
-		// 									var joinTimeStr='00h00m00s';
-		// 									if(timeYMSArr.length===3){
-		// 										 joinTimeStr=timeYMSArr[0]+'h'+timeYMSArr[1]+'m'+timeYMSArr[2]+'s';
-		// 									}else if(timeYMSArr.length===2){
-		// 										 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
-		// 									}
-		// 									var timeStr= "";
-		// 									var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
-		// 									var pageStr = "";
-		// 									if(typeof pageStrMatch === "object" && pageStrMatch?.length > 0){
-		// 									    pageStr = '&' + pageStrMatch[0];
-		// 									}else if(typeof pageStrMatch === "string") {
-		// 									    pageStr = '&' + pageStrMatch;
-		// 									}
-		// 									timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
-		// 								`, true).then((result: any) => {
-		// 						clipboard.writeText("[" + result.split('?t=')[1].replace(/&p=[1-9]{1,}/g, "") + "](" + result + ")"); // Will be the JSON object from the fetch call
-		// 					});
-		// 					console.log('Page URL copied to clipboard');
-		// 				} catch (err) {
-		// 					console.error('Failed to copy: ', err);
-		// 				}
-		// 			}
-		// 		}));
-		// 	}
-		//
-		// 	// Should use this method to prevent default copy+c
-		// 	// The default context menu is related to the shadow root that in the webview tag
-		// 	// So it is not possible to preventDefault because it cannot be accessed.
-		// 	// I tried to use this.frame.shadowRoot.childNodes to locate the iframe HTML element
-		// 	// It doesn't work.
-		// 	setTimeout(() => {
-		// 		this.menu.popup(webContents);
-		// 		// Dirty workaround for showing the menu, when currentUrl is not the same as the url of the webview
-		// 		if (this.currentUrl !== params.pageURL && !params.selectionText) {
-		// 			this.menu.popup(webContents);
-		// 		}
-		// 	}, 0);
-		// }, 10, true);
+			}
+
+			if (this.menu && e.data !== 'darkreader-failed') {
+				this.menu.close();
+			} else if (e.data === 'darkreader-failed') {
+				webContents.executeJavaScript(`
+										window.getComputedStyle( document.body ,null).getPropertyValue('background-color');
+							`, true).then((result: any) => {
+					const colorArr = result.slice(
+						result.indexOf("(") + 1,
+						result.indexOf(")")
+					).split(", ");
+
+					const brightness = Math.sqrt(colorArr[0] ** 2 * 0.241 + colorArr[1] ** 2 * 0.691 + colorArr[2] ** 2 * 0.068);
+
+					// If the background color is dark, set the theme to dark.
+					if (brightness > 120) {
+						webContents.insertCSS(`
+							html {
+								filter: invert(90%) hue-rotate(180deg);
+							}
+
+							img, svg, div[class*="language-"] {
+								filter: invert(110%) hue-rotate(180deg);
+								opacity: .8;
+							}
+
+							video, canvas {
+								filter: invert(110%) hue-rotate(180deg);
+								opacity: 1;
+							}
+					`);
+					}
+				});
+
+			}
+		};
+
+		await (this.webviewEl as any).contentWindow.postMessage(`test`, '*', [ch.port2]);
+	}
+
+	async registerJavascriptInWebcontents(webContents: any) {
+		try {
+			if (this.plugin.settings.darkMode) {
+				try {
+					await webContents.executeJavaScript(`
+						const element = document.createElement('script');
+
+						fetch('https://cdn.jsdelivr.net/npm/darkreader/darkreader.min.js')
+							.then((response) => {
+								element.src = response.url;
+								document.body.appendChild(element);
+							})
+							.catch((error) => {
+								console.error('Error loading the script:', error);
+							});
+
+						element.onload = () => {
+							try {
+								DarkReader?.setFetchMethod(window.fetch);
+								DarkReader?.enable({
+									brightness: 100,
+									contrast: 90,
+									sepia: 10
+								});
+								console.log(DarkReader);
+							} catch (err) {
+
+								window.myPostPort?.postMessage('darkreader-failed');
+								console.error('Failed to load dark reader: ', err);
+
+							}
+						};0
+					`);
+
+
+				} catch (e) {
+					console.error(e);
+				}
+
+
+			}
+
+
+		} catch (err) {
+			console.error('Failed to get background color: ', err);
+		}
+
+		// https://cdn.jsdelivr.net/npm/darkreader/darkreader.min.js
+
 	}
 
 	clearHistory(): void {
@@ -1174,11 +1002,11 @@ export class SurfingView extends ItemView {
 		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 
 		webContents.executeJavaScript(`
-				const selectionText = document.getSelection().toString();	
+				const selectionText = document.getSelection().toString();
 				let tempText = encodeURIComponent(selectionText);
 				const chineseRegex = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
 				const englishSentence = selectionText.split('\\n');
-				
+
 				if (selectionText.match(chineseRegex)?.length > 50) {
 					if (englishSentence.length > 1) {
 						const fistSentenceWords = englishSentence[0];
@@ -1195,15 +1023,15 @@ export class SurfingView extends ItemView {
 
 					tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
 				}
-				
+
 				let linkToHighlight = "${getCurrentUrl()}".replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
-				
+
 				let link = "";
 				if (${checkTime()}) {
 					link = "${getCurrentTime()}";
 				}
-				link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));	
-				
+				link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+
 				`, true).then((result: any) => {
 			clipboard.writeText(result);
 		});
