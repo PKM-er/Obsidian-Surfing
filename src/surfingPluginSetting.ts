@@ -14,7 +14,13 @@ import SurfingPlugin from "./surfingIndex";
 import { NodeModel } from "@minoru/react-dnd-treeview";
 import { CustomData } from "./component/TabTreeView/types";
 
-type settingSearchInfo = { containerEl: HTMLElement, name: string, description: string, options: SearchOptionInfo[], alias?: string }
+type settingSearchInfo = {
+	containerEl: HTMLElement,
+	name: string,
+	description: string,
+	options: SearchOptionInfo[],
+	alias?: string
+}
 type TabContentInfo = { content: HTMLElement, heading: HTMLElement, navButton: HTMLElement }
 export type SearchOptionInfo = { name: string, description: string, options?: DropdownRecord[] }
 
@@ -37,6 +43,7 @@ export interface SurfingSettings {
 	useWebview: boolean;
 	useIconList: boolean;
 	darkMode: boolean;
+	randomBackground: boolean;
 	bookmarkManager: {
 		openBookMark: boolean;
 		saveBookMark: boolean;
@@ -61,7 +68,7 @@ const defaultCategory = `- Computer
 - obsidian
     - surfing
     - dataview
-`
+`;
 
 const defaultColumnList = [
 	"name",
@@ -96,6 +103,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	useWebview: false,
 	useIconList: true,
 	darkMode: false,
+	randomBackground: false,
 	bookmarkManager: {
 		openBookMark: false,
 		saveBookMark: false,
@@ -107,7 +115,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 		defaultFilterType: 'tree',
 	},
 	treeData: [],
-}
+};
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
 	{
@@ -181,7 +189,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
-		const { containerEl } = this;
+		const {containerEl} = this;
 		containerEl.empty();
 
 		this.generateSettingsTitle();
@@ -190,12 +198,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 	private generateSettingsTitle() {
 		const linterHeader = this.containerEl.createDiv('wb-setting-title');
-		linterHeader.createEl('h2', { text: 'Web Browser' });
+		linterHeader.createEl('h2', {text: 'Web Browser'});
 		this.generateSearchBar(linterHeader);
 	}
 
 	private addTabHeader() {
-		const navContainer = this.containerEl.createEl('nav', { cls: 'wb-setting-header' });
+		const navContainer = this.containerEl.createEl('nav', {cls: 'wb-setting-header'});
 		this.navigateEl = navContainer.createDiv('wb-setting-tab-group');
 		const settingsEl = this.containerEl.createDiv('wb-setting-content');
 
@@ -240,7 +248,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		this.search.inputEl.onblur = () => {
 			this.navigateEl.removeClass('wb-setting-searching');
-		}
+		};
 
 		this.search.onChange((value: string) => {
 			if (value === '') {
@@ -257,7 +265,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		const tabClass = 'wb-desktop';
 		tabEl.addClass(tabClass);
 
-		setIcon(tabEl.createEl("div", { cls: 'wb-navigation-item-icon' }), tabNameToTabIconId[tabName], 20);
+		setIcon(tabEl.createEl("div", {cls: 'wb-navigation-item-icon'}), tabNameToTabIconId[tabName], 20);
 		// @ts-ignore
 		tabEl.createSpan().setText(t(tabName));
 
@@ -298,7 +306,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		const tabContent = containerEl.createDiv('wb-tab-settings');
 
-		const tabHeader = tabContent.createEl('h2', { cls: "wb-setting-heading", text: tabName + ' Settings' });
+		const tabHeader = tabContent.createEl('h2', {cls: "wb-setting-heading", text: tabName + ' Settings'});
 		(tabHeader as HTMLElement).hide();
 
 		tabContent.id = tabName.toLowerCase().replace(' ', '-');
@@ -312,7 +320,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			generateTabContent(tabContent, tabName);
 		}
 
-		this.tabContent.set(tabName, { content: tabContent, heading: tabHeader, navButton: tabEl });
+		this.tabContent.set(tabName, {content: tabContent, heading: tabHeader, navButton: tabEl});
 	}
 
 	private searchSettings(searchVal: string) {
@@ -393,11 +401,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 	private generateThemeSettings(tabName: string, wbContainerEl: HTMLElement): void {
 		this.useIconList(tabName, wbContainerEl);
 		this.addDarkMode(tabName, wbContainerEl);
+		this.addRandomBackground(tabName, wbContainerEl);
 		this.addMyIcons(tabName, wbContainerEl);
 	}
 
 	private generateBookmarkManagerSettings(tabName: string, wbContainerEl: HTMLElement): void {
-		this.addBookmarkManagerSettings(tabName, wbContainerEl)
+		this.addBookmarkManagerSettings(tabName, wbContainerEl);
 	}
 
 	// @ts-ignore
@@ -420,7 +429,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 	private createSearchZeroState(containerEl: HTMLElement) {
 		this.searchZeroState = containerEl.createDiv();
 		(this.searchZeroState as HTMLElement).hide();
-		this.searchZeroState.createEl(Platform.isMobile ? 'h3' : 'h2', { text: 'No settings match search' }).style.textAlign = 'center';
+		this.searchZeroState.createEl(Platform.isMobile ? 'h3' : 'h2', {text: 'No settings match search'}).style.textAlign = 'center';
 	}
 
 	private addRefreshButton(tabName: string, wbContainerEl: HTMLElement) {
@@ -434,7 +443,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.showRefreshButton = value;
 						this.applySettingsUpdate();
 					});
-			})
+			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 	}
@@ -449,8 +458,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.showSearchBarInPage = value;
 						this.applySettingsUpdate();
 						this.display();
-					})
-			})
+					});
+			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 	}
@@ -468,7 +477,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 					.addOption('baidu', t('Baidu'));
 
 				this.plugin.settings.customSearchEngine.forEach((value, key) => {
-					aDropdown.addOption(value.name, value.name)
+					aDropdown.addOption(value.name, value.name);
 				});
 
 				aDropdown.setValue(this.plugin.settings.defaultSearchEngine).onChange(async (value) => {
@@ -476,7 +485,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 					this.applySettingsUpdate();
 					// Force refresh
 					this.display();
-				})
+				});
 			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
@@ -491,7 +500,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.showOtherSearchEngines = value;
 						this.applySettingsUpdate();
 					});
-			})
+			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 
@@ -503,9 +512,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.ignoreList.join(","))
 					.onChange(async (value) => {
 						this.plugin.settings.ignoreList = value.split(",");
-						this.applySettingsUpdate()
-					})
-			})
+						this.applySettingsUpdate();
+					});
+			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 
@@ -521,7 +530,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						// Force refresh
 						this.display();
 					});
-			})
+			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 
@@ -540,7 +549,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 				.setButtonText('+')
 				.onClick(async () => {
 					this.plugin.settings.customSearchEngine.push({
-						name: `Custom Search ${ this.plugin.settings.customSearchEngine.length + 1 }`,
+						name: `Custom Search ${this.plugin.settings.customSearchEngine.length + 1}`,
 						url: 'https://www.google.com/search?q=',
 					});
 					await this.plugin.saveSettings();
@@ -550,7 +559,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 
 		this.plugin.settings.customSearchEngine.forEach((searchEngine, index) => {
-			settingName = searchEngine.name ? searchEngine.name : t('Custom Search') + `${ this.plugin.settings.customSearchEngine.length > 1 ? ` ${ index + 1 }` : '' }`;
+			settingName = searchEngine.name ? searchEngine.name : t('Custom Search') + `${this.plugin.settings.customSearchEngine.length > 1 ? ` ${index + 1}` : ''}`;
 			const topLevelSetting = new Setting(wbContainerEl)
 				.setClass('search-engine-setting')
 				.setName(settingName)
@@ -567,25 +576,25 @@ export class SurfingSettingTab extends PluginSettingTab {
 			const mainSettingsNameEl = mainSettingsEl.createEl('div', 'search-engine-main-settings-name');
 			const mainSettingsUrlEl = mainSettingsEl.createEl('div', 'search-engine-main-settings-url');
 
-			mainSettingsNameEl.createEl('label', { text: t('Name') });
+			mainSettingsNameEl.createEl('label', {text: t('Name')});
 			mainSettingsNameEl.createEl('input', {
 				cls: 'search-engine-name-input',
 				type: 'text',
 				value: searchEngine.name,
 			}).on('change', '.search-engine-name-input', async (evt: Event) => {
 				const target = evt.target as HTMLInputElement;
-				this.plugin.settings.customSearchEngine[index] = { ...searchEngine, name: target.value };
+				this.plugin.settings.customSearchEngine[index] = {...searchEngine, name: target.value};
 				await this.plugin.saveSettings();
 			});
 
-			mainSettingsUrlEl.createEl('label', { text: t('Url') });
+			mainSettingsUrlEl.createEl('label', {text: t('Url')});
 			mainSettingsUrlEl.createEl('input', {
 				cls: 'search-engine-url-input',
 				type: 'text',
 				value: searchEngine.url,
 			}).on('change', '.search-engine-url-input', async (evt: Event) => {
 				const target = evt.target as HTMLInputElement;
-				this.plugin.settings.customSearchEngine[index] = { ...searchEngine, url: target.value };
+				this.plugin.settings.customSearchEngine[index] = {...searchEngine, url: target.value};
 				await this.plugin.saveSettings();
 			});
 
@@ -621,7 +630,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						// Force refresh
 						this.display();
 					});
-			})
+			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 
@@ -730,8 +739,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.openInObsidianWeb = value;
 						this.applySettingsUpdate();
 						this.display();
-					})
-			})
+					});
+			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 
@@ -739,7 +748,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			return;
 		}
 
-		const bookmarkLetsContainerEl = wbContainerEl.createDiv({ cls: 'bookmarklets-container' });
+		const bookmarkLetsContainerEl = wbContainerEl.createDiv({cls: 'bookmarklets-container'});
 		const bookmarkLetsBtn = bookmarkLetsContainerEl.createEl('button', {
 			cls: "wb-btn"
 		});
@@ -748,32 +757,32 @@ export class SurfingSettingTab extends PluginSettingTab {
 			text: `Obsidian BookmarkLets Code`,
 			cls: 'cm-url',
 			href: 'javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();'
-		})
+		});
 		bookmarkLetsBtn.addEventListener("click", (e) => {
 			e.preventDefault();
-			clipboard.writeText(`javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();`)
-			new Notice(t("Copy BookmarkLets Success"))
-		})
+			clipboard.writeText(`javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();`);
+			new Notice(t("Copy BookmarkLets Success"));
+		});
 		bookmarkLetsContainerEl.createEl("span", {
 			cls: "wb-btn-tip",
 			text: t("   <- Drag or click on me")
-		})
+		});
 
 		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, settingName);
 	}
 
 	private addAboutInfo(tabName: string, wbContainerEl: HTMLElement) {
 
-		const bookmarkLetsContainerEl = wbContainerEl.createDiv({ cls: 'wb-about-card' });
+		const bookmarkLetsContainerEl = wbContainerEl.createDiv({cls: 'wb-about-card'});
 
-		setIcon(bookmarkLetsContainerEl.createDiv({ cls: 'wb-about-icon' }), 'surfing');
+		setIcon(bookmarkLetsContainerEl.createDiv({cls: 'wb-about-icon'}), 'surfing');
 
-		bookmarkLetsContainerEl.createEl('div', { cls: "wb-about-text", text: 'Surfing' });
+		bookmarkLetsContainerEl.createEl('div', {cls: "wb-about-text", text: 'Surfing'});
 
 		const text = this.plugin.manifest.version;
 		const url = "https://github.com/Quorafind/Obsidian-Surfing/releases/tag/" + text;
 
-		bookmarkLetsContainerEl.createEl("a", { cls: 'wb-about-version', href: url, text: text });
+		bookmarkLetsContainerEl.createEl("a", {cls: 'wb-about-version', href: url, text: text});
 
 		this.addSettingToMasterSettingsList(tabName, bookmarkLetsContainerEl, "surfing");
 	}
@@ -804,19 +813,35 @@ export class SurfingSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.darkMode)
 					.onChange(async (value) => {
 						this.plugin.settings.darkMode = value;
-						this.applySettingsUpdate()
-					})
-			})
+						this.applySettingsUpdate();
+					});
+			});
 
-		this.addSettingToMasterSettingsList(tabName, setting.settingEl, "theme surfing")
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
+	}
+
+	private addRandomBackground(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = "Random Background";
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.randomBackground)
+					.onChange(async (value) => {
+						this.plugin.settings.randomBackground = value;
+						this.applySettingsUpdate();
+					});
+			});
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
 	}
 
 	private addMyIcons(tabName: string, wbContainerEl: HTMLElement) {
 		let settingName = t("Working On, Not Available Now");
 		let setting = new Setting(wbContainerEl)
-			.setName(settingName)
+			.setName(settingName);
 
-		setting.settingEl.classList.add("wb-theme-settings-working-on")
+		setting.settingEl.classList.add("wb-theme-settings-working-on");
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, "theme");
 
@@ -831,7 +856,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.useCustomIcons = value;
 						this.applySettingsUpdate();
 					});
-			})
+			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, "theme surfing");
 	}
@@ -847,7 +872,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 						this.display();
 					});
-			})
+			});
 		this.addSettingToMasterSettingsList(tabName, openBookmarkManager.settingEl, t("Open BookmarkBar & Bookmark Manager"));
 
 		if (!this.plugin.settings.bookmarkManager.openBookMark) return;
@@ -861,7 +886,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.bookmarkManager.saveBookMark = value;
 						this.applySettingsUpdate();
 					});
-			})
+			});
 		this.addSettingToMasterSettingsList(tabName, saveBookmark.settingEl, t("Save Bookmark When Open URI"));
 
 		const sendToReadWise = new Setting(wbContainerEl)
@@ -874,7 +899,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.bookmarkManager.sendToReadWise = value;
 						this.applySettingsUpdate();
 					});
-			})
+			});
 		this.addSettingToMasterSettingsList(tabName, sendToReadWise.settingEl, t("Send to ReadWise"));
 
 
@@ -906,7 +931,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.bookmarkManager.category = value === "" ? DEFAULT_SETTINGS.bookmarkManager.category : value;
 						this.applySettingsUpdate();
 					});
-			})
+			});
 		this.addSettingToMasterSettingsList(tabName, categorySetting.settingEl, t("Category"));
 
 		const defaultCategory = new Setting(wbContainerEl)
@@ -918,7 +943,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.bookmarkManager.defaultCategory = value;
 						this.applySettingsUpdate();
 					});
-			})
+			});
 		this.addSettingToMasterSettingsList(tabName, defaultCategory.settingEl, t("Default Category (Use , to split)"));
 
 
@@ -934,10 +959,10 @@ export class SurfingSettingTab extends PluginSettingTab {
 							this.display();
 						}
 						this.plugin.settings.bookmarkManager.defaultColumnList = value.split(" ");
-						this.applySettingsUpdate()
-					})
-			})
-		this.addSettingToMasterSettingsList(tabName, defaultColumnList.settingEl, t("Default Column List"))
+						this.applySettingsUpdate();
+					});
+			});
+		this.addSettingToMasterSettingsList(tabName, defaultColumnList.settingEl, t("Default Column List"));
 
 		const defaultFilterType = new Setting(wbContainerEl)
 			.setName(t("Default Category Filter Type"))
@@ -949,7 +974,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 				aDropdown.setValue(this.plugin.settings.bookmarkManager.defaultFilterType).onChange(async (value) => {
 					this.plugin.settings.bookmarkManager.defaultFilterType = value;
 					this.applySettingsUpdate();
-				})
+				});
 			});
 
 		this.addSettingToMasterSettingsList(tabName, defaultFilterType.settingEl, t("Default Category Filter Type"));

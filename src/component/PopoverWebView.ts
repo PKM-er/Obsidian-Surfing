@@ -11,7 +11,7 @@ export class PopoverWebView {
 	private currentUrl: string;
 
 	constructor(node: HTMLElement, targetUrl: string) {
-		this.contentEl = node.createEl("div", { cls: "wb-view-content" });
+		this.contentEl = node.createEl("div", {cls: "wb-view-content"});
 		this.node = node;
 		this.currentUrl = targetUrl;
 	}
@@ -38,10 +38,10 @@ export class PopoverWebView {
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
 				if (event.disposition !== "foreground-tab") {
-					SurfingView.spawnWebBrowserView(true, { url: event.url });
+					SurfingView.spawnWebBrowserView(true, {url: event.url});
 					return {
 						action: "allow",
-					}
+					};
 				}
 			});
 
@@ -59,7 +59,7 @@ export class PopoverWebView {
 						return link;
 					}
 					return link;
-				}
+				};
 				webContents.executeJavaScript(`
 					window.addEventListener('dragstart', (e) => {
 						if(e.ctrlKey || e.metaKey) {
@@ -67,17 +67,10 @@ export class PopoverWebView {
 							const selectionText = document.getSelection().toString();
 							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
 							let link = "";
-							if ("${ highlightFormat }".includes("{TIME")) {
-								link = "${ getCurrentTime() }";
-								// // eslint-disable-next-line no-useless-escape
-								// const timeString = "${ highlightFormat }".match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
-								// if (timeString) {
-								// 	// eslint-disable-next-line no-useless-escape
-								// 	const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
-								// 	link = "${ highlightFormat }".replace(timeString, momentTime);
-								// }
+							if ("${highlightFormat}".includes("{TIME")) {
+								link = "${getCurrentTime()}";
 							}
-							link = (link != "" ? link : "${ highlightFormat }").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
 						
 							e.dataTransfer.setData('text/plain', link);
 							console.log(e);
@@ -109,8 +102,8 @@ export class PopoverWebView {
 		});
 
 		doc.contains(this.contentEl) ? this.contentEl.appendChild(this.webviewEl) : this.contentEl.onNodeInserted(() => {
-			this.contentEl.doc === doc ? this.contentEl.appendChild(this.webviewEl) : this.appendWebView()
-		})
+			this.contentEl.doc === doc ? this.contentEl.appendChild(this.webviewEl) : this.appendWebView();
+		});
 
 
 	}

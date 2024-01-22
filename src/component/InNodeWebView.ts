@@ -5,6 +5,7 @@ import { SurfingView } from "../surfingView";
 import { t } from "../translations/helper";
 import { moment } from "obsidian";
 import { getUrl } from "../utils/url";
+import SurfingPlugin from "../surfingIndex";
 
 export class InNodeWebView {
 	private contentEl: HTMLElement;
@@ -14,11 +15,14 @@ export class InNodeWebView {
 	private searchBarEl: InPageHeaderBar;
 
 	private currentUrl: string;
+	private plugin: SurfingPlugin;
 
-	constructor(node: any, canvas?: any) {
+	constructor(node: any, plugin: SurfingPlugin, canvas?: any) {
 		this.contentEl = node.contentEl;
 		this.node = node;
 		this.canvas = canvas;
+
+		this.plugin = plugin;
 	}
 
 	onload() {
@@ -32,7 +36,7 @@ export class InNodeWebView {
 	}
 
 	appendSearchBar() {
-		this.searchBarEl = new InPageHeaderBar(this.node, this.node.url);
+		this.searchBarEl = new InPageHeaderBar(this.plugin.app, this.node, this.node.url);
 		this.searchBarEl.onload();
 		this.currentUrl = this.node.url;
 		this.searchBarEl.setSearchBarUrl(this.node.url);
@@ -72,10 +76,10 @@ export class InNodeWebView {
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
 				if (event.disposition !== "foreground-tab") {
-					SurfingView.spawnWebBrowserView(true, { url: event.url });
+					SurfingView.spawnWebBrowserView(true, {url: event.url});
 					return {
 						action: "allow",
-					}
+					};
 				}
 
 				if (this.canvas) {
@@ -95,7 +99,7 @@ export class InNodeWebView {
 
 					return {
 						action: "allow",
-					}
+					};
 				}
 
 			});
@@ -114,7 +118,7 @@ export class InNodeWebView {
 						return link;
 					}
 					return link;
-				}
+				};
 				webContents.executeJavaScript(`
 					window.addEventListener('dragstart', (e) => {
 						if(e.ctrlKey || e.metaKey) {
@@ -122,17 +126,17 @@ export class InNodeWebView {
 							const selectionText = document.getSelection().toString();
 							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
 							let link = "";
-							if ("${ highlightFormat }".includes("{TIME")) {
-								link = "${ getCurrentTime() }";
+							if ("${highlightFormat}".includes("{TIME")) {
+								link = "${getCurrentTime()}";
 								// // eslint-disable-next-line no-useless-escape
-								// const timeString = "${ highlightFormat }".match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+								// const timeString = "${highlightFormat}".match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
 								// if (timeString) {
 								// 	// eslint-disable-next-line no-useless-escape
 								// 	const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
-								// 	link = "${ highlightFormat }".replace(timeString, momentTime);
+								// 	link = "${highlightFormat}".replace(timeString, momentTime);
 								// }
 							}
-							link = (link != "" ? link : "${ highlightFormat }").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
 						
 							e.dataTransfer.setData('text/plain', link);
 							console.log(e);
@@ -148,7 +152,7 @@ export class InNodeWebView {
 			webContents.on("context-menu", (event: any, params: any) => {
 				event.preventDefault();
 
-				const { Menu, MenuItem } = remote;
+				const {Menu, MenuItem} = remote;
 				const menu = new Menu();
 				// Basic Menu For Webview
 				// TODO: Support adding different commands to the menu.
@@ -178,18 +182,18 @@ export class InNodeWebView {
 				if (params.selectionText) {
 					const pluginSettings = app.plugins.getPlugin("surfing").settings;
 
-					menu.append(new MenuItem({ type: 'separator' }));
+					menu.append(new MenuItem({type: 'separator'}));
 					menu.append(new MenuItem({
 						label: t('Search Text'), click: function () {
 							try {
-								SurfingView.spawnWebBrowserView(true, { url: params.selectionText });
+								SurfingView.spawnWebBrowserView(true, {url: params.selectionText});
 								console.log('Page URL copied to clipboard');
 							} catch (err) {
 								console.error('Failed to copy: ', err);
 							}
 						}
 					}));
-					menu.append(new MenuItem({ type: 'separator' }));
+					menu.append(new MenuItem({type: 'separator'}));
 					menu.append(new MenuItem({
 						label: t('Copy Plain Text'), click: function () {
 							try {
@@ -268,7 +272,7 @@ export class InNodeWebView {
 					if (this.node.url !== params.pageURL && !params.selectionText) {
 						menu.popup(webContents);
 					}
-				}, 0)
+				}, 0);
 			}, false);
 		});
 
@@ -303,8 +307,8 @@ export class InNodeWebView {
 		});
 
 		doc.contains(this.contentEl) ? this.contentEl.appendChild(this.webviewEl) : this.contentEl.onNodeInserted(() => {
-			this.contentEl.doc === doc ? this.contentEl.appendChild(this.webviewEl) : this.appendWebView()
-		})
+			this.contentEl.doc === doc ? this.contentEl.appendChild(this.webviewEl) : this.appendWebView();
+		});
 
 
 	}
