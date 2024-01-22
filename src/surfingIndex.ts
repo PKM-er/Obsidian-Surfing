@@ -570,7 +570,9 @@ export default class SurfingPlugin extends Plugin {
 						const editorPos = editor.offsetToPos(pos);
 
 						const type = editor.getClickableTokenAt(editorPos);
-						console.log(type.text);
+						if (!type) return;
+
+						if (!(type.text.trim().startsWith('http'))) return;
 
 						const hoverPopover = new HoverPopover(
 							<any>editorView,

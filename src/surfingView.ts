@@ -1,5 +1,5 @@
 import {
-	Editor,
+	Editor, HoverPopover,
 	htmlToMarkdown,
 	ItemView,
 	MarkdownView, Menu, MenuItem,
@@ -18,6 +18,7 @@ import { OmniSearchContainer } from "./component/OmniSearchContainer";
 import { BookMarkBar, updateBookmarkBar } from "./component/BookMarkBar/BookMarkBar";
 import { loadJson, saveJson } from "./utils/json";
 import { hashCode } from "./component/BookmarkManager/utils";
+import { PopoverWebView } from "./component/PopoverWebView";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
@@ -32,6 +33,8 @@ export class SurfingView extends ItemView {
 	favicon: HTMLImageElement;
 	webviewEl: HTMLWebViewElement;
 	private menu: Menu;
+
+	private hoverPopover: HoverPopover;
 	private searchContainer: OmniSearchContainer;
 
 	bookmarkBar: BookMarkBar;
@@ -620,6 +623,17 @@ export class SurfingView extends ItemView {
 					});
 				}
 			);
+			this.menu.addItem(
+				(item: MenuItem) => {
+					item.setTitle('Save selection as markdown').setIcon('download').onClick(async () => {
+						const content = params.selectionText;
+						// @ts-ignore
+						const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
+						const file = await app.vault.create((app.plugins.getPlugin("surfing").settings.markdownPath ? app.plugins.getPlugin("surfing").settings.markdownPath + "/" : "/") + currentTitle + ".md", content);
+						await app.workspace.openLinkText(file.path, "", true);
+					});
+				}
+			);
 			const highlightFormat = this.plugin.settings.highlightFormat;
 			this.menu.addItem(
 				(item: MenuItem) => {
@@ -772,12 +786,54 @@ export class SurfingView extends ItemView {
 				} catch (err) {
 					console.error('Failed to copy: ', err);
 				}
-
-
+				return;
 			}
 
-			if (this.menu && e.data !== 'darkreader-failed') {
-				this.menu.close();
+			if (e.data && e.data.startsWith('link ')) {
+				console.log(e.data);
+				if (this.hoverPopover) this.hoverPopover.hide();
+				const x = e.data.split(' ')[1];
+				const y = e.data.split(' ')[2];
+				const url = e.data.split(' ')[3];
+				console.log(url);
+				if (!url) return;
+				if (!url.startsWith("http")) return;
+				this.hoverPopover = new HoverPopover(
+					<any>this.contentEl,
+					null,
+					100
+				);
+
+				const realRect = this.webviewEl.getClientRects();
+				const rect: {
+					x: number,
+					y: number
+				} = {
+					x: parseInt(x, 10) + realRect[0].x,
+					y: parseInt(y, 10) + realRect[0].y
+				};
+
+				setTimeout(() => {
+					this.hoverPopover.position({
+						x: rect.x,
+						y: rect.y,
+						doc: this.doc,
+					});
+				}, 100);
+
+				this.hoverPopover.hoverEl.toggleClass('surfing-hover-popover', true);
+
+				const parentEl = this.hoverPopover.hoverEl.createEl('div', {
+					cls: 'surfing-hover-popover-container'
+				});
+				const webView = new PopoverWebView(parentEl, url);
+				webView.onload();
+				return;
+			}
+
+			if (e.data !== 'darkreader-failed') {
+				this.menu?.close();
+				this.hoverPopover?.hide();
 			} else if (e.data === 'darkreader-failed') {
 				webContents.executeJavaScript(`
 										window.getComputedStyle( document.body ,null).getPropertyValue('background-color');
@@ -816,6 +872,7 @@ export class SurfingView extends ItemView {
 	}
 
 	async registerJavascriptInWebcontents(webContents: any) {
+
 		try {
 			if (this.plugin.settings.darkMode) {
 				try {
@@ -863,7 +920,16 @@ export class SurfingView extends ItemView {
 		}
 
 		// https://cdn.jsdelivr.net/npm/darkreader/darkreader.min.js
-
+		webContents.executeJavaScript(`
+			window.addEventListener('mouseover', (e) => {
+				if(!e.target) return;
+				if(!e.ctrlKey && !e.metaKey) return;
+				// Tag name is a tag
+				if(e.target.tagName.toLowerCase() === 'a'){
+					window.myPostPort?.postMessage('link ' + e.clientX + ' ' + e.clientY + ' ' + e.target.href);
+				}
+			});
+		`);
 	}
 
 	clearHistory(): void {

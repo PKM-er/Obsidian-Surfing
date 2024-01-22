@@ -21,6 +21,16 @@ declare module "obsidian" {
 		close(): void;
 	}
 
+	interface HoverPopover {
+		hide(): void;
+
+		position({x, y, doc}: {
+			x: number;
+			y: number;
+			doc: Document;
+		}): void;
+	}
+
 	interface settings {
 		applySettingsUpdate: () => void;
 	}
