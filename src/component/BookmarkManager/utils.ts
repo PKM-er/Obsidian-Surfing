@@ -1,59 +1,63 @@
 import { request } from "obsidian";
-import { Bookmark, FilterType, CategoryType } from "../../types/bookmark";
+import { Bookmark, CategoryType, FilterType } from "../../types/bookmark";
 
 export function hashCode(str: string) {
-	let hash = 0
+	let hash = 0;
 	for (let i = 0; i < str.length; i++) {
-		hash = (hash << 5) - hash + str.charCodeAt(i)
-		hash = hash & hash // Convert to 32bit integer
+		hash = (hash << 5) - hash + str.charCodeAt(i);
+		hash = hash & hash; // Convert to 32bit integer
 	}
-	return hash
+	return hash;
 }
 
 export function generateColor(str: string) {
 	// 计算字符串的哈希值
-	const hash = hashCode(str)
+	const hash = hashCode(str);
 
 	// 生成颜色值
-	let color = "#"
+	let color = "#";
 	for (let i = 0; i < 3; i++) {
-		const value = (hash >> (i * 8)) & 0xff
-		color += ("00" + value.toString(16)).substr(-2)
+		const value = (hash >> (i * 8)) & 0xff;
+		color += ("00" + value.toString(16)).substr(-2);
 	}
-	return color
+	return color;
 }
 
 export function generateTagsOptions(bookmarks: Bookmark[]) {
-	const tagsOptions: FilterType[] = []
-	const tags: Set<string> = new Set()
+	const tagsOptions: FilterType[] = [];
+	const tags: Set<string> = new Set();
 	for (let i = 0; i < bookmarks?.length; i++) {
 		bookmarks[i].tags.split(" ").forEach((tag: string) => {
-			tags.add(tag)
-		})
+			tags.add(tag);
+		});
 	}
 
 	for (const tag of tags) {
 		tagsOptions.push({
 			text: tag,
 			value: tag
-		})
+		});
 	}
 
 	return {
 		tagsOptions
-	}
+	};
 }
 
 export function isValidURL(str: string): boolean {
 	// 定义一个正则表达式，用于匹配合法的URL
 	const regexp =
-		/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()!@:%_\+.~#?&\/\/=]*)/
-	return regexp.test(str)
+		/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()!@:%_\+.~#?&\/\/=]*)/;
+	return regexp.test(str);
 }
 
-export async function nonElectronGetPageTitle(url: string): Promise<{ title: string | null, name: string | null, description: string | null }> {
+export async function nonElectronGetPageTitle(url: string): Promise<{
+	title: string | null,
+	name: string | null,
+	description: string | null
+}> {
 	try {
-		const html = await request({ url });
+		const html = await request({url});
 
 		const doc = new DOMParser().parseFromString(html, "text/html");
 		const title = doc.querySelector("title")?.innerText;
@@ -65,7 +69,7 @@ export async function nonElectronGetPageTitle(url: string): Promise<{ title: str
 
 		const description = descriptionTag
 			? descriptionTag.getAttribute("content")
-			: null
+			: null;
 
 		return {
 			title: title ? title : "",
@@ -82,7 +86,11 @@ export async function nonElectronGetPageTitle(url: string): Promise<{ title: str
 	}
 }
 
-export async function fetchWebTitleAndDescription(url: string): Promise<{ title: string | null, name: string | null, description: string | null }> {
+export async function fetchWebTitleAndDescription(url: string): Promise<{
+	title: string | null,
+	name: string | null,
+	description: string | null
+}> {
 	// If we're on Desktop use the Electron scraper
 	if (!(url.startsWith("http") || url.startsWith("https"))) {
 		url = "https://" + url;
@@ -101,7 +109,7 @@ export function stringToCategory(categoryString: string): CategoryType[] {
 		"children": []
 	});
 
-	return categoryOptions
+	return categoryOptions;
 }
 
 export function doParse(categoryString: string): CategoryType[] {
@@ -122,15 +130,15 @@ export function doParse(categoryString: string): CategoryType[] {
 			const node = Node(title);
 
 			if (level === 0) {
-				categoryOptions.push(node)
+				categoryOptions.push(node);
 			} else {
 				const p = getParentNode(level, categoryOptions);
 				// For menu mode of el-select
 				p?.children?.push(node);
 			}
 		}
-	})
-	return categoryOptions
+	});
+	return categoryOptions;
 }
 
 function getParentNode(level: number, categoryOptions: CategoryType[]) {
@@ -143,7 +151,7 @@ function getParentNode(level: number, categoryOptions: CategoryType[]) {
 	}
 
 	if (!node?.children && node) {
-		node.children = []
+		node.children = [];
 	}
 	return node;
 }
@@ -153,5 +161,5 @@ function Node(title: string) {
 		"value": title,
 		"text": title,
 		"label": title,
-	}
+	};
 }

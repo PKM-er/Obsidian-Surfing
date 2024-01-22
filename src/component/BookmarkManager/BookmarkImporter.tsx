@@ -1,8 +1,8 @@
 import React from "react";
 import { Button, Upload, UploadProps } from "antd";
-import { Bookmark, CategoryType, FilterType } from "src/types/bookmark";
+import { Bookmark } from "src/types/bookmark";
 import { hashCode } from "./utils";
-import { loadJson, saveJson } from "src/utils/json";
+import { loadJson, saveJson } from "../../utils/json";
 import { moment, Notice } from "obsidian";
 
 interface Props {
@@ -49,7 +49,7 @@ const BookmarkImporter: any = (Props: Props): any => {
 					const regex = /<DT><A HREF="(.*?)"\s*ADD_DATE="(.*?)".*?>(.*)<\/A>/gm;
 					let bookmarkData;
 
-					const { bookmarks, categories } = await loadJson();
+					const {bookmarks, categories} = await loadJson();
 
 					while ((bookmarkData = regex.exec(result)) !== null) {
 						// This is necessary to avoid infinite loops with zero-width matches
@@ -76,7 +76,7 @@ const BookmarkImporter: any = (Props: Props): any => {
 								"Failed to import this bookmark!",
 								newBookmark.name
 							);
-							new Notice(`import ${ newBookmark.name } faield`);
+							new Notice(`import ${newBookmark.name} faield`);
 						}
 					}
 
@@ -95,10 +95,10 @@ const BookmarkImporter: any = (Props: Props): any => {
 	};
 
 	return (
-		<Upload { ...uploadProps }>
+		<Upload {...uploadProps}>
 			<Button>Import</Button>
 		</Upload>
 	);
-}
+};
 
 export default BookmarkImporter;

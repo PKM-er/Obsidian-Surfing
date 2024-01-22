@@ -1,9 +1,8 @@
 import {
-	debounce,
 	Editor,
 	htmlToMarkdown,
 	ItemView,
-	MarkdownView,
+	MarkdownView, Menu, MenuItem,
 	moment, Notice,
 	ViewStateResult,
 	WorkspaceLeaf
@@ -31,8 +30,8 @@ export class SurfingView extends ItemView {
 
 	headerBar: HeaderBar;
 	favicon: HTMLImageElement;
-	webviewEl: HTMLElement;
-	private menu: any;
+	webviewEl: HTMLWebViewElement;
+	private menu: Menu;
 	private searchContainer: OmniSearchContainer;
 
 	bookmarkBar: BookMarkBar;
@@ -102,7 +101,7 @@ export class SurfingView extends ItemView {
 			const leaf = currentViewType === "empty" ? activeViewLeaf : app.workspace.createLeafBySplit(activeViewLeaf) as WorkspaceLeaf;
 			localStorage.setItem("web-browser-leaf-id", leaf.id);
 
-			leaf.setViewState({ type: WEB_BROWSER_VIEW_ID, active: true, state });
+			leaf.setViewState({type: WEB_BROWSER_VIEW_ID, active: true, state});
 
 			if (!(leaf.view.getViewType() === "empty")) {
 				leaf.rebuildView();
@@ -180,6 +179,7 @@ export class SurfingView extends ItemView {
 			this.navigate(url);
 		});
 
+
 		this.webviewEl.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
@@ -193,7 +193,7 @@ export class SurfingView extends ItemView {
 				});
 				return {
 					action: "allow",
-				}
+				};
 			});
 
 			this.registerContextMenuInWebcontents();
@@ -226,7 +226,7 @@ export class SurfingView extends ItemView {
 								filter: invert(110%) hue-rotate(180deg);
 								opacity: 1;
 							}
-						`)
+						`);
 					}
 				});
 			} catch (err) {
@@ -295,7 +295,7 @@ export class SurfingView extends ItemView {
 						return link;
 					}
 					return link;
-				}
+				};
 				webContents.executeJavaScript(`
 					window.addEventListener('dragstart', (e) => {
 						if(e.ctrlKey || e.metaKey) {
@@ -325,17 +325,17 @@ export class SurfingView extends ItemView {
 							
 							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
 							let link = "";
-							if ("${ highlightFormat }".includes("{TIME")) {
-								link = "${ getCurrentTime() }";
+							if ("${highlightFormat}".includes("{TIME")) {
+								link = "${getCurrentTime()}";
 								// // eslint-disable-next-line no-useless-escape
-								// const timeString = "${ highlightFormat }".match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+								// const timeString = "${highlightFormat}".match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
 								// if (timeString) {
 								// 	// eslint-disable-next-line no-useless-escape
 								// 	const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
-								// 	link = "${ highlightFormat }".replace(timeString, momentTime);
+								// 	link = "${highlightFormat}".replace(timeString, momentTime);
 								// }
 							}
-							link = (link != "" ? link : "${ highlightFormat }").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
 						
 							e.dataTransfer.setData('text/plain', link);
 						}
@@ -345,26 +345,6 @@ export class SurfingView extends ItemView {
 			} catch (err) {
 				console.error('Failed to add event: ', err);
 			}
-
-			// TODO: Support Dark Reader
-			// 	try {
-			// 		webContents.openDevTools();
-			// 		webContents.executeJavaScript(`
-			//
-			//
-			//
-			// 			var s = document.createElement('script');
-			// 			s.src = 'https://cdn.jsdelivr.net/npm/darkreader@4.9.58/darkreader.min.js';
-			// 			document.body.appendChild(s);
-			//
-			//
-			//
-			// 			`, true).then((result: any) => {
-			// 		});
-			// 	} catch (err) {
-			// 		console.error('Failed to add event: ', err);
-			// 	}
-			//
 		});
 
 		// When focus set current leaf active;
@@ -390,7 +370,7 @@ export class SurfingView extends ItemView {
 
 		this.webviewEl.addEventListener("did-navigate-in-page", (event: any) => {
 			this.navigate(event.url, true, false);
-			this.menu = undefined;
+			this.menu?.close();
 		});
 
 		this.webviewEl.addEventListener("new-window", (event: any) => {
@@ -399,7 +379,7 @@ export class SurfingView extends ItemView {
 
 		this.webviewEl.addEventListener("did-attach-webview", (event: any) => {
 			console.log("Webview attached");
-		})
+		});
 
 		this.webviewEl.addEventListener('destroyed', () => {
 
@@ -428,9 +408,9 @@ export class SurfingView extends ItemView {
 		doc.contains(this.contentEl) ? this.contentEl.appendChild(this.webviewEl) : this.contentEl.onNodeInserted(() => {
 			if (this.loaded) return;
 			else this.loaded = true;
-			this.contentEl.doc === doc ? this.contentEl.appendChild(this.webviewEl) : this.createWebview()
-		})
-	}
+			this.contentEl.doc === doc ? this.contentEl.appendChild(this.webviewEl) : this.createWebview();
+		});
+	};
 
 	async onOpen() {
 		// Allow views to replace this views.
@@ -454,6 +434,11 @@ export class SurfingView extends ItemView {
 
 		this.createWebview();
 		this.initHeaderButtons();
+	}
+
+	onload() {
+		super.onload();
+		if (this.menu) this.menu.close();
 	}
 
 	initHeaderButtons() {
@@ -485,7 +470,7 @@ export class SurfingView extends ItemView {
 							document.querySelector('meta[name="description"]')?.content
 						`).then((result: any) => {
 							if (result) description = result;
-						})
+						});
 					} catch (err) {
 						console.error(err);
 					}
@@ -503,7 +488,7 @@ export class SurfingView extends ItemView {
 						modified: moment().valueOf(),
 					});
 
-					await saveJson({ bookmarks: bookmarks, categories: jsonData.categories });
+					await saveJson({bookmarks: bookmarks, categories: jsonData.categories});
 
 					updateBookmarkBar(bookmarks, jsonData.categories, true);
 				} else {
@@ -516,14 +501,14 @@ export class SurfingView extends ItemView {
 		});
 		if (this.plugin.settings.bookmarkManager.sendToReadWise) this.addAction("book", t("Send to ReadWise"), async () => {
 			const sendToReadWise = (title: string, url: string) => {
-				open('https://readwise.io/save?title=' + encodeURIComponent(title) + '&url=' + encodeURIComponent(url))
-			}
+				open('https://readwise.io/save?title=' + encodeURIComponent(title) + '&url=' + encodeURIComponent(url));
+			};
 
 			try {
-				await sendToReadWise(this.currentTitle, this.currentUrl)
-				new Notice("Save success!")
+				await sendToReadWise(this.currentTitle, this.currentUrl);
+				new Notice("Save success!");
 			} catch (err) {
-				new Notice("Save failed!")
+				new Notice("Save failed!");
 			}
 		});
 	}
@@ -554,158 +539,136 @@ export class SurfingView extends ItemView {
 		}
 	}
 
-	registerContextMenuInWebcontents() {
-		// @ts-ignore
-		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
+	createMenu = (webContents: any, event: any, params: any) => {
+		if (this.menu) {
+			this.menu?.close();
+		}
 
-		webContents.on("context-menu", (event: any, params: any) => {
-			event.preventDefault();
+		this.menu = new Menu() as Menu;
 
-			run(params);
-		}, false);
+		const navigateBack = () => {
+			// @ts-ignore
+			this.leaf?.history.back();
+		};
 
-		const run = debounce((params: any) => {
-			const { Menu, MenuItem } = remote;
-			this.menu = new Menu();
+		const navigateForward = () => {
+			// @ts-ignore
+			this.leaf?.history.forward();
+		};
 
-			const reload = () => {
-				this.leaf?.rebuildView();
+		if (!params.selectionText) {
+			this.menu.addItem(
+				(item: MenuItem) => {
+					item.setTitle(t('Refresh Current Page'));
+					item.setIcon('refresh-ccw');
+					item.onClick(() => {
+						this.leaf?.rebuildView();
+					});
+				}
+			).addItem(
+				(item: MenuItem) => {
+					item.setTitle(t('Back'));
+					item.setIcon('arrow-left');
+					item.onClick(() => {
+						navigateBack();
+					});
+				}
+			).addItem(
+				(item: MenuItem) => {
+					item.setTitle(t('Forward'));
+					item.setIcon('arrow-right');
+					item.onClick(() => {
+						navigateForward();
+					});
+				}
+			).addSeparator();
+		}
+
+		this.menu.addItem(
+			(item: MenuItem) => {
+				item.setTitle(t('Open Current URL In External Browser'));
+				item.setIcon('link');
+				item.onClick(() => {
+					window.open(params.pageURL, "_blank");
+				});
 			}
-
-			const navigateBack = () => {
-				// @ts-ignore
-				this.leaf?.history.back();
-			}
-
-			const navigateForward = () => {
-				// @ts-ignore
-				this.leaf?.history.forward();
-			}
-
-			if (!params.selectionText) {
-				this.menu.append(
-					new MenuItem(
-						{
-							label: t('Refresh Current Page'),
-							click: function () {
-								reload();
-							}
-						}
-					)
-				);
-
-				this.menu.append(
-					new MenuItem(
-						{
-							label: t('Back'),
-							click: function () {
-								navigateBack();
-							}
-						}
-					)
-				);
-
-				this.menu.append(
-					new MenuItem(
-						{
-							label: t('Forward'),
-							click: function () {
-								navigateForward();
-							}
-						}
-					)
-				);
-
-				this.menu.append(new MenuItem({ type: 'separator' }));
-			}
-
-
-			this.menu.append(
-				new MenuItem(
-					{
-						label: t('Open Current URL In External Browser'),
-						click: function () {
-							window.open(params.pageURL, "_blank");
-						}
-					}
-				)
-			);
-
-			this.menu.append(
-				new MenuItem(
-					{
-						label: t('Save Current Page As Markdown'),
-						click: async function () {
-							try {
-								webContents.executeJavaScript(`
+		).addItem(
+			(item: MenuItem) => {
+				item.setTitle(t('Save Current Page As Markdown'));
+				item.setIcon('download');
+				item.onClick(async () => {
+					try {
+						webContents.executeJavaScript(`
 											document.body.outerHTML
 										`, true).then(async (result: any) => {
-									const url = params.pageURL.replace(/\?(.*)/g, "");
-									const parseContent = result.replaceAll(/src="(?!(https|http))([^"]*)"/g, "src=\"" + url + "$2\"");
-									const content = htmlToMarkdown(parseContent);
-									// @ts-ignore
-									const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
-									const file = await app.vault.create((app.plugins.getPlugin("surfing").settings.markdownPath ? app.plugins.getPlugin("surfing").settings.markdownPath + "/" : "/") + currentTitle + ".md", content);
-									await app.workspace.openLinkText(file.path, "", true);
-								});
-								console.log('Page Title copied to clipboard');
-							} catch (err) {
-								console.error('Failed to copy: ', err);
-							}
-
-						}
+							const url = params.pageURL.replace(/\?(.*)/g, "");
+							const parseContent = result.replaceAll(/src="(?!(https|http))([^"]*)"/g, "src=\"" + url + "$2\"");
+							const content = htmlToMarkdown(parseContent);
+							// @ts-ignore
+							const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
+							const file = await app.vault.create((app.plugins.getPlugin("surfing").settings.markdownPath ? app.plugins.getPlugin("surfing").settings.markdownPath + "/" : "/") + currentTitle + ".md", content);
+							await app.workspace.openLinkText(file.path, "", true);
+						});
+						console.log('Page Title copied to clipboard');
+					} catch (err) {
+						console.error('Failed to copy: ', err);
 					}
-				)
-			);
 
-			this.menu.append(
-				new MenuItem(
-					{
-						label: t('Copy Current Viewport As Image'),
-						click: async function () {
-							try {
-								// Copy Image to Clipboard
-								webContents.capturePage().then(async (image: any) => {
-									clipboard.writeImage(image);
-								});
-							} catch (err) {
-								console.error('Failed to copy: ', err);
-							}
-
-						}
+				});
+			}
+		).addItem(
+			(item: MenuItem) => {
+				item.setTitle(t('Copy Current Viewport As Image'));
+				item.setIcon('image');
+				item.onClick(async () => {
+					try {
+						// Copy Image to Clipboard
+						webContents.capturePage().then(async (image: any) => {
+							clipboard.writeImage(image);
+						});
+					} catch (err) {
+						console.error('Failed to copy: ', err);
 					}
-				)
-			);
 
-			// TODO: Support customize menu items.
-			// TODO: Support cut, paste, select All.
-			// Only works when something is selected.
-			if (params.selectionText) {
-				this.menu.append(new MenuItem({ type: 'separator' }));
-				this.menu.append(new MenuItem({
-					label: t('Search Text'), click: function () {
+				});
+			}
+		);
+
+		if (params.selectionText) {
+			this.menu.addSeparator();
+			this.menu.addItem(
+				(item: MenuItem) => {
+					item.setTitle(t('Search Text'));
+					item.setIcon('search');
+					item.onClick(() => {
 						try {
-							SurfingView.spawnWebBrowserView(true, { url: params.selectionText });
-							console.log('Page URL copied to clipboard');
+							SurfingView.spawnWebBrowserView(true, {url: params.selectionText});
 						} catch (err) {
 							console.error('Failed to copy: ', err);
 						}
-					}
-				}));
-				this.menu.append(new MenuItem({ type: 'separator' }));
-				this.menu.append(new MenuItem({
-					label: t('Copy Plain Text'), click: function () {
+					});
+				}
+			);
+			this.menu.addSeparator();
+			this.menu.addItem(
+				(item: MenuItem) => {
+					item.setTitle(t('Copy Plain Text'));
+					item.setIcon('copy');
+					item.onClick(() => {
 						try {
-							webContents.copy();
-							console.log('Page URL copied to clipboard');
+							navigator.clipboard.writeText(params.selectionText);
 						} catch (err) {
 							console.error('Failed to copy: ', err);
 						}
-					}
-				}));
-				const highlightFormat = this.plugin.settings.highlightFormat;
-				this.menu.append(new MenuItem({
-					label: t('Copy Link to Highlight'), click: function () {
+					});
+				}
+			);
+			const highlightFormat = this.plugin.settings.highlightFormat;
+			this.menu.addItem(
+				(item: MenuItem) => {
+					item.setTitle(t('Copy Link to Highlight'));
+					item.setIcon('link');
+					item.onClick(() => {
 						try {
 							// eslint-disable-next-line no-useless-escape
 							let tempText = encodeURIComponent(params.selectionText);
@@ -747,15 +710,17 @@ export class SurfingView extends ItemView {
 						} catch (err) {
 							console.error('Failed to copy: ', err);
 						}
-					}
-				}));
+					});
+				});
+		}
 
-				this.menu.popup(webContents);
-			}
-
-			if (params.pageURL?.contains("bilibili.com/")) {
-				this.menu.append(new MenuItem({
-					label: t('Copy Video Timestamp'), click: function () {
+		if (params.pageURL?.contains("bilibili.com/")) {
+			this.menu.addSeparator();
+			this.menu.addItem(
+				(item: MenuItem) => {
+					item.setTitle(t('Copy Video Timestamp'));
+					item.setIcon('link');
+					item.onClick(() => {
 						try {
 							webContents.executeJavaScript(`
 											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
@@ -782,23 +747,295 @@ export class SurfingView extends ItemView {
 						} catch (err) {
 							console.error('Failed to copy: ', err);
 						}
-					}
-				}));
+					});
+				}
+			);
+		}
+
+		this.menu.showAtPosition({
+			x: event.x,
+			y: event.y
+		});
+	};
+
+	registerContextMenuInWebcontents() {
+		// @ts-ignore
+		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
+
+		this.webviewEl.addEventListener('context-menu', (e: any) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+
+			if (e.params.selectionText) {
+				const {Menu} = remote;
+				const menu = new Menu();
+				menu.popup(webContents);
+				menu.closePopup();
 			}
 
-			// Should use this method to prevent default copy+c
-			// The default context menu is related to the shadow root that in the webview tag
-			// So it is not possible to preventDefault because it cannot be accessed.
-			// I tried to use this.frame.shadowRoot.childNodes to locate the iframe HTML element
-			// It doesn't work.
-			setTimeout(() => {
-				this.menu.popup(webContents);
-				// Dirty workaround for showing the menu, when currentUrl is not the same as the url of the webview
-				if (this.currentUrl !== params.pageURL && !params.selectionText) {
-					this.menu.popup(webContents);
+			this.createMenu(webContents, e.params, e.params);
+		});
+
+		webContents.executeJavaScript(`
+			window.addEventListener("message", (e) => {
+				window.myPostPort = e.ports[0];
+			})
+			document.addEventListener('click', (e) => {
+				window.myPostPort.postMessage('click');
+			});
+			document.addEventListener('scroll', (e) => {
+				window.myPostPort.postMessage('scroll');
+			});
+			
+		`).then((result: any) => {
+			const ch = new MessageChannel();
+			ch.port1.onmessage = (e: any) => {
+				if (this.menu) {
+
+					this.menu.close();
 				}
-			}, 0)
-		}, 10, true)
+			};
+
+			(this.webviewEl as any).contentWindow.postMessage(`test`, '*', [ch.port2]);
+		});
+
+
+		// const run = debounce((params: any) => {
+		// 	const {Menu, MenuItem} = remote;
+		// 	this.menu = new Menu();
+		//
+		// 	const reload = () => {
+		// 		this.leaf?.rebuildView();
+		// 	};
+		//
+		// 	const navigateBack = () => {
+		// 		// @ts-ignore
+		// 		this.leaf?.history.back();
+		// 	};
+		//
+		// 	const navigateForward = () => {
+		// 		// @ts-ignore
+		// 		this.leaf?.history.forward();
+		// 	};
+		//
+		// 	if (!params.selectionText) {
+		// 		this.menu.append(
+		// 			new MenuItem(
+		// 				{
+		// 					label: t('Refresh Current Page'),
+		// 					click: function () {
+		// 						reload();
+		// 					}
+		// 				}
+		// 			)
+		// 		);
+		//
+		// 		this.menu.append(
+		// 			new MenuItem(
+		// 				{
+		// 					label: t('Back'),
+		// 					click: function () {
+		// 						navigateBack();
+		// 					}
+		// 				}
+		// 			)
+		// 		);
+		//
+		// 		this.menu.append(
+		// 			new MenuItem(
+		// 				{
+		// 					label: t('Forward'),
+		// 					click: function () {
+		// 						navigateForward();
+		// 					}
+		// 				}
+		// 			)
+		// 		);
+		//
+		// 		this.menu.append(new MenuItem({type: 'separator'}));
+		// 	}
+		//
+		//
+		// 	this.menu.append(
+		// 		new MenuItem(
+		// 			{
+		// 				label: t('Open Current URL In External Browser'),
+		// 				click: function () {
+		// 					window.open(params.pageURL, "_blank");
+		// 				}
+		// 			}
+		// 		)
+		// 	);
+		//
+		// 	this.menu.append(
+		// 		new MenuItem(
+		// 			{
+		// 				label: t('Save Current Page As Markdown'),
+		// 				click: async function () {
+		// 					try {
+		// 						webContents.executeJavaScript(`
+		// 									document.body.outerHTML
+		// 								`, true).then(async (result: any) => {
+		// 							const url = params.pageURL.replace(/\?(.*)/g, "");
+		// 							const parseContent = result.replaceAll(/src="(?!(https|http))([^"]*)"/g, "src=\"" + url + "$2\"");
+		// 							const content = htmlToMarkdown(parseContent);
+		// 							// @ts-ignore
+		// 							const currentTitle = webContents.getTitle().replace(/[/\\?%*:|"<>]/g, '-');
+		// 							const file = await app.vault.create((app.plugins.getPlugin("surfing").settings.markdownPath ? app.plugins.getPlugin("surfing").settings.markdownPath + "/" : "/") + currentTitle + ".md", content);
+		// 							await app.workspace.openLinkText(file.path, "", true);
+		// 						});
+		// 						console.log('Page Title copied to clipboard');
+		// 					} catch (err) {
+		// 						console.error('Failed to copy: ', err);
+		// 					}
+		//
+		// 				}
+		// 			}
+		// 		)
+		// 	);
+		//
+		// 	this.menu.append(
+		// 		new MenuItem(
+		// 			{
+		// 				label: t('Copy Current Viewport As Image'),
+		// 				click: async function () {
+		// 					try {
+		// 						// Copy Image to Clipboard
+		// 						webContents.capturePage().then(async (image: any) => {
+		// 							clipboard.writeImage(image);
+		// 						});
+		// 					} catch (err) {
+		// 						console.error('Failed to copy: ', err);
+		// 					}
+		//
+		// 				}
+		// 			}
+		// 		)
+		// 	);
+		//
+		// 	// TODO: Support customize menu items.
+		// 	// TODO: Support cut, paste, select All.
+		// 	// Only works when something is selected.
+		// 	if (params.selectionText) {
+		// 		this.menu.append(new MenuItem({type: 'separator'}));
+		// 		this.menu.append(new MenuItem({
+		// 			label: t('Search Text'), click: function () {
+		// 				try {
+		// 					SurfingView.spawnWebBrowserView(true, {url: params.selectionText});
+		// 					console.log('Page URL copied to clipboard');
+		// 				} catch (err) {
+		// 					console.error('Failed to copy: ', err);
+		// 				}
+		// 			}
+		// 		}));
+		// 		this.menu.append(new MenuItem({type: 'separator'}));
+		// 		this.menu.append(new MenuItem({
+		// 			label: t('Copy Plain Text'), click: function () {
+		// 				try {
+		// 					webContents.copy();
+		// 					console.log('Page URL copied to clipboard');
+		// 				} catch (err) {
+		// 					console.error('Failed to copy: ', err);
+		// 				}
+		// 			}
+		// 		}));
+		// 		const highlightFormat = this.plugin.settings.highlightFormat;
+		// 		this.menu.append(new MenuItem({
+		// 			label: t('Copy Link to Highlight'), click: function () {
+		// 				try {
+		// 					// eslint-disable-next-line no-useless-escape
+		// 					let tempText = encodeURIComponent(params.selectionText);
+		// 					const chineseRegex = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
+		// 					const englishSentence = params.selectionText.split('\n');
+		//
+		// 					if (params.selectionText.match(chineseRegex)?.length > 50) {
+		// 						if (englishSentence.length > 1) {
+		// 							const fistSentenceWords = englishSentence[0];
+		// 							const lastSentenceWords = englishSentence[englishSentence.length - 1];
+		//
+		// 							tempText = encodeURIComponent(fistSentenceWords.slice(0, 3)) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 4, lastSentenceWords.length));
+		// 						} else {
+		// 							tempText = encodeURIComponent(params.selectionText.substring(0, 8)) + "," + encodeURIComponent(params.selectionText.substring(params.selectionText.length - 8, params.selectionText.length));
+		// 						}
+		// 					} else if (englishSentence.length > 1) {
+		//
+		// 						const fistSentenceWords = englishSentence[0].split(' ');
+		// 						const lastSentenceWords = englishSentence[englishSentence.length - 1].split(' ');
+		//
+		// 						tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
+		// 						// tempText = encodeURIComponent(englishWords.slice(0, 2).join(' ')) + "," + encodeURIComponent(englishWords.slice(englishWords.length - 1, englishWords.length).join(' '));
+		// 					}
+		//
+		// 					const linkToHighlight = params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
+		// 					const selectionText = params.selectionText.replace(/\n/g, " ");
+		// 					let link = "";
+		// 					if (highlightFormat.contains("{TIME")) {
+		// 						// eslint-disable-next-line no-useless-escape
+		// 						const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+		// 						if (timeString) {
+		// 							// eslint-disable-next-line no-useless-escape
+		// 							const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
+		// 							link = highlightFormat.replace(timeString, momentTime);
+		// 						}
+		// 					}
+		// 					link = (link != "" ? link : highlightFormat).replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText);
+		// 					clipboard.writeText(link);
+		// 				} catch (err) {
+		// 					console.error('Failed to copy: ', err);
+		// 				}
+		// 			}
+		// 		}));
+		//
+		// 		this.menu.popup(webContents);
+		// 	}
+		//
+		// 	if (params.pageURL?.contains("bilibili.com/")) {
+		// 		this.menu.append(new MenuItem({
+		// 			label: t('Copy Video Timestamp'), click: function () {
+		// 				try {
+		// 					webContents.executeJavaScript(`
+		// 									var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
+		// 									var timeYMSArr=time.split(':');
+		// 									var joinTimeStr='00h00m00s';
+		// 									if(timeYMSArr.length===3){
+		// 										 joinTimeStr=timeYMSArr[0]+'h'+timeYMSArr[1]+'m'+timeYMSArr[2]+'s';
+		// 									}else if(timeYMSArr.length===2){
+		// 										 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
+		// 									}
+		// 									var timeStr= "";
+		// 									var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
+		// 									var pageStr = "";
+		// 									if(typeof pageStrMatch === "object" && pageStrMatch?.length > 0){
+		// 									    pageStr = '&' + pageStrMatch[0];
+		// 									}else if(typeof pageStrMatch === "string") {
+		// 									    pageStr = '&' + pageStrMatch;
+		// 									}
+		// 									timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
+		// 								`, true).then((result: any) => {
+		// 						clipboard.writeText("[" + result.split('?t=')[1].replace(/&p=[1-9]{1,}/g, "") + "](" + result + ")"); // Will be the JSON object from the fetch call
+		// 					});
+		// 					console.log('Page URL copied to clipboard');
+		// 				} catch (err) {
+		// 					console.error('Failed to copy: ', err);
+		// 				}
+		// 			}
+		// 		}));
+		// 	}
+		//
+		// 	// Should use this method to prevent default copy+c
+		// 	// The default context menu is related to the shadow root that in the webview tag
+		// 	// So it is not possible to preventDefault because it cannot be accessed.
+		// 	// I tried to use this.frame.shadowRoot.childNodes to locate the iframe HTML element
+		// 	// It doesn't work.
+		// 	setTimeout(() => {
+		// 		this.menu.popup(webContents);
+		// 		// Dirty workaround for showing the menu, when currentUrl is not the same as the url of the webview
+		// 		if (this.currentUrl !== params.pageURL && !params.selectionText) {
+		// 			this.menu.popup(webContents);
+		// 		}
+		// 	}, 0);
+		// }, 10, true);
 	}
 
 	clearHistory(): void {
@@ -814,7 +1051,7 @@ export class SurfingView extends ItemView {
 	}
 
 	getState(): WebBrowserViewState {
-		return { url: this.currentUrl };
+		return {url: this.currentUrl};
 	}
 
 	getCurrentTitle(): string {
@@ -861,7 +1098,7 @@ export class SurfingView extends ItemView {
 			// If url is not a valid FILE url, search it with search engine.
 			const allSearchEngine = [...SEARCH_ENGINES, ...this.plugin.settings.customSearchEngine];
 			const currentSearchEngine = allSearchEngine.find((engine) => engine.name.toLowerCase() === this.plugin.settings.defaultSearchEngine);
-			console.log(currentSearchEngine, allSearchEngine, this.plugin.settings.defaultSearchEngine)
+			console.log(currentSearchEngine, allSearchEngine, this.plugin.settings.defaultSearchEngine);
 
 			// @ts-ignore
 			url = (currentSearchEngine ? currentSearchEngine.url : SEARCH_ENGINES[0].url) + url;
@@ -922,21 +1159,20 @@ export class SurfingView extends ItemView {
 				return link;
 			}
 			return link;
-		}
+		};
 
 		const getCurrentUrl = () => {
 			return this.currentUrl;
-		}
+		};
 
 		const checkTime = () => {
 			return highlightFormat.includes("{TIME");
-		}
+		};
 
 
 		// @ts-ignore
 		const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 
-		webContents.openDevTools();
 		webContents.executeJavaScript(`
 				const selectionText = document.getSelection().toString();	
 				let tempText = encodeURIComponent(selectionText);
@@ -960,13 +1196,13 @@ export class SurfingView extends ItemView {
 					tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
 				}
 				
-				let linkToHighlight = "${ getCurrentUrl() }".replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
+				let linkToHighlight = "${getCurrentUrl()}".replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
 				
 				let link = "";
-				if (${ checkTime() }) {
-					link = "${ getCurrentTime() }";
+				if (${checkTime()}) {
+					link = "${getCurrentTime()}";
 				}
-				link = (link != "" ? link : "${ highlightFormat }").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));	
+				link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));	
 				
 				`, true).then((result: any) => {
 			clipboard.writeText(result);
