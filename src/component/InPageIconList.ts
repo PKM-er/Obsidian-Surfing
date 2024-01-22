@@ -1,6 +1,6 @@
 import SurfingPlugin from "../surfingIndex";
 import { ButtonComponent, ItemView } from "obsidian";
-import { t } from "src/translations/helper";
+import { t } from "../translations/helper";
 
 export class InPageIconList {
 	plugin: SurfingPlugin;
@@ -27,15 +27,15 @@ export class InPageIconList {
 
 		this.createBtnEl = this.iconListEl.createEl("div", {
 			cls: "wb-create-btn"
-		})
+		});
 
 		this.searchBtnEl = this.iconListEl.createEl("div", {
 			cls: "wb-search-btn"
-		})
+		});
 
 		this.closeBtnEl = this.iconListEl.createEl("div", {
 			cls: "wb-close-btn"
-		})
+		});
 
 
 		this.closeBtn = new ButtonComponent(this.closeBtnEl);

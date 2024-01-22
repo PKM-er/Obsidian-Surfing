@@ -1,11 +1,11 @@
-import { Form, Input, Select, Button, Cascader } from "antd";
+import { Button, Cascader, Form, Input, Select } from "antd";
 import { DefaultOptionType } from "antd/es/select";
 import { moment } from "obsidian";
 import React, { ReactNode } from "react";
 import { Bookmark, CategoryType, FilterType } from "../../types/bookmark";
 import { fetchWebTitleAndDescription, hashCode, isValidURL } from "./utils";
 
-const { Option } = Select;
+const {Option} = Select;
 
 interface Props {
 	bookmark?: Bookmark;
@@ -31,7 +31,7 @@ export function BookmarkForm(props: Props) {
 	// let index = 0
 	if (!props.bookmark) return <></>;
 
-	const { tagsOptions: tagsList } = props.options;
+	const {tagsOptions: tagsList} = props.options;
 
 	// const [items, setItems] = useState(
 	//     categoriesList.map((category) => {
@@ -55,11 +55,11 @@ export function BookmarkForm(props: Props) {
 		if (!selectedOptions || !texts[0]) return null;
 		return texts.map((text, i) => {
 			const option = selectedOptions[i];
-			if (!option?.value) return <span key={ "ROOT" }>{ text }</span>
+			if (!option?.value) return <span key={"ROOT"}>{text}</span>;
 			if (i === texts.length - 1) {
-				return <span key={ option?.value }>{ text }</span>;
+				return <span key={option?.value}>{text}</span>;
 			}
-			return <span key={ option?.value }>{ text } / </span>;
+			return <span key={option?.value}>{text} / </span>;
 		});
 	};
 
@@ -90,7 +90,7 @@ export function BookmarkForm(props: Props) {
 
 		if (!nameField?.value && urlField && isValidURL(urlField.value)) {
 			try {
-				const { title, description } =
+				const {title, description} =
 					await fetchWebTitleAndDescription(urlField.value);
 
 				if (title && description) {
@@ -136,21 +136,21 @@ export function BookmarkForm(props: Props) {
 
 	return (
 		<Form
-			form={ form }
-			onFinish={ onFinish }
-			onFieldsChange={ onFieldsChange }
+			form={form}
+			onFinish={onFinish}
+			onFieldsChange={onFieldsChange}
 			name="bookmark"
 		>
 			<Form.Item
 				label="Name"
 				name="name"
-				rules={ [
+				rules={[
 					{
 						required: true,
 						message: "Please input BookMarkBar name!",
 					},
-				] }
-				initialValue={ props.bookmark.name }
+				]}
+				initialValue={props.bookmark.name}
 				shouldUpdate
 			>
 				<Input></Input>
@@ -158,14 +158,14 @@ export function BookmarkForm(props: Props) {
 			<Form.Item
 				label="URL"
 				name="url"
-				initialValue={ props.bookmark.url }
-				rules={ [
+				initialValue={props.bookmark.url}
+				rules={[
 					{
 						type: "url",
 						required: true,
 						message: "Please input BookMarkBar url!",
 					},
-				] }
+				]}
 				shouldUpdate
 			>
 				<Input></Input>
@@ -173,13 +173,13 @@ export function BookmarkForm(props: Props) {
 			<Form.Item
 				label="Description"
 				name="description"
-				initialValue={ props.bookmark.description }
-				rules={ [
+				initialValue={props.bookmark.description}
+				rules={[
 					{
 						required: false,
 						message: "Please input the description!",
 					},
-				] }
+				]}
 				shouldUpdate
 			>
 				<Input.TextArea/>
@@ -190,20 +190,20 @@ export function BookmarkForm(props: Props) {
 				initialValue={
 					props.bookmark.tags ? props.bookmark.tags?.split(" ") : []
 				}
-				rules={ [{ required: false, message: "Please input the tags!" }] }
+				rules={[{required: false, message: "Please input the tags!"}]}
 				shouldUpdate
 			>
 				<Select mode="tags" placeholder="Please select tags" allowClear>
-					{ tagsList.map((tag: FilterType, index: number) => {
+					{tagsList.map((tag: FilterType, index: number) => {
 						return (
 							<Option
-								value={ tag.value }
-								key={ `${ tag.value }-${ index }` }
+								value={tag.value}
+								key={`${tag.value}-${index}`}
 							>
-								{ tag.value }
+								{tag.value}
 							</Option>
 						);
-					}) }
+					})}
 				</Select>
 			</Form.Item>
 			<Form.Item
@@ -212,29 +212,29 @@ export function BookmarkForm(props: Props) {
 				initialValue={
 					props.bookmark.category ? props.bookmark.category : ""
 				}
-				rules={ [
-					{ required: false, message: "Please select the category!" },
-				] }
+				rules={[
+					{required: false, message: "Please select the category!"},
+				]}
 				shouldUpdate
 			>
 				<Cascader
-					displayRender={ categoryDisplayRender }
-					options={ props.categories }
+					displayRender={categoryDisplayRender}
+					options={props.categories}
 					changeOnSelect
 				/>
 			</Form.Item>
 			<Form.Item
 				label="Created Time"
 				name="created"
-				initialValue={ moment(props.bookmark.created).format(
+				initialValue={moment(props.bookmark.created).format(
 					"YYYY-MM-DD HH:mm"
-				) }
-				rules={ [
+				)}
+				rules={[
 					{
 						required: true,
 						message: "Please select the created time!",
 					},
-				] }
+				]}
 				shouldUpdate
 			>
 				<Input></Input>
@@ -242,22 +242,22 @@ export function BookmarkForm(props: Props) {
 			<Form.Item
 				label="Modified Time"
 				name="modified"
-				initialValue={ moment(props.bookmark.modified).format(
+				initialValue={moment(props.bookmark.modified).format(
 					"YYYY-MM-DD HH:mm"
-				) }
-				rules={ [
+				)}
+				rules={[
 					{
 						required: true,
 						message: "Please select the modified time!",
 					},
-				] }
+				]}
 				shouldUpdate
 			>
 				<Input></Input>
 			</Form.Item>
 			<Form.Item>
-				<div className="submit-bar" style={ { textAlign: "end" } }>
-					<Button className="wb-reset-button" htmlType="button" onClick={ onReset }>
+				<div className="submit-bar" style={{textAlign: "end"}}>
+					<Button className="wb-reset-button" htmlType="button" onClick={onReset}>
 						Reset
 					</Button>
 					<Button type="primary" htmlType="submit">
