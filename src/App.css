@@ -136,6 +136,8 @@
 
 	height: 40px;
 
+	cursor: pointer;
+
 }
 
 .wb-page-search-bar-container .wb-last-opened-files .wb-last-opened-file:hover {

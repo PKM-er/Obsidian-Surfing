@@ -19,6 +19,8 @@ declare module "obsidian" {
 
 	interface Menu {
 		close(): void;
+
+		addSections(sections: any[]): Menu;
 	}
 
 	interface ItemView {
