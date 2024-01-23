@@ -20,7 +20,7 @@ import { around } from "monkey-around";
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, SurfingSettings, SurfingSettingTab } from "./surfingPluginSetting";
 import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
-import { checkIfWebBrowserAvailable } from "./utils/url";
+import { checkIfWebBrowserAvailable, isEmailLink, isNormalLink } from "./utils/url";
 import { InPageIconList } from "./component/InPageIconList";
 import { InNodeWebView } from "./component/InNodeWebView";
 import { BookMarkBar, updateBookmarkBar } from "./component/BookMarkBar/BookMarkBar";
@@ -81,6 +81,7 @@ export default class SurfingPlugin extends Plugin {
 		this.registerCustomIcon();
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
+		this.patchProperty();
 
 
 		if (requireApiVersion("1.1.0") && this.settings.useWebview) {
@@ -798,6 +799,98 @@ export default class SurfingPlugin extends Plugin {
 				},
 		});
 		this.register(uninstaller);
+	}
+
+	private patchProperty() {
+		if (!requireApiVersion('1.4.0')) return;
+		const patchTextPropertyInList = () => {
+			const editor = this.app.workspace.activeEditor;
+			// @ts-ignore
+			const propertyList = editor?.metadataEditor?.rendered.filter((property: any) => property.entry.type === "text");
+
+			if (!propertyList?.length) return false;
+
+			const property = propertyList[0];
+			if (!property) return false;
+
+			const renderer = property.rendered;
+
+			this.register(
+				around(renderer.constructor.prototype, {
+					render: (next: any) =>
+						async function (this: any, ...args: any) {
+
+							next.apply(this, ...args);
+
+							const linkEl = this.linkTextEl;
+							const clonedLinkEl = linkEl.cloneNode(true);
+							linkEl.parentNode?.replaceChild(clonedLinkEl, linkEl);
+
+							clonedLinkEl.onclick = (e: MouseEvent) => {
+								if (e.button !== 0 && e.button !== 1) return;
+								e.preventDefault();
+
+								if (this.isWikilink()) {
+									this.ctx.app.workspace.openLinkText(this.getLinkText(), this.ctx.sourcePath, Keymap.isModEvent(e), {
+										active: true
+									});
+								} else if (isNormalLink(this.value)) {
+									if (Keymap.isModEvent(e)) {
+										window.open(this.value, "_blank");
+										return;
+									}
+									SurfingView.spawnWebBrowserView(true, {url: this.value});
+									return;
+								} else if (isEmailLink(this.value)) {
+									window.open("mailto:" + this.value, "_blank");
+								}
+							};
+
+							clonedLinkEl.oncontextmenu = (e: MouseEvent) => {
+								e.preventDefault();
+
+								// 创建一个新的 DD 实例并添加不同的部分
+								const menu = (new Menu()).addSections([
+									"title", "correction", "spellcheck", "open",
+									"selection", "clipboard", "action", "view",
+									"info", "", "danger"
+								]);
+
+								// 检查当前元素是否是 Wikilink
+								if (this.isWikilink()) {
+									e.preventDefault();
+									this.ctx.app.workspace.handleLinkContextMenu(menu, this.getLinkText(), this.ctx.sourcePath);
+								}
+								// 检查当前元素的值是否是普通链接
+								else if (isNormalLink(this.value)) {
+									e.preventDefault();
+									this.ctx.app.workspace.handleExternalLinkContextMenu(menu, this.value);
+								}
+								// 检查当前元素的值是否是电子邮件链接
+								else if (isEmailLink(this.value)) {
+									e.preventDefault();
+									this.ctx.app.workspace.handleExternalLinkContextMenu(menu, "mailto:" + this.value);
+								}
+
+								// 在鼠标事件的位置显示菜单
+								menu.showAtMouseEvent(e);
+							};
+						}
+				})
+			);
+			// @ts-ignore
+			editor?.leaf?.rebuildView();
+			console.log("Surfing: metadata editor get patched");
+			return true;
+		};
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchTextPropertyInList()) {
+				const evt = this.app.workspace.on("layout-change", () => {
+					patchTextPropertyInList() && this.app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
 	}
 
 	private patchEmptyView() {

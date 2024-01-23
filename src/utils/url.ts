@@ -1,8 +1,8 @@
 import { SEARCH_ENGINES } from "../surfingPluginSetting";
 
 export const checkIfWebBrowserAvailable = (url: string) => {
-	return url.startsWith("http://") || url.startsWith("https://") || (url.startsWith("file://") && /\.htm(l)?/g.test(url))
-}
+	return url.startsWith("http://") || url.startsWith("https://") || (url.startsWith("file://") && /\.htm(l)?/g.test(url));
+};
 
 export const getComposedUrl = (url: string, value: string) => {
 	// Support both http:// and https://
@@ -31,7 +31,7 @@ export const getComposedUrl = (url: string, value: string) => {
 	if (!(/^(https?|file):\/\//g.test(tempValue))) tempValue = url + tempValue;
 
 	return tempValue;
-}
+};
 
 export const getUrl = (urlString: string) => {
 	let url = urlString;
@@ -61,4 +61,22 @@ export const getUrl = (urlString: string) => {
 	if (url) return url;
 	else return urlString;
 
+};
+
+
+export function isNormalLink(e: string) {
+	if (!e || e.contains(" "))
+		return false;
+	try {
+		new URL(e);
+	} catch (e) {
+		return false;
+	}
+	return true;
+}
+
+const isEmail = /^(([^<>()[\]\\.,;:\s@\"`]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))\b/;
+
+export function isEmailLink(e: string) {
+	return isEmail.test(e);
 }
