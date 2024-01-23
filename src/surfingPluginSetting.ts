@@ -44,6 +44,7 @@ export interface SurfingSettings {
 	useIconList: boolean;
 	darkMode: boolean;
 	randomBackground: boolean;
+	lastOpenedFiles: boolean;
 	bookmarkManager: {
 		openBookMark: boolean;
 		saveBookMark: boolean;
@@ -104,6 +105,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	useIconList: true,
 	darkMode: false,
 	randomBackground: false,
+	lastOpenedFiles: false,
 	bookmarkManager: {
 		openBookMark: false,
 		saveBookMark: false,
@@ -265,7 +267,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		const tabClass = 'wb-desktop';
 		tabEl.addClass(tabClass);
 
-		setIcon(tabEl.createEl("div", {cls: 'wb-navigation-item-icon'}), tabNameToTabIconId[tabName], 20);
+		setIcon(tabEl.createEl("div", {cls: 'wb-navigation-item-icon'}), tabNameToTabIconId[tabName]);
 		// @ts-ignore
 		tabEl.createSpan().setText(t(tabName));
 
@@ -449,15 +451,35 @@ export class SurfingSettingTab extends PluginSettingTab {
 	}
 
 	private addInpageSearch(tabName: string, wbContainerEl: HTMLElement) {
-		const settingName = t('Show Search Bar In Empty Page');
-		const setting = new Setting(wbContainerEl)
+		let settingName = t('Show Search Bar In Empty Page');
+		let setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.showSearchBarInPage)
 					.onChange(async (value) => {
 						this.plugin.settings.showSearchBarInPage = value;
 						this.applySettingsUpdate();
-						this.display();
+
+						setTimeout(() => {
+							this.display();
+						}, 200);
+					});
+			});
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName);
+
+		if (!this.plugin.settings.showSearchBarInPage) {
+			return;
+		}
+
+		settingName = 'Show last opened files';
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.lastOpenedFiles)
+					.onChange(async (value) => {
+						this.plugin.settings.lastOpenedFiles = value;
+						this.applySettingsUpdate();
 					});
 			});
 

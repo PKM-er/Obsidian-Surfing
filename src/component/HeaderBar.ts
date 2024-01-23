@@ -1,6 +1,6 @@
 import SurfingPlugin from "../surfingIndex";
 import { t } from "../translations/helper";
-import { Component, ItemView, setIcon } from "obsidian";
+import { Component, ItemView, Scope, setIcon } from "obsidian";
 import { BookmarkSuggester } from "./suggester/bookmarkSuggester";
 import { FileSuggester } from "./suggester/fileSuggester";
 
@@ -27,6 +27,8 @@ export class HeaderBar extends Component {
 
 		if (this.removeHeaderChild) this.parentEl.empty();
 
+		this.initScope();
+
 		if (this.plugin.settings.showRefreshButton && this.removeHeaderChild && this.view.getViewType() !== "empty") {
 			const refreshButton = this.parentEl.createEl("div", {
 				cls: "wb-refresh-button"
@@ -46,20 +48,6 @@ export class HeaderBar extends Component {
 			cls: "wb-search-bar"
 		});
 
-		// TODO: Would this be ok to use Obsidian add domlistener instead?
-		// this.searchBar.addEventListener("keydown", (event: KeyboardEvent) => {
-		// 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		// 	if (!event) {
-		// 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		// 		const event = window.event as KeyboardEvent;
-		// 	}
-		// 	if (event.key === "Enter") {
-		// 		// When enter is pressed, search for the url.
-		// 		for (const listener of this.onSearchBarEnterListener) {
-		// 			listener(this.searchBar.value);
-		// 		}
-		// 	}
-		// }, false);
 		this.registerDomEvent(this.searchBar, "keydown", (event: KeyboardEvent) => {
 			if (!event) {
 				// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -100,6 +88,24 @@ export class HeaderBar extends Component {
 				this.searchBar.detach();
 			}
 		});
+	}
+
+	initScope() {
+		// console.log(this.view.scope);
+		if (!this.view.scope) {
+			this.view.scope = new Scope(this.plugin.app.scope);
+			(this.view.scope as Scope).register([], '/', (evt) => {
+				if (evt.target === this.searchBar) return;
+				evt.preventDefault();
+				this.searchBar.focus();
+			});
+		} else {
+			(this.view.scope as Scope).register([], '/', (evt) => {
+				if (evt.target === this.searchBar) return;
+				evt.preventDefault();
+				this.searchBar.focus();
+			});
+		}
 	}
 
 	addOnSearchBarEnterListener(listener: (url: string) => void) {

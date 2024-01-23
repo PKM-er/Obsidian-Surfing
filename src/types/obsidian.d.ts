@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import * as obsidian from 'obsidian';
-import { EditorPosition, MarkdownPreviewRenderer } from "obsidian";
+import { EditorPosition, MarkdownPreviewRenderer, Scope } from "obsidian";
 
 declare module "obsidian" {
 	export interface ItemView {
@@ -19,6 +19,10 @@ declare module "obsidian" {
 
 	interface Menu {
 		close(): void;
+	}
+
+	interface ItemView {
+		scope: Scope;
 	}
 
 	interface HoverPopover {
