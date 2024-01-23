@@ -606,7 +606,6 @@ export default class SurfingPlugin extends Plugin {
 				link.onmouseover = (e) => {
 					if (!link.hasClass('external-link')) return;
 
-
 					if (!link.href || !link.href.trim().startsWith('http')) return;
 
 					const hoverPopover = new HoverPopover(
