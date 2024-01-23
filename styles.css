@@ -200,15 +200,6 @@
 	padding-top: 100px;
 }
 
-.wb-random-background .empty-state {
-	background: url("https://source.unsplash.com/random/?mountain") no-repeat center center;
-	background-size: cover;
-}
-
-.wb-random-background .empty-state input {
-	filter: opacity(0.8);
-}
-
 .wb-search-bar-container {
 	margin-left: auto;
 	margin-right: auto;
@@ -220,44 +211,6 @@
 	/*margin-left: auto;*/
 	/*margin-right: auto;*/
 	/*margin-bottom: 29%;*/
-}
-
-.wb-page-search-bar-container .wb-last-opened-files {
-	display: grid;
-	grid-template-columns: 1fr 1fr 1fr 1fr;
-	gap: var(--size-4-2);
-	justify-items: center;
-
-	margin-top: var(--size-4-12);
-}
-
-.wb-page-search-bar-container .wb-last-opened-files .wb-last-opened-file {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-
-	gap: var(--size-2-2);
-	background-color: var(--interactive-normal);
-	box-shadow: var(--input-shadow);
-	opacity: 0.6;
-	justify-content: flex-start;
-	width: 160px;
-
-	height: 40px;
-
-	cursor: pointer;
-
-}
-
-.wb-page-search-bar-container .wb-last-opened-files .wb-last-opened-file:hover {
-	opacity: 1;
-}
-
-.wb-page-search-bar-container .wb-last-opened-files .wb-last-opened-file-name {
-	/* Hide text */
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 
 .wb-page-search-bar-text {
