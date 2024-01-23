@@ -32,6 +32,7 @@ import { TabTreeView, WEB_BROWSER_TAB_TREE_ID } from "./component/TabTreeView/Ta
 import './App.css';
 import { EditorView } from "@codemirror/view";
 import { PopoverWebView } from "./component/PopoverWebView";
+import { LastOpenedFiles } from "./component/LastOpenedFiles";
 
 
 export default class SurfingPlugin extends Plugin {
@@ -151,8 +152,6 @@ export default class SurfingPlugin extends Plugin {
 		if (this.settings.randomBackground) {
 			currentView.contentEl.toggleClass("wb-random-background", true);
 		}
-		// @ts-ignore
-		currentView.titleEl.setText('Surfing');
 		const emptyStateEl = (currentView.contentEl.children[0] as HTMLElement).hasClass("empty-state") ? currentView.contentEl.children[0] as HTMLElement : null;
 		if (!emptyStateEl) return;
 		if (!emptyStateEl.hasClass("wb-page-search-bar") && this.settings.showSearchBarInPage) {
@@ -162,6 +161,10 @@ export default class SurfingPlugin extends Plugin {
 			emptyStateEl?.addClass("wb-page-search-bar");
 
 			const inPageSearchBar = new InPageSearchBar(inPageContainerEl, currentView, this);
+			if (this.settings.lastOpenedFiles) {
+				new LastOpenedFiles(this, inPageSearchBar.inPageSearchBarContainerEl).onload();
+			}
+
 			if (this.settings.useIconList) {
 				new InPageIconList(emptyStateEl, currentView, this);
 				const emptyActionsEl = emptyStateEl.querySelector(".empty-state-container");
@@ -828,6 +831,7 @@ export default class SurfingPlugin extends Plugin {
 									self.app.setting.openTabById('surfing');
 								});
 								setIcon(iconEl, 'settings');
+
 							}
 							return next.call(this, ...args);
 						},

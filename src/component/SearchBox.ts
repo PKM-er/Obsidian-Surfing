@@ -47,12 +47,12 @@ export default class searchBox {
 		this.closeButtonEl.addEventListener("click", this.unload.bind(this));
 		this.backwardButtonEl.addEventListener("click", this.backward.bind(this));
 		this.forwardButtonEl.addEventListener("click", this.forward.bind(this));
-		this.inputEl.addEventListener("keyup", this.search.bind(this))
-		this.inputEl.addEventListener("keyup", this.exist.bind(this))
+		this.inputEl.addEventListener("keyup", this.search.bind(this));
+		this.inputEl.addEventListener("keyup", this.exist.bind(this));
 
-		setIcon(this.closeButtonEl, "x", 8);
-		setIcon(this.backwardButtonEl, "arrow-up", 8);
-		setIcon(this.forwardButtonEl, "arrow-down", 8);
+		setIcon(this.closeButtonEl, "x");
+		setIcon(this.backwardButtonEl, "arrow-up");
+		setIcon(this.forwardButtonEl, "arrow-down");
 
 		this.inputEl.focus();
 	}
@@ -110,7 +110,7 @@ export default class searchBox {
 	}
 
 	unload() {
-		this.webContents.stopFindInPage('clearSelection')
+		this.webContents.stopFindInPage('clearSelection');
 		this.inputEl.value = "";
 
 		this.closeButtonEl.removeEventListener("click", this.unload);
