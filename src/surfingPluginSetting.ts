@@ -55,7 +55,8 @@ export interface SurfingSettings {
 		defaultColumnList: string[];
 		defaultFilterType: string;
 	},
-	treeData: NodeModel<CustomData>[]
+	treeData: NodeModel<CustomData>[];
+	enableHtmlPreview: boolean;
 }
 
 export interface SearchEngine {
@@ -117,6 +118,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 		defaultFilterType: 'tree',
 	},
 	treeData: [],
+	enableHtmlPreview: true,
 };
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
@@ -386,7 +388,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 	private generateGeneralSettings(tabName: string, wbContainerEl: HTMLElement) {
 		this.addOpenInSameTab(tabName, wbContainerEl);
 		this.addHoverPopover(tabName, wbContainerEl);
-
+		this.addEnableHTMLPreview(tabName, wbContainerEl);
 		this.addRefreshButton(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
 		this.addMarkdownPath(tabName, wbContainerEl);
@@ -718,8 +720,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 	}
 
 	private addHoverPopover(tabName: string, wbContainerEl: HTMLElement) {
-		const settingName = 'Hover Popover';
-		const settingDesc = 'Show a popover when hover on the link.';
+		const settingName = t('Hover Popover');
+		const settingDesc = t('Show a popover when hover on the link.');
 		const setting = new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(settingDesc)
@@ -728,6 +730,24 @@ export class SurfingSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.hoverPopover)
 					.onChange(async (value) => {
 						this.plugin.settings.hoverPopover = value;
+						this.applySettingsUpdate();
+					});
+			});
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName, settingDesc);
+	}
+
+	private addEnableHTMLPreview(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = t('Enable HTML Preview');
+		const settingDesc = t('Enable HTML Preview in Surfing');
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(settingDesc)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.enableHtmlPreview)
+					.onChange(async (value) => {
+						this.plugin.settings.enableHtmlPreview = value;
 						this.applySettingsUpdate();
 					});
 			});

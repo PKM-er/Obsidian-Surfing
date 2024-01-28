@@ -55,7 +55,7 @@ export default class SurfingPlugin extends Plugin {
 		if (this.settings.bookmarkManager.openBookMark) this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this));
 
 		try {
-			this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
+			if (this.settings.enableHtmlPreview) this.registerExtensions(HTML_FILE_EXTENSIONS, WEB_BROWSER_FILE_VIEW_ID);
 		} catch (error) {
 			new Notice(`File extensions ${HTML_FILE_EXTENSIONS} had been registered by other plugin!`);
 		}
@@ -1042,20 +1042,20 @@ export default class SurfingPlugin extends Plugin {
 
 	private registerEmbededHTML() {
 		// @ts-expect-error
-		app.embedRegistry.registerExtension("html", (e, t, n) => {
+		this.app.embedRegistry.registerExtension("html", (e, t, n) => {
 			return new EmbededWebView(e, t);
 		});
 		// @ts-expect-error
-		app.embedRegistry.registerExtension("htm", (e, t, n) => {
+		this.app.embedRegistry.registerExtension("htm", (e, t, n) => {
 			return new EmbededWebView(e, t);
 		});
 	}
 
 	unRegisterEmbededHTML() {
 		// @ts-expect-error
-		app.embedRegistry.unregisterExtension("html");
+		this.app.embedRegistry.unregisterExtension("html");
 		// @ts-expect-error
-		app.embedRegistry.unregisterExtension("htm");
+		this.app.embedRegistry.unregisterExtension("htm");
 	}
 
 	async loadSettings() {
