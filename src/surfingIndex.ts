@@ -622,18 +622,16 @@ export default class SurfingPlugin extends Plugin {
 						if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
 							return;
 						}
-						hoverPopover = new HoverPopover(hoverParent, targetEl, 100);
+						hoverPopover = new HoverPopover(hoverParent, targetEl);
 						hoverPopover.hoverEl.addClass('surfing-hover-popover');
 
-						// Obsidian's native onLinkHover method has a setTimeout with 100 ms delay here,
-						// but here it causes the web page content to be displayed only in the upper half of the popover.
-						// setTimeout(() => {
-						// 	if (hoverPopover!.state !== (PopoverState as any).Hidden) {
+						setTimeout(() => {
+							if (hoverPopover!.state !== (PopoverState as any).Hidden) {
 								const parentEl = hoverPopover!.hoverEl.createDiv('surfing-hover-popover-container');
 								const webView = new PopoverWebView(parentEl, linktext);
 								webView.onload();
-						// 	}
-						// }, 100);
+							}
+						}, 100);
 						return;
 					}
 
