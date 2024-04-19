@@ -93,4 +93,6 @@ export default {
 	'Disable / to search when on these sites': '当在这些网站中禁止按 / 来搜索的功能',
 	'Show a popover when hover on the link.': '当鼠标悬停在链接上时显示一个弹出窗口。',
 	'Hover Popover': '悬停弹出窗口',
+	'Enable HTML Preview': '启用 HTML 预览',
+	'Enable HTML Preview in Surfing': '在 Surfing 中启用 HTML 预览',
 };
