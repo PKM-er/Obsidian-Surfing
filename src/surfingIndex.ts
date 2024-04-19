@@ -1,14 +1,14 @@
 import {
 	addIcon, App,
 	Editor, editorInfoField,
-	EventRef, HoverPopover,
+	EventRef, HoverParent, HoverPopover,
 	ItemView, Keymap, MarkdownPostProcessorContext,
 	MarkdownPreviewRenderer,
 	MarkdownPreviewRendererStatic,
 	MarkdownView,
 	Menu, Modal, moment,
 	Notice, parseYaml,
-	Plugin, requireApiVersion,
+	Plugin, PopoverState, requireApiVersion,
 	setIcon,
 	TFile,
 } from "obsidian";
@@ -569,59 +569,87 @@ export default class SurfingPlugin extends Plugin {
 		this.registerEditorExtension(
 			EditorView.domEventHandlers({
 				mouseover: (e: MouseEvent, editorView: EditorView) => {
-					if (Keymap.isModifier(e, 'Mod')) {
-						if (!(e.target as HTMLElement).hasClass('cm-underline') && !(e.target as HTMLElement).hasClass('external-link')) return;
+					if (!(e.target as HTMLElement).hasClass('cm-underline') && !(e.target as HTMLElement).hasClass('external-link')) return;
 
-						const editorInfo = editorView.state.field(editorInfoField);
-						const editor: Editor = (editorInfo as any).editMode?.editor;
+					const editorInfo = editorView.state.field(editorInfoField);
+					const editor: Editor = (editorInfo as any).editMode?.editor;
 
-						const pos = editorView.posAtDOM(<Node>e.target);
-						const editorPos = editor.offsetToPos(pos);
+					const pos = editorView.posAtDOM(<Node>e.target);
+					const editorPos = editor.offsetToPos(pos);
 
-						const type = editor.getClickableTokenAt(editorPos);
-						if (!type) return;
+					const type = editor.getClickableTokenAt(editorPos);
+					if (!type) return;
 
-						if (!(type.text.trim().startsWith('http'))) return;
+					if (!(type.text.trim().startsWith('http'))) return;
 
-						const hoverPopover = new HoverPopover(
-							<any>editorView,
-							<HTMLElement>e.target,
-							100
-						);
-
-						hoverPopover.hoverEl.toggleClass('surfing-hover-popover', true);
-
-						const parentEl = hoverPopover.hoverEl.createEl('div', {
-							cls: 'surfing-hover-popover-container'
-						});
-						const webView = new PopoverWebView(parentEl, type.text);
-						webView.onload();
-					}
+					this.app.workspace.trigger('hover-link', {
+						event: e,
+						source: 'editor',
+						hoverParent: editorInfo,
+						targetEl: e.target,
+						linktext: type.text.trim()
+					});
 				},
 			})
 		);
 
 		this.registerMarkdownPostProcessor((el, ctx: MarkdownPostProcessorContext) => {
 			el.querySelectorAll('a').forEach((link) => {
-				link.onmouseover = (e) => {
+				link.addEventListener('mouseover', (e) => {
 					if (!link.hasClass('external-link')) return;
 
 					if (!link.href || !link.href.trim().startsWith('http')) return;
 
-					const hoverPopover = new HoverPopover(
-						(ctx as any).containerEl,
-						<HTMLElement>e.target,
-						100
-					);
-
-					hoverPopover.hoverEl.toggleClass('surfing-hover-popover', true);
-
-					const parentEl = hoverPopover.hoverEl.createEl('div', {
-						cls: 'surfing-hover-popover-container'
+					this.app.workspace.trigger('hover-link', {
+						event: e,
+						source: 'preview',
+						// Ideally, the hoverParent should be `view.previewMode` in Reading View,
+						// but we don't have access to the view instance here.
+						hoverParent: ctx,
+						targetEl: link,
+						linktext: link.href.trim()
 					});
-					const webView = new PopoverWebView(parentEl, link.href);
-					webView.onload();
-				};
+				});
+			});
+		});
+
+		this.app.workspace.onLayoutReady(() => {
+			const pagePreview = this.app.internalPlugins.plugins['page-preview'];
+			this.register(around(pagePreview.instance, {
+				onLinkHover(old: any) {
+					return function (hoverParent: HoverParent, targetEl: HTMLElement | null, linktext: string, sourcePath: string, state: any, ...args: any[]) {
+						if (linktext.startsWith('http://') || linktext.startsWith('https://')) {
+							let { hoverPopover } = hoverParent;
+							if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
+								return;
+							}
+							hoverPopover = new HoverPopover(hoverParent, targetEl);
+							hoverPopover.hoverEl.addClass('surfing-hover-popover');
+	
+							setTimeout(() => {
+								if (hoverPopover!.state !== (PopoverState as any).Hidden) {
+									const parentEl = hoverPopover!.hoverEl.createDiv('surfing-hover-popover-container');
+									const webView = new PopoverWebView(parentEl, linktext);
+									webView.onload();
+								}
+							}, 100);
+							return;
+						}
+	
+						return old.call(this, hoverParent, targetEl, linktext, sourcePath, state, ...args);
+					}
+				}
+			}));
+	
+			// Re-register the 'hover-link' & 'link-hover' workspace events handlers
+			if (!pagePreview.enabled) return;
+			pagePreview.disable();
+			pagePreview.enable();
+	
+			this.register(() => {
+				if (!pagePreview.enabled) return;
+				pagePreview.disable();
+				pagePreview.enable();
 			});
 		});
 	}

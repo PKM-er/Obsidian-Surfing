@@ -13,6 +13,16 @@ declare module "obsidian" {
 			enabledPlugins: Set<string>;
 			getPluginFolder(): string;
 		};
+		internalPlugins: {
+			plugins: {
+				[name: string]: {
+					enabled: boolean;
+					enable(): void;
+					disable(): void;
+					instance: any;
+				};
+			};
+		};	
 		commands: any;
 		getTheme: () => string;
 	}
@@ -28,6 +38,8 @@ declare module "obsidian" {
 	}
 
 	interface HoverPopover {
+		targetEl: HTMLElement;	
+
 		hide(): void;
 
 		position({x, y, doc}: {
