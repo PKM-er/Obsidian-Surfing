@@ -1,6 +1,6 @@
 {
 	"name": "surfing",
-	"version": "0.9.8",
+	"version": "0.9.9",
 	"description": "Use surfing to surf the net in Obsidian.",
 	"main": "main.js",
 	"scripts": {
