@@ -614,7 +614,6 @@ export default class SurfingPlugin extends Plugin {
 						linktext: link.href.trim()
 					});
 				});
-
 			});
 		});
 
@@ -624,13 +623,14 @@ export default class SurfingPlugin extends Plugin {
 				onLinkHover(old: any) {
 					return function (hoverParent: HoverParent, targetEl: HTMLElement | null, linktext: string, sourcePath: string, state: any, ...args: any[]) {
 						if (linktext.startsWith('http://') || linktext.startsWith('https://')) {
-							let {hoverPopover} = hoverParent;
+							let { hoverPopover } = hoverParent;
+              
 							if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
 								return;
 							}
 							hoverPopover = new HoverPopover(hoverParent, targetEl);
 							hoverPopover.hoverEl.addClass('surfing-hover-popover');
-
+              
 							setTimeout(() => {
 								if (hoverPopover!.state !== (PopoverState as any).Hidden) {
 									const parentEl = hoverPopover!.hoverEl.createDiv('surfing-hover-popover-container');

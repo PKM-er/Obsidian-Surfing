@@ -42,7 +42,8 @@ declare module "obsidian" {
 	}
 
 	interface HoverPopover {
-		targetEl: HTMLElement;
+
+		targetEl: HTMLElement;	
 
 		hide(): void;
 
