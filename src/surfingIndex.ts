@@ -1,14 +1,14 @@
 import {
 	addIcon, App,
 	Editor, editorInfoField,
-	EventRef, HoverParent, HoverPopover,
+	EventRef,
 	ItemView, Keymap, MarkdownPostProcessorContext,
 	MarkdownPreviewRenderer,
 	MarkdownPreviewRendererStatic,
 	MarkdownView,
 	Menu, Modal, moment,
 	Notice, parseYaml,
-	Plugin, PopoverState, requireApiVersion,
+	Plugin, requireApiVersion,
 	setIcon,
 	TFile,
 } from "obsidian";
@@ -30,7 +30,8 @@ import { loadJson, saveJson } from "./utils/json";
 import { hashCode, nonElectronGetPageTitle } from "./component/BookmarkManager/utils";
 import { TabTreeView, WEB_BROWSER_TAB_TREE_ID } from "./component/TabTreeView/TabTreeView";
 import './App.css';
-import { EditorView } from "@codemirror/view";
+import { Range } from '@codemirror/state';
+import { Decoration, EditorView, WidgetType } from "@codemirror/view";
 import { PopoverWebView } from "./component/PopoverWebView";
 import { LastOpenedFiles } from "./component/LastOpenedFiles";
 
@@ -41,6 +42,8 @@ export default class SurfingPlugin extends Plugin {
 	private onLayoutChangeEventRef: EventRef;
 	private applyURLDebounceTimer = 0;
 	private urlOpened = false;
+
+	private patchInlineUrl = false;
 
 	async onload() {
 		await this.loadSettings();
@@ -82,6 +85,7 @@ export default class SurfingPlugin extends Plugin {
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
 		this.patchProperty();
+		this.settings.supportLivePreviewInlineUrl && this.patchInlinePreview();
 
 
 		if (requireApiVersion("1.1.0") && this.settings.useWebview) {
@@ -128,7 +132,7 @@ export default class SurfingPlugin extends Plugin {
 		this.addRibbonIcon('bookmark', WEB_BROWSER_BOOKMARK_MANAGER_ID, async () => {
 			const workspace = this.app.workspace;
 			workspace.detachLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID);
-			await workspace.getLeaf(false).setViewState({ type: WEB_BROWSER_BOOKMARK_MANAGER_ID });
+			await workspace.getLeaf(false).setViewState({type: WEB_BROWSER_BOOKMARK_MANAGER_ID});
 			workspace.revealLeaf(workspace.getLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID)[0]);
 		});
 	}
@@ -145,7 +149,7 @@ export default class SurfingPlugin extends Plugin {
 			// Focus on current inputEl
 			if (!this.settings.showSearchBarInPage) headerBar.focus();
 			headerBar.addOnSearchBarEnterListener((url: string) => {
-				SurfingView.spawnWebBrowserView(false, { url });
+				SurfingView.spawnWebBrowserView(false, {url});
 			});
 		}
 
@@ -177,7 +181,7 @@ export default class SurfingPlugin extends Plugin {
 			inPageSearchBar.focus();
 			inPageSearchBar.addOnSearchBarEnterListener((url: string) => {
 				if (url.trim() === '' || this.settings.showOtherSearchEngines) return;
-				SurfingView.spawnWebBrowserView(false, { url });
+				SurfingView.spawnWebBrowserView(false, {url});
 			});
 		}
 	}
@@ -234,7 +238,7 @@ export default class SurfingPlugin extends Plugin {
 			if (!url) return;
 			if (decodeURI(url) !== url) url = decodeURI(url).toString().replace(/\s/g, "%20");
 			if (this.settings.bookmarkManager.saveBookMark) new SaveBookmarkModal(this.app, url, this).open();
-			else SurfingView.spawnWebBrowserView(true, { url: url });
+			else SurfingView.spawnWebBrowserView(true, {url: url});
 		});
 	}
 
@@ -253,7 +257,7 @@ export default class SurfingPlugin extends Plugin {
 								.setTitle(t('Open With Surfing'))
 								.onClick(() => {
 									// @ts-ignore
-									SurfingView.spawnWebBrowserView(true, { url: token.text });
+									SurfingView.spawnWebBrowserView(true, {url: token.text});
 								});
 						}).addItem((item) => {
 							item.setIcon('surfing')
@@ -306,7 +310,7 @@ export default class SurfingPlugin extends Plugin {
 								.setTitle(engine.name)
 								.onClick(() => {
 									// @ts-ignore
-									SurfingView.spawnWebBrowserView(true, { url: engine.url + selection });
+									SurfingView.spawnWebBrowserView(true, {url: engine.url + selection});
 								});
 						});
 					});
@@ -435,7 +439,7 @@ export default class SurfingPlugin extends Plugin {
 				searchBarEl.onLoad();
 
 				searchBarEl.addOnSearchBarEnterListener((url: string) => {
-					SurfingView.spawnWebBrowserView(false, { url });
+					SurfingView.spawnWebBrowserView(false, {url});
 				});
 				searchBarEl.focus();
 			}
@@ -451,7 +455,7 @@ export default class SurfingPlugin extends Plugin {
 					const selection = editor.getSelection();
 
 					// @ts-ignore
-					SurfingView.spawnWebBrowserView(true, { url: engine.url + selection });
+					SurfingView.spawnWebBrowserView(true, {url: engine.url + selection});
 				}
 			});
 		});
@@ -613,42 +617,53 @@ export default class SurfingPlugin extends Plugin {
 			});
 		});
 
-		const pagePreview = this.app.internalPlugins.plugins['page-preview'];
-		this.register(around(pagePreview.instance, {
-			onLinkHover(old: any) {
-				return function (hoverParent: HoverParent, targetEl: HTMLElement | null, linktext: string, sourcePath: string, state: any, ...args: any[]) {
-					if (linktext.startsWith('http://') || linktext.startsWith('https://')) {
-						let { hoverPopover } = hoverParent;
-						if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
-							return;
-						}
-						hoverPopover = new HoverPopover(hoverParent, targetEl);
-						hoverPopover.hoverEl.addClass('surfing-hover-popover');
+		this.registerPagePreview();
 
-						setTimeout(() => {
-							if (hoverPopover!.state !== (PopoverState as any).Hidden) {
-								const parentEl = hoverPopover!.hoverEl.createDiv('surfing-hover-popover-container');
-								const webView = new PopoverWebView(parentEl, linktext);
-								webView.onload();
-							}
-						}, 100);
-						return;
-					}
+	}
 
-					return old.call(this, hoverParent, targetEl, linktext, sourcePath, state, ...args);
-				}
-			}
-		}));
+	private registerPagePreview() {
+		// const pagePreview = this.app.internalPlugins.plugins['page-preview'];
+		// // if (!pagePreview.enabled) return;
+		// this.register(around(pagePreview.instance, {
+		// 	onLinkHover(old: any) {
+		// 		return function (hoverParent: HoverParent, targetEl: HTMLElement | null, linktext: string, sourcePath: string, state: any, ...args: any[]) {
+		// 			if (linktext.startsWith('http://') || linktext.startsWith('https://')) {
+		// 				let {hoverPopover} = hoverParent;
+		// 				if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
+		// 					return;
+		// 				}
+		// 				hoverPopover = new HoverPopover(hoverParent, targetEl);
+		// 				hoverPopover.hoverEl.addClass('surfing-hover-popover');
+		//
+		// 				setTimeout(() => {
+		// 					if (hoverPopover!.state !== (PopoverState as any).Hidden) {
+		// 						const parentEl = hoverPopover!.hoverEl.createDiv('surfing-hover-popover-container');
+		// 						const webView = new PopoverWebView(parentEl, linktext);
+		// 						webView.onload();
+		// 					}
+		// 				}, 100);
+		// 				return;
+		// 			}
+		//
+		// 			return old.call(this, hoverParent, targetEl, linktext, sourcePath, state, ...args);
+		// 		};
+		// 	}
+		// }));
+		//
+		// // Re-register the 'hover-link' & 'link-hover' workspace events handlers
+		// pagePreview.disable();
+		// pagePreview.enable();
+		//
+		// this.register(() => {
+		// 	if (!pagePreview.enabled) return;
+		// 	pagePreview.disable();
+		// 	pagePreview.enable();
+		// });
 
-		// Re-register the 'hover-link' & 'link-hover' workspace events handlers
-		pagePreview.disable();
-		pagePreview.enable();
-
-		this.register(() => {
-			if (!pagePreview.enabled) return;
-			pagePreview.disable();
-			pagePreview.enable();
-		});
+		app.internalPlugins.plugins['page-preview'].disable();
+		app.internalPlugins.plugins['page-preview'].enable();
+		app.internalPlugins.plugins['page-preview'].disable();
+		app.internalPlugins.plugins['page-preview'].enable();
 	}
 
 	private checkWebBrowser() {
@@ -671,7 +686,7 @@ export default class SurfingPlugin extends Plugin {
 							}
 							const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
 							if (checkIfWebBrowserAvailable(url)) {
-								SurfingView.spawnWebBrowserView(true, { url: url });
+								SurfingView.spawnWebBrowserView(true, {url: url});
 							} else {
 								window.open(url, '_blank', 'external');
 							}
@@ -706,7 +721,7 @@ export default class SurfingPlugin extends Plugin {
 								}
 								const url = (token.text !== decodeURI(token.text)) ? decodeURI(token.text) : token.text;
 								if (checkIfWebBrowserAvailable(url)) {
-									SurfingView.spawnWebBrowserView(true, { url: url });
+									SurfingView.spawnWebBrowserView(true, {url: url});
 								} else {
 									window.open(url, '_blank', 'external');
 								}
@@ -764,7 +779,7 @@ export default class SurfingPlugin extends Plugin {
 
 					if (urlString && !target && !features && !currentUrlOpened()) {
 						console.log("Obsidian-Surfing: open url in web browser view");
-						SurfingView.spawnWebBrowserView(true, { url: urlString });
+						SurfingView.spawnWebBrowserView(true, {url: urlString});
 
 						preventSameUrl();
 					}
@@ -811,7 +826,7 @@ export default class SurfingPlugin extends Plugin {
 								}
 
 								if (checkIfWebBrowserAvailable(url) && !currentUrlOpened()) {
-									SurfingView.spawnWebBrowserView(true, { url: url });
+									SurfingView.spawnWebBrowserView(true, {url: url});
 
 									preventSameUrl();
 								} else {
@@ -842,6 +857,8 @@ export default class SurfingPlugin extends Plugin {
 
 			const renderer = property.rendered;
 
+			if (!renderer?.constructor) return false;
+
 			this.register(
 				around(renderer.constructor.prototype, {
 					render: (next: any) =>
@@ -866,7 +883,7 @@ export default class SurfingPlugin extends Plugin {
 										window.open(this.value, "_blank");
 										return;
 									}
-									SurfingView.spawnWebBrowserView(true, { url: this.value });
+									SurfingView.spawnWebBrowserView(true, {url: this.value});
 									return;
 								} else if (isEmailLink(this.value)) {
 									window.open("mailto:" + this.value, "_blank");
@@ -918,6 +935,105 @@ export default class SurfingPlugin extends Plugin {
 				this.registerEvent(evt);
 			}
 		});
+	}
+
+	private patchWidget(widget: WidgetType) {
+		this.patchInlineUrl = true;
+		console.log(widget);
+
+		const jA = /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com|youtu\.be)(?:\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(?:\??(?:t|start)=([0-9]+))?(?:\S+)?$/
+			, WA = /^(?:https?:\/\/)?(?:mobile\.)?twitter\.com\/.+\/(\d+)/;
+		const imageReg = /^https?:\/\/.*\/.*\.(png|gif|webp|jpeg|jpg)($|\?.*$)/gmi;
+
+		const checkUrl = (url: any) => {
+			if (!url || typeof url !== 'string') {
+				return null;
+			}
+
+			let match = url.match(jA);
+			if (match) {
+				let youtubeUrl = `https://www.youtube.com/embed/${match[1]}`;
+				if (match[2]) {
+					youtubeUrl += `?start=${match[2]}`;
+				}
+				return youtubeUrl;
+			}
+
+			match = url.match(WA);
+			if (match) {
+				const isDarkTheme = document.body.classList.contains('theme-dark');
+				return `https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=${isDarkTheme ? 'dark' : 'light'}&id=${match[1]}`;
+			}
+
+			return null;
+		};
+
+		const proto = widget.constructor.prototype;
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const self = this;
+
+		this.register(around(proto, {
+			initDOM: (next: any) =>
+				function (arg: any) {
+					if (imageReg.test(this.url)) {
+						console.log('image widget');
+						return next.call(this, arg);
+					} else if (checkUrl(this.url)) {
+						return next.call(this, arg);
+					} else {
+						const containerEl = createEl('div', {
+							cls: 'cm-browser-widget',
+						});
+						const widgetEl = containerEl.createDiv({
+							cls: 'wb-browser-widget',
+						});
+						const urlComponent = {
+							contentEl: widgetEl,
+							url: this.url,
+							editor: arg,
+							widget: this
+						};
+						this.hookClickHandler(arg, containerEl);
+						new InNodeWebView(urlComponent, self, 'inline').onload();
+
+						return containerEl;
+					}
+					// console.log(this.hookClickHandler);
+					// return next.call(this, arg);
+				}
+		}));
+	}
+
+	private patchInlinePreview() {
+		const patchDecoration = (plugin: SurfingPlugin) => {
+			const uninstaller = around(Decoration, {
+				set(old) {
+					return function (of: Range<Decoration> | readonly Range<Decoration>[], sort?: boolean) {
+						if (Array.isArray(of)) {
+							if (!plugin.patchInlineUrl) {
+								const ranges: Range<Decoration>[] = [];
+								for (const range of of) {
+									if (!plugin.patchInlineUrl) {
+										if (range.value.widget && range.value.widget.url) {
+											plugin.patchWidget(range.value.widget);
+										}
+									}
+								}
+								return old.call(this, ranges, sort);
+							} else {
+								return old.call(this, of, sort);
+							}
+						} else {
+							return old.call(this, of, sort);
+						}
+					};
+				},
+			});
+
+			plugin.register(uninstaller);
+		};
+
+		patchDecoration(this);
 	}
 
 	private patchEmptyView() {
@@ -1003,7 +1119,7 @@ export default class SurfingPlugin extends Plugin {
 						// TODO: Move this with surfing view's constructor to prevent multiple htmlelement
 						if (this.canvas.isDragging) return;
 
-						new InNodeWebView(this, self, this?.canvas).onload();
+						new InNodeWebView(this, self, 'canvas', this?.canvas).onload();
 					};
 				},
 			});
@@ -1105,14 +1221,14 @@ class SaveBookmarkModal extends Modal {
 	}
 
 	onOpen() {
-		const { contentEl } = this;
+		const {contentEl} = this;
 		contentEl.parentElement?.classList.add("wb-bookmark-modal");
 
-		contentEl.createEl("h2", { text: "Save Bookmark" });
+		contentEl.createEl("h2", {text: "Save Bookmark"});
 
-		const btnContainerEl = contentEl.createDiv({ cls: "wb-bookmark-modal-btn-container" });
+		const btnContainerEl = contentEl.createDiv({cls: "wb-bookmark-modal-btn-container"});
 
-		const saveBtnEl = btnContainerEl.createEl("button", { text: "Save" });
+		const saveBtnEl = btnContainerEl.createEl("button", {text: "Save"});
 		saveBtnEl.onclick = async () => {
 			this.close();
 			const urlData = await nonElectronGetPageTitle(this.url);
@@ -1135,21 +1251,21 @@ class SaveBookmarkModal extends Modal {
 				modified: moment().valueOf(),
 			});
 
-			await saveJson({ bookmarks: bookmarks, categories: data.categories });
+			await saveJson({bookmarks: bookmarks, categories: data.categories});
 
 			updateBookmarkBar(bookmarks, data.categories, true);
 		};
 
-		const openBtnEl = btnContainerEl.createEl("button", { text: "Open" });
+		const openBtnEl = btnContainerEl.createEl("button", {text: "Open"});
 		openBtnEl.onclick = () => {
 			this.close();
 
-			SurfingView.spawnWebBrowserView(true, { url: this.url });
+			SurfingView.spawnWebBrowserView(true, {url: this.url});
 		};
 	}
 
 	onClose() {
-		const { contentEl } = this;
+		const {contentEl} = this;
 		contentEl.empty();
 	}
 }

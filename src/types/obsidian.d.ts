@@ -7,6 +7,10 @@ declare module "obsidian" {
 		headerEl: HTMLDivElement;
 	}
 
+	interface FileView {
+		allowNoFile: boolean;
+	}
+
 	interface App {
 		plugins: {
 			getPlugin(name: string): any;
