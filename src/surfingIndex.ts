@@ -658,53 +658,45 @@ export default class SurfingPlugin extends Plugin {
 			});
 		});
 
-		this.registerPagePreview();
 
-	}
+		const pagePreview = this.app.internalPlugins.plugins['page-preview'];
+		this.register(around(pagePreview.instance, {
+			onLinkHover(old: any) {
+				return function (hoverParent: HoverParent, targetEl: HTMLElement | null, linktext: string, sourcePath: string, state: any, ...args: any[]) {
+					if (linktext.startsWith('http://') || linktext.startsWith('https://')) {
+						let {hoverPopover} = hoverParent;
+						if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
+							return;
+						}
+						hoverPopover = new HoverPopover(hoverParent, targetEl, 100);
+						hoverPopover.hoverEl.addClass('surfing-hover-popover');
 
-	private registerPagePreview() {
-		// const pagePreview = this.app.internalPlugins.plugins['page-preview'];
-		// // if (!pagePreview.enabled) return;
-		// this.register(around(pagePreview.instance, {
-		// 	onLinkHover(old: any) {
-		// 		return function (hoverParent: HoverParent, targetEl: HTMLElement | null, linktext: string, sourcePath: string, state: any, ...args: any[]) {
-		// 			if (linktext.startsWith('http://') || linktext.startsWith('https://')) {
-		// 				let {hoverPopover} = hoverParent;
-		// 				if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
-		// 					return;
-		// 				}
-		// 				hoverPopover = new HoverPopover(hoverParent, targetEl);
-		// 				hoverPopover.hoverEl.addClass('surfing-hover-popover');
-		//
-		// 				setTimeout(() => {
-		// 					if (hoverPopover!.state !== (PopoverState as any).Hidden) {
-		// 						const parentEl = hoverPopover!.hoverEl.createDiv('surfing-hover-popover-container');
-		// 						const webView = new PopoverWebView(parentEl, linktext);
-		// 						webView.onload();
-		// 					}
-		// 				}, 100);
-		// 				return;
-		// 			}
-		//
-		// 			return old.call(this, hoverParent, targetEl, linktext, sourcePath, state, ...args);
-		// 		};
-		// 	}
-		// }));
-		//
-		// // Re-register the 'hover-link' & 'link-hover' workspace events handlers
-		// pagePreview.disable();
-		// pagePreview.enable();
-		//
-		// this.register(() => {
-		// 	if (!pagePreview.enabled) return;
-		// 	pagePreview.disable();
-		// 	pagePreview.enable();
-		// });
+						// Obsidian's native onLinkHover method has a setTimeout with 100 ms delay here,
+						// but here it causes the web page content to be displayed only in the upper half of the popover.
+						// setTimeout(() => {
+						// 	if (hoverPopover!.state !== (PopoverState as any).Hidden) {
+						const parentEl = hoverPopover!.hoverEl.createDiv('surfing-hover-popover-container');
+						const webView = new PopoverWebView(parentEl, linktext);
+						webView.onload();
+						// 	}
+						// }, 100);
+						return;
+					}
 
-		app.internalPlugins.plugins['page-preview'].disable();
-		app.internalPlugins.plugins['page-preview'].enable();
-		app.internalPlugins.plugins['page-preview'].disable();
-		app.internalPlugins.plugins['page-preview'].enable();
+					return old.call(this, hoverParent, targetEl, linktext, sourcePath, state, ...args);
+				};
+			}
+		}));
+
+		// Re-register the 'hover-link' & 'link-hover' workspace events handlers
+		pagePreview.disable();
+		pagePreview.enable();
+
+		this.register(() => {
+			if (!pagePreview.enabled) return;
+			pagePreview.disable();
+			pagePreview.enable();
+		});
 	}
 
 	private checkWebBrowser() {
