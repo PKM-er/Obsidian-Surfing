@@ -22,7 +22,6 @@ import { PopoverWebView } from "./component/PopoverWebView";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
-
 export class SurfingView extends ItemView {
 	plugin: SurfingPlugin;
 	private searchBox: searchBox;
@@ -189,7 +188,6 @@ export class SurfingView extends ItemView {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 
-
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
 				SurfingView.spawnWebBrowserView(true, {
@@ -203,6 +201,7 @@ export class SurfingView extends ItemView {
 
 			await this.registerContextMenuInWebcontents(webContents);
 			await this.registerJavascriptInWebcontents(webContents);
+
 
 			// For getting keyboard event from webview
 			webContents.on('before-input-event', (event: any, input: any) => {

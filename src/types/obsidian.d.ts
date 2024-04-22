@@ -7,6 +7,10 @@ declare module "obsidian" {
 		headerEl: HTMLDivElement;
 	}
 
+	interface FileView {
+		allowNoFile: boolean;
+	}
+
 	interface App {
 		plugins: {
 			getPlugin(name: string): any;
@@ -22,7 +26,7 @@ declare module "obsidian" {
 					instance: any;
 				};
 			};
-		};	
+		};
 		commands: any;
 		getTheme: () => string;
 	}
@@ -38,6 +42,7 @@ declare module "obsidian" {
 	}
 
 	interface HoverPopover {
+
 		targetEl: HTMLElement;	
 
 		hide(): void;

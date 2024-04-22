@@ -3,7 +3,7 @@ import { InPageHeaderBar } from "./InPageHeaderBar";
 import { clipboard, remote } from "electron";
 import { SurfingView } from "../surfingView";
 import { t } from "../translations/helper";
-import { moment } from "obsidian";
+import { ExtraButtonComponent, moment } from "obsidian";
 import { getUrl } from "../utils/url";
 import SurfingPlugin from "../surfingIndex";
 
@@ -17,22 +17,53 @@ export class InNodeWebView {
 	private currentUrl: string;
 	private plugin: SurfingPlugin;
 
-	constructor(node: any, plugin: SurfingPlugin, canvas?: any) {
+	private type: 'canvas' | 'inline';
+
+	private editor: any;
+	private widget: any;
+
+	constructor(node: any, plugin: SurfingPlugin, type: 'canvas' | 'inline', canvas?: any) {
 		this.contentEl = node.contentEl;
 		this.node = node;
 		this.canvas = canvas;
 
+
+		console.log(this.node);
+		if (this.type === 'inline') {
+			this.editor = this.node?.editor;
+			this.widget = this.node?.widget;
+		}
+
 		this.plugin = plugin;
+		this.type = type;
 	}
 
 	onload() {
 		this.contentEl.empty();
 
-		this.appendSearchBar();
+		this.type === 'canvas' && this.appendSearchBar();
+		this.type === 'inline' && this.appendShowOriginalCode();
 		this.appendWebView();
 
-		this.contentEl.addClass("wb-view-content");
+		this.contentEl.toggleClass("wb-view-content", true);
+		this.type === 'inline' && this.contentEl.toggleClass('wb-browser-inline', true);
+	}
 
+	appendShowOriginalCode() {
+		const btnEl = this.contentEl.createEl('div');
+		btnEl.addClass('wb-show-original-code');
+		new ExtraButtonComponent(btnEl).setIcon('code-2').setTooltip(t('Show original url'));
+		// 	.onClick(() => {
+		// 	// Dispatch selection event to the codemirror editor based on widget start and end position.
+		// 	const {start, end} = this.widget;
+		// 	this.editor.dispatch({
+		// 		selection: EditorSelection.create([
+		// 			EditorSelection.range(start, end - 1),
+		// 			// EditorSelection.range(6, 7),
+		// 			EditorSelection.cursor(start)
+		// 		], 0)
+		// 	});
+		// });
 	}
 
 	appendSearchBar() {
@@ -53,7 +84,7 @@ export class InNodeWebView {
 			if (oldData.url === this.currentUrl) return;
 			oldData.url = this.currentUrl;
 			this.node.setData(oldData);
-			this.node.canvas.requestSave();
+			this.node.canvas?.requestSave();
 
 			this.node.render();
 		});
@@ -277,26 +308,34 @@ export class InNodeWebView {
 		});
 
 		this.webviewEl.addEventListener("will-navigate", (event: any) => {
-			const oldData = this.node.getData();
-			oldData.url = event.url;
-			this.node.setData(oldData);
-			this.node.canvas.requestSave();
+			if (this.type === 'canvas') {
+				const oldData = this.node.getData();
+				oldData.url = event.url;
+				this.node.setData(oldData);
+				this.node.canvas?.requestSave();
+			} else {
+				this.node.url = event.url;
+			}
 		});
 
 		this.webviewEl.addEventListener("did-navigate-in-page", (event: any) => {
-			const oldData = this.node.getData();
+			if (this.type === 'canvas') {
+				const oldData = this.node.getData();
 
-			if (event.url.contains("contacts.google.com/widget") || (this.node.canvas.isDragging && oldData.url === event.url)) {
-				// @ts-ignore
-				const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
-				webContents.stop();
-				return;
+				if (event.url.contains("contacts.google.com/widget") || (this.node.canvas?.isDragging && oldData.url === event.url)) {
+					// @ts-ignore
+					const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
+					webContents.stop();
+					return;
+				}
+				if (oldData.url === event.url) return;
+				oldData.url = event.url;
+				oldData.alwaysKeepLoaded = true;
+				this.node.setData(oldData);
+				this.node.canvas?.requestSave();
+			} else {
+				this.node.url = event.url;
 			}
-			if (oldData.url === event.url) return;
-			oldData.url = event.url;
-			oldData.alwaysKeepLoaded = true;
-			this.node.setData(oldData);
-			this.node.canvas.requestSave();
 		});
 
 		this.webviewEl.addEventListener('destroyed', () => {

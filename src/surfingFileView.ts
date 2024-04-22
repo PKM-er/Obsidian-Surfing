@@ -9,12 +9,13 @@ export class SurfingFileView extends FileView {
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
+		this.allowNoFile = false;
 	}
 
 	async onLoadFile(file: TFile): Promise<void> {
 		const adapter = this.app.vault.adapter as FileSystemAdapter;
 		const urlString = "file:///" + (adapter.getBasePath() + "/" + file.path).toString().replace(/\s/g, "%20");
-		SurfingView.spawnWebBrowserView(true, { url: urlString });
+		SurfingView.spawnWebBrowserView(true, {url: urlString});
 		if (this.leaf) this.leaf.detach();
 	}
 

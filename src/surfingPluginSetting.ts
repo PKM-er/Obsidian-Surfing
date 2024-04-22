@@ -57,6 +57,7 @@ export interface SurfingSettings {
 	},
 	treeData: NodeModel<CustomData>[];
 	enableHtmlPreview: boolean;
+	supportLivePreviewInlineUrl: boolean;
 }
 
 export interface SearchEngine {
@@ -119,6 +120,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	},
 	treeData: [],
 	enableHtmlPreview: true,
+	supportLivePreviewInlineUrl: false,
 };
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
@@ -389,6 +391,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addOpenInSameTab(tabName, wbContainerEl);
 		this.addHoverPopover(tabName, wbContainerEl);
 		this.addEnableHTMLPreview(tabName, wbContainerEl);
+		this.addInlinePreview(tabName, wbContainerEl);
 		this.addRefreshButton(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
 		this.addMarkdownPath(tabName, wbContainerEl);
@@ -755,6 +758,24 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName, settingDesc);
 	}
 
+	private addInlinePreview(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = t('Enable Inline Preview');
+		const settingDesc = t('Enable inline preview with surfing. Currently only support Live preview');
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(settingDesc)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.supportLivePreviewInlineUrl)
+					.onChange(async (value) => {
+						this.plugin.settings.supportLivePreviewInlineUrl = value;
+						this.applySettingsUpdate();
+					});
+			});
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName, settingDesc);
+	}
+
 	private addReplaceIframeInCanvas(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t('[Experimental] Replace Iframe In Canvas') + t('(Reload to take effect)');
 		const setting = new Setting(wbContainerEl)
@@ -933,7 +954,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		const sendToReadWise = new Setting(wbContainerEl)
 			.setName(t("Send to ReadWise"))
-			.setDesc(t("Add a action in page haader to Send to ReadWise."))
+			.setDesc(t("Add a action in page header to Send to ReadWise."))
 			.addToggle((toggle) => {
 				toggle
 					.setValue(this.plugin.settings.bookmarkManager.sendToReadWise)

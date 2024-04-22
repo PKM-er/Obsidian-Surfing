@@ -30,7 +30,8 @@ import { loadJson, saveJson } from "./utils/json";
 import { hashCode, nonElectronGetPageTitle } from "./component/BookmarkManager/utils";
 import { TabTreeView, WEB_BROWSER_TAB_TREE_ID } from "./component/TabTreeView/TabTreeView";
 import './App.css';
-import { EditorView } from "@codemirror/view";
+import { Range } from '@codemirror/state';
+import { Decoration, EditorView, WidgetType } from "@codemirror/view";
 import { PopoverWebView } from "./component/PopoverWebView";
 import { LastOpenedFiles } from "./component/LastOpenedFiles";
 
@@ -41,6 +42,8 @@ export default class SurfingPlugin extends Plugin {
 	private onLayoutChangeEventRef: EventRef;
 	private applyURLDebounceTimer = 0;
 	private urlOpened = false;
+
+	private patchInlineUrl = false;
 
 	async onload() {
 		await this.loadSettings();
@@ -82,6 +85,7 @@ export default class SurfingPlugin extends Plugin {
 		this.patchEmptyView();
 		this.patchMarkdownPreviewRenderer();
 		this.patchProperty();
+		this.settings.supportLivePreviewInlineUrl && this.patchInlinePreview();
 
 
 		if (requireApiVersion("1.1.0") && this.settings.useWebview) {
@@ -620,12 +624,13 @@ export default class SurfingPlugin extends Plugin {
 					return function (hoverParent: HoverParent, targetEl: HTMLElement | null, linktext: string, sourcePath: string, state: any, ...args: any[]) {
 						if (linktext.startsWith('http://') || linktext.startsWith('https://')) {
 							let { hoverPopover } = hoverParent;
+              
 							if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
 								return;
 							}
 							hoverPopover = new HoverPopover(hoverParent, targetEl);
 							hoverPopover.hoverEl.addClass('surfing-hover-popover');
-	
+              
 							setTimeout(() => {
 								if (hoverPopover!.state !== (PopoverState as any).Hidden) {
 									const parentEl = hoverPopover!.hoverEl.createDiv('surfing-hover-popover-container');
@@ -635,17 +640,17 @@ export default class SurfingPlugin extends Plugin {
 							}, 100);
 							return;
 						}
-	
+
 						return old.call(this, hoverParent, targetEl, linktext, sourcePath, state, ...args);
-					}
+					};
 				}
 			}));
-	
+
 			// Re-register the 'hover-link' & 'link-hover' workspace events handlers
 			if (!pagePreview.enabled) return;
 			pagePreview.disable();
 			pagePreview.enable();
-	
+
 			this.register(() => {
 				if (!pagePreview.enabled) return;
 				pagePreview.disable();
@@ -845,6 +850,8 @@ export default class SurfingPlugin extends Plugin {
 
 			const renderer = property.rendered;
 
+			if (!renderer?.constructor) return false;
+
 			this.register(
 				around(renderer.constructor.prototype, {
 					render: (next: any) =>
@@ -921,6 +928,105 @@ export default class SurfingPlugin extends Plugin {
 				this.registerEvent(evt);
 			}
 		});
+	}
+
+	private patchWidget(widget: WidgetType) {
+		this.patchInlineUrl = true;
+		console.log(widget);
+
+		const jA = /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com|youtu\.be)(?:\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(?:\??(?:t|start)=([0-9]+))?(?:\S+)?$/
+			, WA = /^(?:https?:\/\/)?(?:mobile\.)?twitter\.com\/.+\/(\d+)/;
+		const imageReg = /^https?:\/\/.*\/.*\.(png|gif|webp|jpeg|jpg)($|\?.*$)/gmi;
+
+		const checkUrl = (url: any) => {
+			if (!url || typeof url !== 'string') {
+				return null;
+			}
+
+			let match = url.match(jA);
+			if (match) {
+				let youtubeUrl = `https://www.youtube.com/embed/${match[1]}`;
+				if (match[2]) {
+					youtubeUrl += `?start=${match[2]}`;
+				}
+				return youtubeUrl;
+			}
+
+			match = url.match(WA);
+			if (match) {
+				const isDarkTheme = document.body.classList.contains('theme-dark');
+				return `https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=${isDarkTheme ? 'dark' : 'light'}&id=${match[1]}`;
+			}
+
+			return null;
+		};
+
+		const proto = widget.constructor.prototype;
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const self = this;
+
+		this.register(around(proto, {
+			initDOM: (next: any) =>
+				function (arg: any) {
+					if (imageReg.test(this.url)) {
+						console.log('image widget');
+						return next.call(this, arg);
+					} else if (checkUrl(this.url)) {
+						return next.call(this, arg);
+					} else {
+						const containerEl = createEl('div', {
+							cls: 'cm-browser-widget',
+						});
+						const widgetEl = containerEl.createDiv({
+							cls: 'wb-browser-widget',
+						});
+						const urlComponent = {
+							contentEl: widgetEl,
+							url: this.url,
+							editor: arg,
+							widget: this
+						};
+						this.hookClickHandler(arg, containerEl);
+						new InNodeWebView(urlComponent, self, 'inline').onload();
+
+						return containerEl;
+					}
+					// console.log(this.hookClickHandler);
+					// return next.call(this, arg);
+				}
+		}));
+	}
+
+	private patchInlinePreview() {
+		const patchDecoration = (plugin: SurfingPlugin) => {
+			const uninstaller = around(Decoration, {
+				set(old) {
+					return function (of: Range<Decoration> | readonly Range<Decoration>[], sort?: boolean) {
+						if (Array.isArray(of)) {
+							if (!plugin.patchInlineUrl) {
+								const ranges: Range<Decoration>[] = [];
+								for (const range of of) {
+									if (!plugin.patchInlineUrl) {
+										if (range.value.widget && range.value.widget.url) {
+											plugin.patchWidget(range.value.widget);
+										}
+									}
+								}
+								return old.call(this, ranges, sort);
+							} else {
+								return old.call(this, of, sort);
+							}
+						} else {
+							return old.call(this, of, sort);
+						}
+					};
+				},
+			});
+
+			plugin.register(uninstaller);
+		};
+
+		patchDecoration(this);
 	}
 
 	private patchEmptyView() {
@@ -1006,7 +1112,7 @@ export default class SurfingPlugin extends Plugin {
 						// TODO: Move this with surfing view's constructor to prevent multiple htmlelement
 						if (this.canvas.isDragging) return;
 
-						new InNodeWebView(this, self, this?.canvas).onload();
+						new InNodeWebView(this, self, 'canvas', this?.canvas).onload();
 					};
 				},
 			});

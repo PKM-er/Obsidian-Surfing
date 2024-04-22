@@ -89,10 +89,13 @@ export default {
 	'Copy failed, you may focus on surfing view, click the title bar, and try again.': '复制失败，你可能聚焦到了 Surfing 视图，点击标题栏，然后再试一次。',
 	"Default Category (Use , to split)": "默认分类 (用,分层)",
 	"Send to ReadWise": "发送到 ReadWise",
-	"Add a action in page haader to Send to ReadWise.": "在页面标题栏中添加一个动作来发送到 ReadWise。",
+	"Add a action in page header to Send to ReadWise.": "在页面标题栏中添加一个动作来发送到 ReadWise。",
 	'Disable / to search when on these sites': '当在这些网站中禁止按 / 来搜索的功能',
 	'Show a popover when hover on the link.': '当鼠标悬停在链接上时显示一个弹出窗口。',
 	'Hover Popover': '悬停弹出窗口',
+	'Show original url': '显示原始链接',
+	'Enable Inline Preview': '启用内联预览',
+	'Enable inline preview with surfing. Currently only support Live preview': '启用 Surfing 的内联预览。目前仅支持实时预览',
 	'Enable HTML Preview': '启用 HTML 预览',
-	'Enable HTML Preview in Surfing': '在 Surfing 中启用 HTML 预览',
+	'Enable HTML Preview in Surfing': '在 Surfing 中启用 HTML 预览'
 };
