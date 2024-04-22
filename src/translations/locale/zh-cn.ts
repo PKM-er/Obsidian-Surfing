@@ -96,4 +96,6 @@ export default {
 	'Show original url': '显示原始链接',
 	'Enable Inline Preview': '启用内联预览',
 	'Enable inline preview with surfing. Currently only support Live preview': '启用 Surfing 的内联预览。目前仅支持实时预览',
+	'Enable HTML Preview': '启用 HTML 预览',
+	'Enable HTML Preview in Surfing': '在 Surfing 中启用 HTML 预览',
 };
