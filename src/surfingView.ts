@@ -22,17 +22,6 @@ import { PopoverWebView } from "./component/PopoverWebView";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
 
-
-// export function listenToLoginEvent() {
-// 	console.log(app);
-// 	app?.on('login', (event, webContents, details, authInfo, callback) => {
-// 		event.preventDefault();
-// 		console.log('login', details, authInfo, event, webContents);
-// 		callback('username', 'secret');
-// 	});
-// }
-
-
 export class SurfingView extends ItemView {
 	plugin: SurfingPlugin;
 	private searchBox: searchBox;
@@ -199,12 +188,6 @@ export class SurfingView extends ItemView {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
 
-			// webContents.on('login', (event, webContents, details, authInfo, callback) => {
-			// 	event.preventDefault();
-			// 	console.log('login', details, authInfo, event, webContents);
-			// 	// callback('username', 'secret');
-			// });
-
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
 				SurfingView.spawnWebBrowserView(true, {
@@ -365,11 +348,6 @@ export class SurfingView extends ItemView {
 				this.createWebview();
 			}
 		});
-
-
-		// this.webviewEl.addEventListener('login', ()=> {
-		//
-		// })
 
 		// TODO: Support dark reader soon.
 		// this.frame.addEventListener("did-finish-load", (event: any) => {
