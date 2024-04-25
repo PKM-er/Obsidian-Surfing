@@ -1982,3 +1982,24 @@ div[data-type^="surfing-tab-tree"] ul li {
 .popover.hover-editor .popover-content:has(div[data-type^="surfing-view"]) {
 	width: 100%;
 }
+
+.cm-browser-widget {
+	border: 1px solid var(--background-modifier-border);
+}
+
+.cm-browser-widget .wb-browser-inline {
+	height: max(4vw, 400px);
+}
+
+.cm-browser-widget .wb-show-original-code {
+	position: absolute;
+	right: var(--size-4-2);
+	top: var(--size-4-2);
+	visibility: hidden;
+}
+
+.cm-browser-widget:hover .wb-show-original-code {
+	visibility: visible;
+}
+
+

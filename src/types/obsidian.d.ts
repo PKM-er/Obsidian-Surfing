@@ -1,10 +1,16 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import * as obsidian from 'obsidian';
-import { EditorPosition, MarkdownPreviewRenderer, Scope } from "obsidian";
+import { EditorPosition, EventRef, MarkdownPreviewRenderer, Scope } from "obsidian";
+import { SurfingView } from "../surfingView";
 
 declare module "obsidian" {
 	export interface ItemView {
 		headerEl: HTMLDivElement;
+		titleContainerEl: HTMLDivElement;
+	}
+
+	interface FileView {
+		allowNoFile: boolean;
 	}
 
 	interface FileView {
@@ -42,8 +48,7 @@ declare module "obsidian" {
 	}
 
 	interface HoverPopover {
-
-		targetEl: HTMLElement;	
+		targetEl: HTMLElement;
 
 		hide(): void;
 
@@ -70,6 +75,10 @@ declare module "obsidian" {
 		activeTime: number
 		rebuildView: () => void;
 		setDimension: (dimension: any) => void;
+	}
+
+	interface Workspace {
+		on(name: 'surfing:page-change', callback: (url: string, view: SurfingView) => any, ctx?: any): EventRef;
 	}
 
 	export interface WorkspaceItem {
