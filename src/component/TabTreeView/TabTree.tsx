@@ -1,5 +1,5 @@
 import SurfingPlugin from "../../surfingIndex";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import {
 	Tree,
@@ -24,17 +24,23 @@ interface Props {
 export const useDndProvider = () => {
 	const [dndArea, setDndArea] = useState<Node | undefined>();
 	const handleRef = React.useCallback((node: Node | undefined | null) => setDndArea(node as Node), []);
+
+	useEffect(() => {
+		const view = document.body.find(`div[data-type="surfing-tab-tree"]`);
+		setDndArea(view);
+	}, []);
+
 	const html5Options = React.useMemo(
-		() => ({ rootElement: dndArea }),
+		() => ({rootElement: dndArea}),
 		[dndArea]
 	);
-	return { dndArea, handleRef, html5Options };
+	return {dndArea, handleRef, html5Options};
 };
 
 export default function TabTree(props: Props) {
 	const [treeData, setTreeData] = useState<NodeModel<CustomData>[]>(props.plugin.settings.treeData || []);
 	const handleDrop = (newTree: NodeModel<CustomData>[]) => setTreeData(newTree);
-	const { dndArea, handleRef, html5Options } = useDndProvider();
+	const {dndArea, handleRef, html5Options} = useDndProvider();
 
 	const [selectedNode, setSelectedNode] = useState<NodeModel<CustomData> | null>(null);
 	const handleSelect = (node: NodeModel) => {
@@ -64,7 +70,7 @@ export default function TabTree(props: Props) {
 					}).open();
 				});
 		});
-		menu.showAtPosition({ x: e.clientX, y: e.clientY });
+		menu.showAtPosition({x: e.clientX, y: e.clientY});
 	};
 
 
@@ -82,7 +88,7 @@ export default function TabTree(props: Props) {
 		if (!treeData) return;
 		props.plugin.settings.treeData = treeData;
 		props.plugin.settingsTab.applySettingsUpdate();
-	}, [treeData])
+	}, [treeData]);
 
 	React.useEffect(() => {
 		if (treeData.length > 0) return;
@@ -118,14 +124,14 @@ export default function TabTree(props: Props) {
 						}
 					]);
 					(leaf.view as SurfingView).webviewEl.addEventListener("dom-ready", () => {
-						updateTabsData(leaf.view as SurfingView);
+						updateTabsData(leaf.view as SurfingView, '');
 					});
 				}
 			});
 		};
 	}, []);
 
-	const updateTabsData = React.useCallback((activeView: SurfingView) => {
+	const updateTabsData = React.useCallback((activeView: SurfingView, url: string) => {
 		//@ts-ignore
 		setTreeData((prevTreeData) => {
 			const existingNodeIndex = prevTreeData.findIndex(node => node.id === activeView.leaf.id);
@@ -136,7 +142,7 @@ export default function TabTree(props: Props) {
 					...prevTreeData.slice(0, existingNodeIndex),
 					{
 						...existingNode,
-						text: activeView.currentTitle,
+						text: url || activeView.currentTitle,
 						data: {
 							...existingNode.data,
 							icon: activeView.favicon,
@@ -152,7 +158,7 @@ export default function TabTree(props: Props) {
 						"id": activeView.leaf.id,
 						"parent": 0,
 						"droppable": true,
-						"text": activeView.currentTitle,
+						"text": url || activeView.currentTitle,
 						"data": {
 							"fileType": "site",
 							"fileSize": "",
@@ -168,78 +174,87 @@ export default function TabTree(props: Props) {
 		return !treeData.some(obj => obj.id === leafID);
 	};
 
-	props.plugin.app.workspace.on("layout-change", () => {
-		const activeView = props.plugin.app.workspace.getActiveViewOfType(ItemView);
-		if (activeView?.getViewType() === WEB_BROWSER_VIEW_ID && checkExist(activeView.leaf.id)) {
-			updateTabsData(activeView as SurfingView);
-			(activeView as SurfingView).webviewEl.addEventListener("dom-ready", () => {
-				updateTabsData(activeView as SurfingView);
-			});
-			return;
-		}
+	useEffect(() => {
+		props.plugin.app.workspace.on('surfing:page-change', (url: string, view: SurfingView) => {
+			if (checkExist(view.leaf.id)) {
+				updateTabsData(view, url);
+			}
+		});
 
-		const leaves = props.plugin.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
-		if (leaves.length === 0) {
-			setTreeData([]);
-			return;
-		}
-	});
+
+		props.plugin.app.workspace.on("layout-change", () => {
+			// const activeView = props.plugin.app.workspace.getActiveViewOfType(ItemView);
+			// if (activeView?.getViewType() === WEB_BROWSER_VIEW_ID && checkExist(activeView.leaf.id)) {
+			// 	updateTabsData(activeView as SurfingView);
+			// 	(activeView as SurfingView).webviewEl.addEventListener("dom-ready", () => {
+			// 		updateTabsData(activeView as SurfingView);
+			// 	});
+			// 	return;
+			// }
+
+			const leaves = props.plugin.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
+			if (leaves.length === 0) {
+				setTreeData([]);
+				return;
+			}
+		});
+	}, []);
 
 	return (
 		treeData.length > 0 ? (
-			<div ref={ handleRef } className={ styles.container }>
-				<DndProvider backend={ MultiBackend } options={ getBackendOptions(
+			<div ref={handleRef} className={styles.container}>
+				<DndProvider backend={MultiBackend} options={getBackendOptions(
 					{
 						html5: {
 							rootElement: dndArea
 						}
 					}
-				) }>
-					<div className={ styles.app } onContextMenu={ handleContextMenu }>
+				)}>
+					<div className={styles.app} onContextMenu={handleContextMenu}>
 						<Tree
-							tree={ treeData }
-							rootId={ 0 }
-							render={ (node, { depth, isOpen, hasChild, onToggle }) => (
+							tree={treeData}
+							rootId={0}
+							render={(node, {depth, isOpen, hasChild, onToggle}) => (
 								<CustomNode
-									node={ node }
-									depth={ depth }
-									isOpen={ isOpen }
-									onToggle={ onToggle }
-									hasChild={ hasChild }
-									isSelected={ node.id === selectedNode?.id }
-									onSelect={ handleSelect }
+									node={node}
+									depth={depth}
+									isOpen={isOpen}
+									onToggle={onToggle}
+									hasChild={hasChild}
+									isSelected={node.id === selectedNode?.id}
+									onSelect={handleSelect}
 								/>
-							) }
-							dragPreviewRender={ (monitorProps) => (
-								<CustomDragPreview monitorProps={ monitorProps }/>
-							) }
-							onDrop={ handleDrop }
-							classes={ {
+							)}
+							dragPreviewRender={(monitorProps) => (
+								<CustomDragPreview monitorProps={monitorProps}/>
+							)}
+							onDrop={handleDrop}
+							classes={{
 								root: styles.treeRoot,
 								draggingSource: styles.draggingSource,
 								placeholder: styles.placeholderContainer
-							} }
-							sort={ false }
-							insertDroppableFirst={ false }
-							canDrop={ (tree, { dragSource, dropTargetId }) => {
+							}}
+							sort={false}
+							insertDroppableFirst={false}
+							canDrop={(tree, {dragSource, dropTargetId}) => {
 								if (dragSource?.parent === dropTargetId) {
 									return true;
 								}
-							} }
-							dropTargetOffset={ 10 }
-							placeholderRender={ (node, { depth }) => (
-								<Placeholder node={ node } depth={ depth }/>
-							) }
+							}}
+							dropTargetOffset={10}
+							placeholderRender={(node, {depth}) => (
+								<Placeholder node={node} depth={depth}/>
+							)}
 						/>
 					</div>
 				</DndProvider>
 			</div>
 
-		) : (<div className={ `${ styles.app } tab-tree-empty-container` }>
-			<div className={ `tab-tree-empty-state` }>
-				<CrownTwoTone size={ 64 } width={ 64 } height={ 64 }/>
+		) : (<div className={`${styles.app} tab-tree-empty-container`}>
+			<div className={`tab-tree-empty-state`}>
+				<CrownTwoTone size={64} width={64} height={64}/>
 				<span>
-				{ "No surfing tabs open" }
+				{"No surfing tabs open"}
 			</span>
 			</div>
 		</div>)

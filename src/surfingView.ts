@@ -321,6 +321,9 @@ export class SurfingView extends ItemView {
 			if (this.omnisearchEnabled) this.updateSearchBox();
 			this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
 			this.currentTitle = event.title;
+
+
+			this.app.workspace.trigger('surfing:page-change', event.title, this);
 		});
 
 		this.webviewEl.addEventListener("will-navigate", (event: any) => {
@@ -376,7 +379,7 @@ export class SurfingView extends ItemView {
 		this.navigation = true;
 
 		// Create search bar in the header bar.
-		this.headerBar = new HeaderBar(this.headerEl.children[2], this.plugin, this, true);
+		this.headerBar = new HeaderBar(this.titleContainerEl, this.plugin, this, true);
 		this.headerBar.onLoad();
 
 		// Create favicon image element.
@@ -970,6 +973,7 @@ export class SurfingView extends ItemView {
 				this.headerEl.children[1].children[0].setAttribute("aria-disabled", "false");
 			}
 		}
+
 
 		// TODO: move this to utils.ts
 		// Support both http:// and https://

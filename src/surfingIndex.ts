@@ -144,7 +144,7 @@ export default class SurfingPlugin extends Plugin {
 		if (currentView.getViewType() != "empty" && currentView.getViewType() !== 'home-tab-view') return;
 		// Check if the "New tab" view has already been processed and has a header bar already.
 		if (!currentView.headerEl.children[2].hasClass("web-browser-header-bar")) {
-			const headerBar = new HeaderBar(currentView.headerEl.children[2], this, currentView);
+			const headerBar = new HeaderBar(currentView.titleContainerEl, this, currentView);
 			headerBar.onLoad();
 			// Focus on current inputEl
 			if (!this.settings.showSearchBarInPage) headerBar.focus();
@@ -194,9 +194,9 @@ export default class SurfingPlugin extends Plugin {
 		if (currentView.getViewType() != "empty" && currentView.getViewType() !== 'home-tab-view') return;
 
 		// Check if the "New tab" view has already been processed and has a header bar already.
-		if (currentView.headerEl.children[2].hasClass("wb-header-bar")) {
-			currentView.headerEl.children[2].empty();
-			currentView.headerEl.children[2].removeClass("wb-header-bar");
+		if (currentView.titleContainerEl.hasClass("wb-header-bar")) {
+			currentView.titleContainerEl.empty();
+			currentView.titleContainerEl.removeClass("wb-header-bar");
 		}
 
 		// Remove config icon
@@ -623,14 +623,14 @@ export default class SurfingPlugin extends Plugin {
 				onLinkHover(old: any) {
 					return function (hoverParent: HoverParent, targetEl: HTMLElement | null, linktext: string, sourcePath: string, state: any, ...args: any[]) {
 						if (linktext.startsWith('http://') || linktext.startsWith('https://')) {
-							let { hoverPopover } = hoverParent;
-              
+							let {hoverPopover} = hoverParent;
+
 							if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
 								return;
 							}
 							hoverPopover = new HoverPopover(hoverParent, targetEl);
 							hoverPopover.hoverEl.addClass('surfing-hover-popover');
-              
+
 							setTimeout(() => {
 								if (hoverPopover!.state !== (PopoverState as any).Hidden) {
 									const parentEl = hoverPopover!.hoverEl.createDiv('surfing-hover-popover-container');

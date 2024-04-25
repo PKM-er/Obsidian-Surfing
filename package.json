@@ -1,6 +1,6 @@
 {
 	"name": "surfing",
-	"version": "0.9.9",
+	"version": "0.9.10",
 	"description": "Use surfing to surf the net in Obsidian.",
 	"main": "main.js",
 	"scripts": {
@@ -20,7 +20,7 @@
 		"@codemirror/language": "^6.2.1",
 		"@codemirror/state": "^6.1.2",
 		"@codemirror/view": "^6.3.0",
-		"@minoru/react-dnd-treeview": "^3.4.1",
+		"@minoru/react-dnd-treeview": "^3.4.4",
 		"@mui/icons-material": "^5.11.0",
 		"@popperjs/core": "^2.11.6",
 		"@rollup/plugin-commonjs": "^25.0.7",
