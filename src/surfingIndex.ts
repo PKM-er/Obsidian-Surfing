@@ -623,8 +623,8 @@ export default class SurfingPlugin extends Plugin {
 				onLinkHover(old: any) {
 					return function (hoverParent: HoverParent, targetEl: HTMLElement | null, linktext: string, sourcePath: string, state: any, ...args: any[]) {
 						if (linktext.startsWith('http://') || linktext.startsWith('https://')) {
-							let {hoverPopover} = hoverParent;
 
+							let { hoverPopover } = hoverParent;
 							if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
 								return;
 							}

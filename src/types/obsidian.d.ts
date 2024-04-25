@@ -13,6 +13,10 @@ declare module "obsidian" {
 		allowNoFile: boolean;
 	}
 
+	interface FileView {
+		allowNoFile: boolean;
+	}
+
 	interface App {
 		plugins: {
 			getPlugin(name: string): any;
@@ -44,7 +48,6 @@ declare module "obsidian" {
 	}
 
 	interface HoverPopover {
-
 		targetEl: HTMLElement;
 
 		hide(): void;
