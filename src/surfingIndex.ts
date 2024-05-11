@@ -30,7 +30,6 @@ import { loadJson, saveJson } from "./utils/json";
 import { hashCode, nonElectronGetPageTitle } from "./component/BookmarkManager/utils";
 import { TabTreeView, WEB_BROWSER_TAB_TREE_ID } from "./component/TabTreeView/TabTreeView";
 import './App.css';
-import { Range } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType } from "@codemirror/view";
 import { PopoverWebView } from "./component/PopoverWebView";
 import { LastOpenedFiles } from "./component/LastOpenedFiles";
@@ -624,7 +623,7 @@ export default class SurfingPlugin extends Plugin {
 					return function (hoverParent: HoverParent, targetEl: HTMLElement | null, linktext: string, sourcePath: string, state: any, ...args: any[]) {
 						if (linktext.startsWith('http://') || linktext.startsWith('https://')) {
 
-							let { hoverPopover } = hoverParent;
+							let {hoverPopover} = hoverParent;
 							if (hoverPopover && hoverPopover.state !== (PopoverState as any).Hidden && hoverPopover.targetEl === targetEl) {
 								return;
 							}
@@ -1001,24 +1000,16 @@ export default class SurfingPlugin extends Plugin {
 		const patchDecoration = (plugin: SurfingPlugin) => {
 			const uninstaller = around(Decoration, {
 				set(old) {
-					return function (of: Range<Decoration> | readonly Range<Decoration>[], sort?: boolean) {
-						if (Array.isArray(of)) {
-							if (!plugin.patchInlineUrl) {
-								const ranges: Range<Decoration>[] = [];
-								for (const range of of) {
-									if (!plugin.patchInlineUrl) {
-										if (range.value.widget && range.value.widget.url) {
-											plugin.patchWidget(range.value.widget);
-										}
-									}
+					return function (a: any, sort?: boolean) {
+						if (Array.isArray(a)) {
+							for (const item of a) {
+								if (item.value.widget && item.value.widget.url !== undefined) {
+									plugin.patchWidget(item.value.widget);
+									uninstaller();
 								}
-								return old.call(this, ranges, sort);
-							} else {
-								return old.call(this, of, sort);
 							}
-						} else {
-							return old.call(this, of, sort);
 						}
+						return old.call(this, a, sort);
 					};
 				},
 			});

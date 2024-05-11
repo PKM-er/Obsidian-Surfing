@@ -887,4 +887,8 @@ div[data-type^="surfing-tab-tree"] ul li {
 	visibility: visible;
 }
 
+.surfing-hover-popover {
+	z-index: 99999;
+}
+
 
