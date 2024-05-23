@@ -58,6 +58,7 @@ export interface SurfingSettings {
 	treeData: NodeModel<CustomData>[];
 	enableHtmlPreview: boolean;
 	supportLivePreviewInlineUrl: boolean;
+	enableTreeView: boolean;
 }
 
 export interface SearchEngine {
@@ -121,6 +122,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	treeData: [],
 	enableHtmlPreview: true,
 	supportLivePreviewInlineUrl: false,
+	enableTreeView: false,
 };
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
@@ -391,6 +393,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addOpenInSameTab(tabName, wbContainerEl);
 		this.addHoverPopover(tabName, wbContainerEl);
 		this.addEnableHTMLPreview(tabName, wbContainerEl);
+		this.addTreeView(tabName, wbContainerEl);
 		this.addInlinePreview(tabName, wbContainerEl);
 		this.addRefreshButton(tabName, wbContainerEl);
 		this.addHighlightFormat(tabName, wbContainerEl);
@@ -756,6 +759,25 @@ export class SurfingSettingTab extends PluginSettingTab {
 			});
 
 		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName, settingDesc);
+	}
+
+	private addTreeView(tabName: string, wbContainerEl: HTMLElement) {
+		const settingName = t('Enable Tree View');
+		const settingDesc = t('Enable Tree View in Surfing');
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(settingDesc)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.enableTreeView)
+					.onChange(async (value) => {
+						this.plugin.settings.enableTreeView = value;
+						this.applySettingsUpdate();
+					});
+			});
+
+		this.addSettingToMasterSettingsList(tabName, setting.settingEl, settingName, settingDesc);
+
 	}
 
 	private addInlinePreview(tabName: string, wbContainerEl: HTMLElement) {

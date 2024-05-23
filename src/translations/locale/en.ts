@@ -100,4 +100,6 @@ export default {
 	'Show original url': 'Show original url',
 	'Enable Inline Preview': 'Enable Inline Preview',
 	'Enable inline preview with surfing. Currently only support Live preview': 'Enable inline preview with surfing. Currently only support Live preview',
+	'Enable Tree View in Surfing': 'Enable Tree View in Surfing',
+	'Enable Tree View': 'Enable Tree View',
 };

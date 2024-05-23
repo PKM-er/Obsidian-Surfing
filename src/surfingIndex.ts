@@ -53,7 +53,7 @@ export default class SurfingPlugin extends Plugin {
 
 		this.registerView(WEB_BROWSER_VIEW_ID, (leaf) => new SurfingView(leaf, this));
 		this.registerView(WEB_BROWSER_FILE_VIEW_ID, (leaf) => new SurfingFileView(leaf));
-		this.registerView(WEB_BROWSER_TAB_TREE_ID, (leaf) => new TabTreeView(leaf, this));
+		this.settings.enableTreeView && this.registerView(WEB_BROWSER_TAB_TREE_ID, (leaf) => new TabTreeView(leaf, this));
 		if (this.settings.bookmarkManager.openBookMark) this.registerView(WEB_BROWSER_BOOKMARK_MANAGER_ID, (leaf) => new SurfingBookmarkManagerView(leaf, this));
 
 		try {
@@ -101,7 +101,7 @@ export default class SurfingPlugin extends Plugin {
 	onunload() {
 		this.app.workspace.detachLeavesOfType(WEB_BROWSER_VIEW_ID);
 		this.app.workspace.detachLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID);
-		this.app.workspace.detachLeavesOfType(WEB_BROWSER_TAB_TREE_ID);
+		this.settings.enableTreeView && this.app.workspace.detachLeavesOfType(WEB_BROWSER_TAB_TREE_ID);
 		this.app.workspace.offref(this.onLayoutChangeEventRef);
 
 		// Clean up header bar added to "New tab" views when plugin is disabled.
@@ -119,6 +119,7 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	onLayoutReady(): void {
+		if (!this.settings.enableTreeView) return;
 		if (this.app.workspace.getLeavesOfType(WEB_BROWSER_TAB_TREE_ID).length) {
 			return;
 		}
