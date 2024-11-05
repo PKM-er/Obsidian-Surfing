@@ -221,13 +221,10 @@ export class SurfingView extends ItemView {
 				});
 
 				// TODO: Allow set hotkey in webview;
+
+                //Set whether to focus on the address bar when pressing "/" according to the configured filtering options
 				if (emulatedKeyboardEvent.key === '/') {
-					if (!this.plugin.settings.ignoreList.find((item: string) => this.currentUrl.contains(item.toLowerCase()))) {
-						webContents.executeJavaScript(`
-											document.activeElement instanceof HTMLInputElement
-										`, true).then((result: any) => {
-							if (!result) this.headerBar.focus();
-						});
+					if (this.plugin.settings.ignoreList.find((item: string) => this.currentUrl.contains(item.toLowerCase()))) {
 						return;
 					}
 				}
