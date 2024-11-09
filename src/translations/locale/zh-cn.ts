@@ -91,6 +91,7 @@ export default {
 	"Send to ReadWise": "发送到 ReadWise",
 	"Add a action in page header to Send to ReadWise.": "在页面标题栏中添加一个动作来发送到 ReadWise。",
 	'Disable / to search when on these sites': '当在这些网站中禁止按 / 来搜索的功能',
+	'Focus search bar via keyboard': '通过键盘聚焦到搜索栏',
 	'Show a popover when hover on the link.': '当鼠标悬停在链接上时显示一个弹出窗口。',
 	'Hover Popover': '悬停弹出窗口',
 	'Show original url': '显示原始链接',

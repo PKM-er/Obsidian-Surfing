@@ -64,7 +64,7 @@ the current browser URL within Obsidain.
 
 ## Installation
 
-- Not ready for market yet
+- Search `Surfing` in the Obsidian Community Plugin marketplace.
 - Can be installed via the [Brat](https://github.com/TfTHacker/obsidian42-brat) plugin
 - Manual installation
 

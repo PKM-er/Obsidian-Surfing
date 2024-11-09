@@ -27,8 +27,6 @@ export class InNodeWebView {
 		this.node = node;
 		this.canvas = canvas;
 
-
-		console.log(this.node);
 		if (this.type === 'inline') {
 			this.editor = this.node?.editor;
 			this.widget = this.node?.widget;
@@ -73,7 +71,7 @@ export class InNodeWebView {
 		this.searchBarEl.setSearchBarUrl(this.node.url);
 
 		this.searchBarEl.addOnSearchBarEnterListener((url: string) => {
-			const finalURL = getUrl(url);
+			const finalURL = getUrl(url, this.plugin);
 			if (finalURL) this.currentUrl = finalURL;
 			else this.currentUrl = url;
 
@@ -95,6 +93,7 @@ export class InNodeWebView {
 		this.webviewEl = doc.createElement('webview');
 		this.webviewEl.setAttribute("allowpopups", "");
 		this.webviewEl.addClass("wb-frame");
+		const self = this;
 
 		if (this.currentUrl) this.webviewEl.setAttribute("src", this.currentUrl);
 		else this.webviewEl.setAttribute("src", this.node.url);
@@ -107,7 +106,7 @@ export class InNodeWebView {
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
 				if (event.disposition !== "foreground-tab") {
-					SurfingView.spawnWebBrowserView(true, {url: event.url});
+					SurfingView.spawnWebBrowserView(self.plugin, true, {url: event.url});
 					return {
 						action: "allow",
 					};
@@ -136,7 +135,7 @@ export class InNodeWebView {
 			});
 
 			try {
-				const pluginSettings = app.plugins.getPlugin("surfing").settings;
+				const pluginSettings = this.plugin.settings;
 				const highlightFormat = pluginSettings.highlightFormat;
 				const getCurrentTime = () => {
 					let link = "";
@@ -211,13 +210,13 @@ export class InNodeWebView {
 				);
 
 				if (params.selectionText) {
-					const pluginSettings = app.plugins.getPlugin("surfing").settings;
+					const pluginSettings = this.plugin.settings;
 
 					menu.append(new MenuItem({type: 'separator'}));
 					menu.append(new MenuItem({
 						label: t('Search Text'), click: function () {
 							try {
-								SurfingView.spawnWebBrowserView(true, {url: params.selectionText});
+								SurfingView.spawnWebBrowserView(self.plugin, true, {url: params.selectionText});
 								console.log('Page URL copied to clipboard');
 							} catch (err) {
 								console.error('Failed to copy: ', err);

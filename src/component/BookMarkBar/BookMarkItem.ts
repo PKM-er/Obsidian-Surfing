@@ -87,8 +87,8 @@ export class BookMarkItem {
 										window.open(bookmarkItem.url, "_blank", "external");
 										return;
 									}
-									if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
-									else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
+									if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(this.plugin, 	false, { url: bookmarkItem.url });
+									else SurfingView.spawnWebBrowserView(this.plugin, true, { url: bookmarkItem.url });
 								})
 						});
 					});
@@ -113,8 +113,8 @@ export class BookMarkItem {
 								window.open(bookmarkItem.url, "_blank", "external");
 								return;
 							}
-							if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
-							else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
+							if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(this.plugin, false, { url: bookmarkItem.url });
+							else SurfingView.spawnWebBrowserView(this.plugin, true, { url: bookmarkItem.url });
 						})
 				});
 			});
@@ -145,8 +145,8 @@ export class BookMarkItem {
 						window.open(bookmarkItem.url, "", "external");
 						return;
 					}
-					if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(false, { url: bookmarkItem.url });
-					else SurfingView.spawnWebBrowserView(true, { url: bookmarkItem.url });
+					if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(this.plugin, false, { url: bookmarkItem.url });
+					else SurfingView.spawnWebBrowserView(this.plugin, true, { url: bookmarkItem.url });
 				}
 			});
 		}

@@ -62,7 +62,7 @@ export class InPageSearchBar extends Component {
 			window.getSelection()?.removeAllRanges();
 		});
 
-		if (this.plugin.settings.showOtherSearchEngines) this.searchEnginesSuggester = new SearchEngineSuggester(app, this.plugin, this.inPageSearchBarInputEl, this.view);
+		if (this.plugin.settings.showOtherSearchEngines) this.searchEnginesSuggester = new SearchEngineSuggester(this.plugin.app, this.plugin, this.inPageSearchBarInputEl, this.view);
 	}
 
 	addOnSearchBarEnterListener(listener: (url: string) => void) {

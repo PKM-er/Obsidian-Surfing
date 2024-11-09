@@ -80,7 +80,7 @@ export class FileSuggester extends TextInputSuggest<CustomItem> {
         switch (item.type) {
             case 'web': {
                 const finalUrl = getComposedUrl("", item.path);
-                SurfingView.spawnWebBrowserView(false, {url: finalUrl});
+                SurfingView.spawnWebBrowserView(this.plugin, false, {url: finalUrl});
                 break;
             }
             case 'file': {

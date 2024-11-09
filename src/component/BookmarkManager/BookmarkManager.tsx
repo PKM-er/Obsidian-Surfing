@@ -88,7 +88,7 @@ export default function BookmarkManager(props: Props) {
 								window.open(record.url, "_blank", "external");
 								return;
 							}
-							SurfingView.spawnWebBrowserView(true, {
+							SurfingView.spawnWebBrowserView(props.plugin, true, {
 								url: record.url,
 							});
 						}}
@@ -284,7 +284,7 @@ export default function BookmarkManager(props: Props) {
 			setCategories(tempCategories);
 
 			if (tempCategories) {
-				saveJson({
+				saveJson(props.plugin, {
 					bookmarks: bookmarks,
 					categories: tempCategories,
 				});
@@ -331,12 +331,12 @@ export default function BookmarkManager(props: Props) {
 
 		setBookmarks(newBookmarks.filter((bookmark) => bookmark.id !== oldBookmark.id));
 
-		await saveJson({
+		await saveJson(props.plugin, {
 			bookmarks: bookmarksRef.current,
 			categories: props.categories,
 		});
 
-		updateBookmarkBar(bookmarksRef.current, props.categories, false);
+		updateBookmarkBar(props.plugin, bookmarksRef.current, props.categories, false);
 	};
 
 	const handleImportFinished = async (importedBookmarks: Bookmark[]): Promise<void> => {
@@ -377,12 +377,12 @@ export default function BookmarkManager(props: Props) {
 			setModalVisible(false);
 		}
 
-		await saveJson({
+		await saveJson(props.plugin, {
 			bookmarks: bookmarks,
 			categories: props.categories,
 		});
 
-		updateBookmarkBar(bookmarks, props.categories, false);
+		updateBookmarkBar(props.plugin, bookmarks, props.categories, false);
 	};
 
 	const importProps = {
@@ -391,10 +391,10 @@ export default function BookmarkManager(props: Props) {
 
 	return (
 		<div className="surfing-bookmark-manager">
-			<ConfigProvider
+			<ConfigProvider 
 				theme={{
 					algorithm:
-						app.getTheme() === "obsidian"
+					props.plugin.app.getTheme() === "obsidian"
 							? theme.darkAlgorithm
 							: theme.defaultAlgorithm,
 				}}

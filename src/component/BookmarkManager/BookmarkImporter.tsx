@@ -49,7 +49,7 @@ const BookmarkImporter: any = (Props: Props): any => {
 					const regex = /<DT><A HREF="(.*?)"\s*ADD_DATE="(.*?)".*?>(.*)<\/A>/gm;
 					let bookmarkData;
 
-					const {bookmarks, categories} = await loadJson();
+					const {bookmarks, categories} = await loadJson(this.plugin);
 
 					while ((bookmarkData = regex.exec(result)) !== null) {
 						// This is necessary to avoid infinite loops with zero-width matches
@@ -80,7 +80,7 @@ const BookmarkImporter: any = (Props: Props): any => {
 						}
 					}
 
-					await saveJson({
+					await saveJson(this.plugin, {
 						bookmarks,
 						categories,
 					});
