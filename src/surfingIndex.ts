@@ -477,6 +477,7 @@ export default class SurfingPlugin extends Plugin {
 			},
 		});
 
+
 		this.addCommand({
 			id: "clear-browsing-data",
 			name: "Clear browsing data",
@@ -505,7 +506,7 @@ export default class SurfingPlugin extends Plugin {
 					});
 			},
 		});
-
+    
 		// Use checkCallback method to check if the view is WebBrowserView;
 		// And change the default private to public.
 		this.addCommand({
