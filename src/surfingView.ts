@@ -28,7 +28,6 @@ import { hashCode } from "./component/BookmarkManager/utils";
 import { PopoverWebView } from "./component/PopoverWebView";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
-
 export class SurfingView extends ItemView {
 	plugin: SurfingPlugin;
 	private searchBox: searchBox;
@@ -494,6 +493,8 @@ export class SurfingView extends ItemView {
 	async onOpen() {
 		// Allow views to replace this views.
 		this.navigation = true;
+
+		
 
 		// Create search bar in the header bar.
 		this.headerBar = new HeaderBar(

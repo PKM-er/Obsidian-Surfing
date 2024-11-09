@@ -477,6 +477,35 @@ export default class SurfingPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "clear-browsing-data",
+			name: "Clear browsing data",
+			callback: () => {
+				// @ts-ignore
+				const session = remote.session.fromPartition(
+					// @ts-ignore
+					`persist:surfing-vault-${this.app.appId}`
+				);
+				session
+					.clearStorageData({
+						storages: [
+							"appcache",
+							"cookies",
+							"filesystem",
+							"indexdb",
+							"localstorage",
+							"shadercache",
+							"websql",
+							"serviceworkers",
+							"cachestorage",
+						],
+					})
+					.then(() => {
+						new Notice("Browsing data cleared");
+					});
+			},
+		});
+
 		// Use checkCallback method to check if the view is WebBrowserView;
 		// And change the default private to public.
 		this.addCommand({
