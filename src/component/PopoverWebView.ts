@@ -2,6 +2,7 @@
 import { remote } from "electron";
 import { SurfingView } from "../surfingView";
 import { moment } from "obsidian";
+import SurfingPlugin from "src/surfingIndex";
 
 export class PopoverWebView {
 	private contentEl: HTMLElement;
@@ -9,11 +10,13 @@ export class PopoverWebView {
 	private node: HTMLElement;
 
 	private currentUrl: string;
+	private plugin: SurfingPlugin;
 
-	constructor(node: HTMLElement, targetUrl: string) {
+	constructor(node: HTMLElement, targetUrl: string, plugin: SurfingPlugin) {
 		this.contentEl = node.createEl("div", {cls: "wb-view-content"});
 		this.node = node;
 		this.currentUrl = targetUrl;
+		this.plugin = plugin;
 	}
 
 	onload() {
@@ -27,6 +30,7 @@ export class PopoverWebView {
 		this.webviewEl = doc.createElement('webview');
 		this.webviewEl.setAttribute("allowpopups", "");
 		this.webviewEl.addClass("wb-frame");
+		const self = this;
 
 		if (this.currentUrl) this.webviewEl.setAttribute("src", this.currentUrl);
 		// this.node.placeholderEl.innerText = this.node.url;
@@ -38,7 +42,7 @@ export class PopoverWebView {
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
 				if (event.disposition !== "foreground-tab") {
-					SurfingView.spawnWebBrowserView(true, {url: event.url});
+					SurfingView.spawnWebBrowserView(self.plugin, true, {url: event.url});
 					return {
 						action: "allow",
 					};
@@ -46,7 +50,7 @@ export class PopoverWebView {
 			});
 
 			try {
-				const pluginSettings = app.plugins.getPlugin("surfing").settings;
+				const pluginSettings = this.plugin.settings;
 				const highlightFormat = pluginSettings.highlightFormat;
 				const getCurrentTime = () => {
 					let link = "";

@@ -20,6 +20,10 @@
       "no-prototype-builtins": "off",
       "@typescript-eslint/no-empty-function": "off",
       "@typescript-eslint/no-explicit-any": "off",
-      "no-useless-escape": "off"
+      "no-useless-escape": "off",
+      "no-unexpected-multiline": "off",
+      "no-mixed-spaces-and-tabs": "off",
+	  
+	  "@typescript-eslint/no-this-alias": "off"
     } 
   }

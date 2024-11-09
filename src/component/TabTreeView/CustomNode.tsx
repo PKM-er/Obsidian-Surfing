@@ -6,9 +6,10 @@ import { CustomData } from "./types";
 import { TypeIcon } from "./TypeIcon";
 import styles from './CustomNode.module.css';
 import { Menu, Notice } from "obsidian";
-import { random, SaveWorkspaceModal } from "./workspace";
+import SurfingPlugin from "src/surfingIndex";
 
 type Props = {
+	plugin: SurfingPlugin;	
 	node: NodeModel<CustomData>;
 	depth: number;
 	isOpen: boolean;
@@ -35,10 +36,10 @@ export const CustomNode: React.FC<Props> = (props) => {
 
 	const handleClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
-		const leaf = app.workspace.getLeafById(String(props.node.id));
+		const leaf = props.plugin.app.workspace.getLeafById(String(props.node.id));
 		if (!leaf) return;
 
-		app.workspace.setActiveLeaf(leaf);
+		props.plugin.app.workspace.setActiveLeaf(leaf);
 		handleSelect();
 		// app.workspace.revealLeaf(leaf);
 	}

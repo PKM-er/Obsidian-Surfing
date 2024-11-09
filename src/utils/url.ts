@@ -1,4 +1,5 @@
 import { SEARCH_ENGINES } from "../surfingPluginSetting";
+import SurfingPlugin from "src/surfingIndex";
 
 export const checkIfWebBrowserAvailable = (url: string) => {
 	return url.startsWith("http://") || url.startsWith("https://") || (url.startsWith("file://") && /\.htm(l)?/g.test(url));
@@ -33,12 +34,12 @@ export const getComposedUrl = (url: string, value: string) => {
 	return tempValue;
 };
 
-export const getUrl = (urlString: string) => {
+export const getUrl = (urlString: string, plugin: SurfingPlugin) => {
 	let url = urlString;
 
 	if (!url) return;
 
-	const pluginSettings = app.plugins.getPlugin("surfing").settings;
+	const pluginSettings = plugin.settings;
 
 	const urlRegEx = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
 	// eslint-disable-next-line no-useless-escape

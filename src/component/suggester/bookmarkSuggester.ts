@@ -21,7 +21,7 @@ export class BookmarkSuggester extends TextInputSuggest<Bookmark> {
         const inputLowerCase: string = inputStr.toLowerCase();
 
         try {
-            if (this.suggestions.length === 0) loadJson().then((data) => {
+            if (this.suggestions.length === 0) loadJson(this.plugin).then((data) => {
                 this.bookmarkData = data.bookmarks;
                 this.suggestions = this.bookmarkData;
             });
@@ -73,13 +73,13 @@ export class BookmarkSuggester extends TextInputSuggest<Bookmark> {
 
         if (item.id === "BOOKMARK") {
             const finalUrl = getComposedUrl("", item.name);
-            SurfingView.spawnWebBrowserView(false, {url: finalUrl});
+            SurfingView.spawnWebBrowserView(this.plugin, false, {url: finalUrl});
 
             this.close();
             return;
         }
 
-        SurfingView.spawnWebBrowserView(false, {url: item.url});
+        SurfingView.spawnWebBrowserView(this.plugin, false, {url: item.url});
         this.close();
         return;
     }

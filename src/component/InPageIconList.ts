@@ -44,10 +44,10 @@ export class InPageIconList {
 
 
 		this.createBtn.setIcon("file-plus").onClick(() => {
-			app.commands.executeCommandById("file-explorer:new-file");
+			this.plugin.app.commands.executeCommandById("file-explorer:new-file");
 		});
 		this.searchBtn.setIcon("file-search-2").onClick(() => {
-			app.commands.executeCommandById("switcher:open");
+			this.plugin.app.commands.executeCommandById("switcher:open");
 		});
 		this.closeBtn.setIcon("x-square").onClick(() => {
 			if (this.view?.leaf) this.view?.leaf.detach();

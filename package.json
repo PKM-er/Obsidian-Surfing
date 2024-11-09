@@ -1,6 +1,6 @@
 {
 	"name": "surfing",
-	"version": "0.9.12",
+	"version": "0.9.13",
 	"description": "Use surfing to surf the net in Obsidian.",
 	"main": "main.js",
 	"scripts": {
@@ -10,7 +10,8 @@
 		"build": "vite build",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint:fix": "eslint --fix . --ext .ts",
-		"prepare": "husky install"
+		"prepare": "husky install",
+		"type-check": "tsc -noEmit -skipLibCheck"
 	},
 	"keywords": [],
 	"author": "Boninall & Windily-cloud",
@@ -35,12 +36,12 @@
 		"@vitejs/plugin-react": "^4.2.1",
 		"antd": "^5.0.5",
 		"builtin-modules": "3.3.0",
-		"electron": "^21.0.1",
+		"electron": "^32.2.0",
 		"eslint": "^8.28.0",
 		"eslint-plugin-import": "^2.26.0",
-		"husky": "^8.0.0",
+		"husky": "^9.1.6",
 		"monkey-around": "^2.3.0",
-		"obsidian": "1.4.11",
+		"obsidian": "latest",
 		"react": "^18.2.0",
 		"react-dnd": "^16.0.1",
 		"react-dom": "^18.2.0",

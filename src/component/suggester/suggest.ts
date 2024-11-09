@@ -16,10 +16,12 @@ class Suggest<T> {
 	private suggestions: HTMLDivElement[];
 	private selectedItem: number;
 	private containerEl: HTMLElement;
+	private app: App;
 
-	constructor(owner: ISuggestOwner<T>, containerEl: HTMLElement, scope: Scope) {
+	constructor(owner: ISuggestOwner<T>, containerEl: HTMLElement, scope: Scope, app: App) {
 		this.owner = owner;
 		this.containerEl = containerEl;
+		this.app = app;
 
 		containerEl.on(
 			"click",
@@ -55,7 +57,7 @@ class Suggest<T> {
 
 
 		// Register Control+Number to select specific items.
-		const pluginSettings = app.plugins.getPlugin("surfing").settings;
+		const pluginSettings = this.app.plugins.getPlugin("surfing").settings;
 		const searchEngines = [...SEARCH_ENGINES, ...pluginSettings.customSearchEngine];
 		for (let i = 0; i < searchEngines.length; i++) {
 			if (i === 9) {
@@ -153,7 +155,7 @@ export abstract class TextInputSuggest<T> implements ISuggestOwner<T> {
 
 		this.suggestEl = createDiv("wb-search-suggestion-container");
 		const suggestion = this.suggestEl.createDiv("wb-search-suggestion");
-		this.suggest = new Suggest(this, suggestion, this.scope);
+		this.suggest = new Suggest(this, suggestion, this.scope, this.app);
 
 		this.scope.register([], "Escape", this.close.bind(this));
 

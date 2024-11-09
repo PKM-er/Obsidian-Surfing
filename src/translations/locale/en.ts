@@ -93,6 +93,7 @@ export default {
 	"Send to ReadWise": "Send to ReadWise",
 	"Add a action in page header to Send to ReadWise.": "Add a action in page header to Send to ReadWise.",
 	'Disable / to search when on these sites': 'Disable / to search when on these sites',
+	'Focus search bar via keyboard': 'Focus search bar via keyboard',
 	'Hover Popover': 'Hover Popover',
 	'Show a popover when hover on the link.': 'Show a popover when hover on the link.',
 	'Enable HTML Preview': 'Enable HTML Preview',

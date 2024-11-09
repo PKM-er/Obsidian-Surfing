@@ -26,13 +26,13 @@ export class BookMarkBar {
 		this.renderIcon();
 
 		try {
-			const { bookmarks, categories } = await loadJson();
+			const { bookmarks, categories } = await loadJson(this.plugin);
 			this.bookmarkData = bookmarks;
 			this.categoryData = categories;
 		} catch (e) {
 			if (this.bookmarkData?.length === 0 || !this.bookmarkData) {
-				await initializeJson();
-				const { bookmarks, categories } = await loadJson();
+				await initializeJson(this.plugin);
+				const { bookmarks, categories } = await loadJson(this.plugin);
 				this.bookmarkData = bookmarks;
 				this.categoryData = categories;
 			}
@@ -52,7 +52,7 @@ export class BookMarkBar {
 		})
 
 		bookmarkManagerEl.onclick = async () => {
-			const workspace = app.workspace;
+			const workspace = this.plugin.app.workspace;
 			workspace.detachLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID);
 			await workspace.getLeaf(false).setViewState({ type: WEB_BROWSER_BOOKMARK_MANAGER_ID });
 			workspace.revealLeaf(workspace.getLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID)[0]);
@@ -79,22 +79,22 @@ export class BookMarkBar {
 	}
 }
 
-export const updateBookmarkBar = (bookmarks: Bookmark[], categories: CategoryType[], refreshBookmarkManager: boolean) => {
+export const updateBookmarkBar = (plugin: SurfingPlugin, bookmarks: Bookmark[], categories: CategoryType[], refreshBookmarkManager: boolean) => {
 	if (refreshBookmarkManager) {
-		const currentBookmarkLeaves = app.workspace.getLeavesOfType("surfing-bookmark-manager");
+		const currentBookmarkLeaves = plugin.app.workspace.getLeavesOfType("surfing-bookmark-manager");
 		if (currentBookmarkLeaves.length > 0) {
 			currentBookmarkLeaves[0].rebuildView();
 		}
 	}
 
-	const emptyLeaves = app.workspace.getLeavesOfType("empty");
+	const emptyLeaves = plugin.app.workspace.getLeavesOfType("empty");
 	if (emptyLeaves.length > 0) {
 		emptyLeaves.forEach((leaf) => {
 			leaf.rebuildView();
 		})
 	}
 
-	const surfingLeaves = app.workspace.getLeavesOfType("surfing-view");
+	const surfingLeaves = plugin.app.workspace.getLeavesOfType("surfing-view");
 	if (surfingLeaves.length > 0) {
 		surfingLeaves.forEach((leaf) => {
 			// @ts-ignore

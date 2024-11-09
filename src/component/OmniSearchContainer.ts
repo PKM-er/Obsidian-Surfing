@@ -70,7 +70,7 @@ export class OmniSearchContainer {
 			}
 			this.show();
 			this.result.forEach((item: ResultNoteApi) => {
-				(new OmniSearchItem(this.wbOmniSearchCtnEl, item.path, item.foundWords, item.matches)).onload();
+				(new OmniSearchItem(this.wbOmniSearchCtnEl, item.path, item.foundWords, item.matches, this.plugin)).onload();
 			})
 		}
 	}

@@ -102,7 +102,7 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 				const url = (currentSearchEngine ? currentSearchEngine.url : SEARCH_ENGINES[0].url);
 
 				const finalUrl = getComposedUrl(url, currentInputValue);
-				SurfingView.spawnWebBrowserView(false, {url: finalUrl});
+				SurfingView.spawnWebBrowserView(this.plugin, false, {url: finalUrl});
 				break;
 			}
 			case 'file': {

@@ -78,7 +78,7 @@ export default function TabTree(props: Props) {
 		const leafIndex = treeData.findIndex((node) => node.data?.fileType === "site");
 		if (leafIndex === -1) return;
 		const leafId = String(treeData[leafIndex].id);
-		const leaf = app.workspace.getLeafById(leafId);
+		const leaf = props.plugin.app.workspace.getLeafById(leafId);
 		if (!leaf) {
 			setTreeData([]);
 			props.plugin.settings.treeData = [];
@@ -216,6 +216,7 @@ export default function TabTree(props: Props) {
 							rootId={0}
 							render={(node, {depth, isOpen, hasChild, onToggle}) => (
 								<CustomNode
+									plugin={props.plugin}
 									node={node}
 									depth={depth}
 									isOpen={isOpen}

@@ -7,18 +7,24 @@ import { FileSuggester } from "./suggester/fileSuggester";
 export class HeaderBar extends Component {
 	plugin: SurfingPlugin;
 	private searchBar: HTMLInputElement;
-	private onSearchBarEnterListener = new Array<(url: string) => void>;
+	private onSearchBarEnterListener = new Array<(url: string) => void>();
 	private view: ItemView;
 	private parentEl: Element;
 	private removeHeaderChild = true;
 
-	constructor(parent: Element, plugin: SurfingPlugin, view: ItemView, removeHeaderChild?: boolean) {
+	constructor(
+		parent: Element,
+		plugin: SurfingPlugin,
+		view: ItemView,
+		removeHeaderChild?: boolean
+	) {
 		super();
 		this.plugin = plugin;
 		this.view = view;
 
 		this.parentEl = parent;
-		if (removeHeaderChild !== undefined) this.removeHeaderChild = removeHeaderChild;
+		if (removeHeaderChild !== undefined)
+			this.removeHeaderChild = removeHeaderChild;
 	}
 
 	onLoad() {
@@ -29,9 +35,13 @@ export class HeaderBar extends Component {
 
 		this.initScope();
 
-		if (this.plugin.settings.showRefreshButton && this.removeHeaderChild && this.view.getViewType() !== "empty") {
+		if (
+			this.plugin.settings.showRefreshButton &&
+			this.removeHeaderChild &&
+			this.view.getViewType() !== "empty"
+		) {
 			const refreshButton = this.parentEl.createEl("div", {
-				cls: "wb-refresh-button"
+				cls: "wb-refresh-button",
 			});
 			refreshButton.addEventListener("click", () => {
 				this.view.leaf.rebuildView();
@@ -44,34 +54,47 @@ export class HeaderBar extends Component {
 		// Use Obsidian CreateEL method.
 		this.searchBar = this.parentEl.createEl("input", {
 			type: "text",
-			placeholder: t("Search with") + this.plugin.settings.defaultSearchEngine + t("or enter address"),
-			cls: "wb-search-bar"
+			placeholder:
+				t("Search with") +
+				this.plugin.settings.defaultSearchEngine +
+				t("or enter address"),
+			cls: "wb-search-bar",
 		});
 
-		this.registerDomEvent(this.searchBar, "keydown", (event: KeyboardEvent) => {
-			if (!event) {
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				const event = window.event as KeyboardEvent;
-			}
-			if (event.key === "Enter") {
-				// When enter is pressed, search for the url.
-				for (const listener of this.onSearchBarEnterListener) {
-					listener(this.searchBar.value);
+		this.registerDomEvent(
+			this.searchBar,
+			"keydown",
+			(event: KeyboardEvent) => {
+				if (!event) {
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars
+					const event = window.event as KeyboardEvent;
+				}
+				if (event.key === "Enter") {
+					// When enter is pressed, search for the url.
+					for (const listener of this.onSearchBarEnterListener) {
+						listener(this.searchBar.value);
+					}
 				}
 			}
-		});
+		);
 
-		if (!this.plugin.settings.bookmarkManager.openBookMark) new FileSuggester(app, this.plugin, this.searchBar, this.view);
-		if (this.plugin.settings.bookmarkManager.openBookMark) new BookmarkSuggester(app, this.plugin, this.searchBar);
+		if (!this.plugin.settings.bookmarkManager.openBookMark)
+			new FileSuggester(this.plugin.app, this.plugin, this.searchBar, this.view);
+		if (this.plugin.settings.bookmarkManager.openBookMark)
+			new BookmarkSuggester(this.plugin.app, this.plugin, this.searchBar);
 
 		// Use focusin to bubble up to the parent
 		// Rather than just input element itself.
 		// this.searchBar.addEventListener("focusin", (event: FocusEvent) => {
 		// 	this.searchBar.select();
 		// });
-		this.registerDomEvent(this.searchBar, "focusin", (event: FocusEvent) => {
-			this.searchBar.select();
-		});
+		this.registerDomEvent(
+			this.searchBar,
+			"focusin",
+			(event: FocusEvent) => {
+				this.searchBar.select();
+			}
+		);
 
 		// When focusout, unselect the text to prevent it is still selected when focus back
 		// It will trigger some unexpected behavior,like you will not select all text and the cursor will set to current position;
@@ -82,25 +105,31 @@ export class HeaderBar extends Component {
 		// 		this.searchBar.detach();
 		// 	}
 		// });
-		this.registerDomEvent(this.searchBar, "focusout", (event: FocusEvent) => {
-			window.getSelection()?.removeAllRanges();
-			if (!this.removeHeaderChild) {
-				this.searchBar.detach();
+		this.registerDomEvent(
+			this.searchBar,
+			"focusout",
+			(event: FocusEvent) => {
+				window.getSelection()?.removeAllRanges();
+				if (!this.removeHeaderChild) {
+					this.searchBar.detach();
+				}
 			}
-		});
+		);
 	}
 
 	initScope() {
 		// console.log(this.view.scope);
 		if (!this.view.scope) {
 			this.view.scope = new Scope(this.plugin.app.scope);
-			(this.view.scope as Scope).register([], '/', (evt) => {
+			(this.view.scope as Scope).register([], "/", (evt) => {
+				if (!this.plugin.settings.focusSearchBarViaKeyboard) return;
 				if (evt.target === this.searchBar) return;
 				evt.preventDefault();
 				this.searchBar.focus();
 			});
 		} else {
-			(this.view.scope as Scope).register([], '/', (evt) => {
+			(this.view.scope as Scope).register([], "/", (evt) => {
+				if (!this.plugin.settings.focusSearchBarViaKeyboard) return;
 				if (evt.target === this.searchBar) return;
 				evt.preventDefault();
 				this.searchBar.focus();
