@@ -68,6 +68,35 @@ export class SurfingView extends ItemView {
 		const isOpenInSameTab = pluginSettings.openInSameTab;
 		const highlightInSameTab = pluginSettings.highlightInSameTab;
 		const app = plugin.app;
+
+		// Check for fragment-only changes first, regardless of openInSameTab setting
+		if (!state.url.startsWith("file://")) {
+			// Reuse existing tab if only the fragment changes.
+			const requestedBase = state.url.split("#")[0];
+			const requestedFragment = state.url.includes('#') ? '#' + state.url.split('#')[1] : '';
+			const leaves = app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
+			for (let i = 0; i < leaves.length; i++) {
+				const leaf = leaves[i];
+				if (!leaf) continue;
+				const viewState = leaf.getViewState();
+				const browserState = viewState.state as WebBrowserViewState;
+				if (!browserState?.url) continue;
+				const openBase = browserState.url.split("#")[0];
+				if (openBase === requestedBase && browserState.url !== state.url) {
+					const view = leaf.view as SurfingView;
+					// Change only the fragment.
+					// Use Electron's webContents to execute JavaScript
+					const webContents = remote.webContents.fromId(view.webviewEl.getWebContentsId());
+					webContents?.executeJavaScript(
+						`window.location.hash = ${JSON.stringify(requestedFragment)}`
+					);
+					view.currentUrl = state.url;
+					app.workspace.setActiveLeaf(leaf);
+					return;
+				}
+			}
+		}
+
 		if (!isOpenInSameTab || state.url.startsWith("file://")) {
 			if (state.url.contains("bilibili")) {
 				for (
@@ -124,6 +153,7 @@ export class SurfingView extends ItemView {
 					}
 				}
 			}
+
 
 			app.workspace.getLeaf(newLeaf).setViewState({
 				type: WEB_BROWSER_VIEW_ID,
