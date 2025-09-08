@@ -68,6 +68,12 @@ export class SurfingView extends ItemView {
 		const isOpenInSameTab = pluginSettings.openInSameTab;
 		const highlightInSameTab = pluginSettings.highlightInSameTab;
 		const app = plugin.app;
+		if(state.url.startsWith("obsidian://")) {
+			const leaf = app.workspace.getLeaf(true); 
+			window.open(state.url, "_blank");
+			app.workspace.revealLeaf(leaf);
+			return;
+		}
 		if (!isOpenInSameTab || state.url.startsWith("file://")) {
 			if (state.url.contains("bilibili")) {
 				for (
