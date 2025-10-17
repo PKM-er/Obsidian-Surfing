@@ -1266,6 +1266,11 @@ export class SurfingView extends ItemView {
 		// eslint-disable-next-line no-useless-escape
 		const urlRegEx2 =
 			/((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+(:[0-9]+)?|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g;
+		
+			if (url.startsWith("obsidian://")) {
+			window.open(url, "_blank");
+			return;
+		}
 
 		if (urlRegEx.test(url)) {
 			const first7 = url.slice(0, 7).toLowerCase();
