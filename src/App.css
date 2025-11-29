@@ -624,6 +624,60 @@ div[data-type^="empty"] .wb-bookmark-bar {
 	width: var(--size-4-4);
 }
 
+/* Custom Scripts in Bookmark Bar */
+.wb-bookmark-bar-separator {
+	display: flex;
+	align-items: center;
+	margin: 0 var(--size-4-2);
+}
+
+.wb-separator-line {
+	width: 1px;
+	height: 20px;
+	background-color: var(--background-modifier-border);
+}
+
+.wb-bookmark-bar-script-item {
+	max-width: 120px;
+	text-overflow: hidden;
+	overflow: hidden;
+	margin-right: var(--size-2-2);
+	padding: var(--size-2-2);
+	border: 1px solid var(--color-base-10);
+	border-radius: var(--radius-s);
+	white-space: nowrap;
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	background-color: var(--background-secondary-alt);
+}
+
+.wb-bookmark-bar-script-item:hover {
+	background-color: var(--color-base-30);
+}
+
+.wb-bookmark-bar-script-icon {
+	padding: unset;
+	height: 16px;
+	width: 16px;
+	margin-right: var(--size-2-1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.wb-bookmark-bar-script-icon svg {
+	height: var(--size-4-4);
+	width: var(--size-4-4);
+	color: var(--text-accent);
+}
+
+.wb-bookmark-bar-script-name {
+	text-overflow: ellipsis;
+	overflow: hidden;
+	font-size: var(--font-smallest);
+}
+
 div[data-type^="empty"].workspace-leaf-content
 .view-content.mod-wb-bookmark-bar {
 	padding: unset;
@@ -889,6 +943,68 @@ div[data-type^="surfing-tab-tree"] ul li {
 
 .surfing-hover-popover {
 	z-index: 99999;
+}
+
+/* Custom Scripts Settings */
+.custom-script-container {
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	padding: var(--size-4-3);
+	margin-bottom: var(--size-4-3);
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.custom-script-top-row {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+	width: 100%;
+}
+
+.custom-script-toggle {
+	flex-shrink: 0;
+	cursor: pointer;
+}
+
+.custom-script-name-input {
+	flex: 1;
+	min-width: 0;
+	height: var(--input-height);
+	padding: var(--size-4-1) var(--size-4-2);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background-color: var(--background-primary);
+	font-size: var(--font-ui-medium);
+}
+
+.custom-script-delete-btn {
+	flex-shrink: 0;
+	padding: var(--size-4-1) var(--size-4-3);
+	border-radius: var(--radius-s);
+	cursor: pointer;
+	font-size: var(--font-ui-small);
+}
+
+.custom-script-code-input {
+	display: block;
+	width: 100% !important;
+	min-height: 120px;
+	padding: var(--size-4-2);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background-color: var(--background-primary);
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	resize: vertical;
+	box-sizing: border-box;
+}
+
+.custom-script-code-input:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
 }
 
 
