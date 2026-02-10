@@ -8,6 +8,7 @@ import {
 	MenuItem,
 	moment,
 	Notice,
+	Platform,
 	ViewStateResult,
 	WorkspaceLeaf,
 } from "obsidian";
@@ -19,16 +20,20 @@ import { t } from "./translations/helper";
 import searchBox from "./component/SearchBox";
 import { SEARCH_ENGINES } from "./surfingPluginSetting";
 import { OmniSearchContainer } from "./component/OmniSearchContainer";
-import {
-	BookMarkBar,
-	updateBookmarkBar,
-} from "./component/BookMarkBar/BookMarkBar";
-import { loadJson, saveJson } from "./utils/json";
-import { hashCode } from "./component/BookmarkManager/utils";
+import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
+import { createBookmarkFile, isUrlBookmarked } from "./utils/bookmarkStore";
 import { PopoverWebView } from "./component/PopoverWebView";
+import type {
+	AssistantAction,
+	AssistantPageContext,
+	AssistantHost,
+} from "./component/AIAssistantSidebar";
+import type { AIAssistantView } from "./component/AIAssistantView";
+
+const WEB_BROWSER_AI_VIEW_ID = "surfing-ai-assistant";
 
 export const WEB_BROWSER_VIEW_ID = "surfing-view";
-export class SurfingView extends ItemView {
+export class SurfingView extends ItemView implements AssistantHost {
 	plugin: SurfingPlugin;
 	private searchBox: searchBox;
 	currentUrl: string;
@@ -43,6 +48,7 @@ export class SurfingView extends ItemView {
 	private searchContainer: OmniSearchContainer;
 
 	bookmarkBar: BookMarkBar;
+	private webViewContainerEl: HTMLElement;
 
 	private loaded = false;
 
@@ -62,7 +68,7 @@ export class SurfingView extends ItemView {
 	static spawnWebBrowserView(
 		plugin: SurfingPlugin,
 		newLeaf: boolean,
-		state: WebBrowserViewState
+		state: WebBrowserViewState,
 	) {
 		const pluginSettings = plugin.settings;
 		const isOpenInSameTab = pluginSettings.openInSameTab;
@@ -113,7 +119,7 @@ export class SurfingView extends ItemView {
 
 					if (
 						(viewState.state as WebBrowserViewState).url.split(
-							"#:~:text="
+							"#:~:text=",
 						)[0] === state.url.split("#:~:text=")[0]
 					) {
 						// @ts-ignore
@@ -157,8 +163,8 @@ export class SurfingView extends ItemView {
 				currentViewType === "empty"
 					? activeViewLeaf
 					: (app.workspace.createLeafBySplit(
-							activeViewLeaf
-					  ) as WorkspaceLeaf);
+							activeViewLeaf,
+						) as WorkspaceLeaf);
 			localStorage.setItem("web-browser-leaf-id", leaf.id);
 
 			leaf.setViewState({
@@ -173,7 +179,7 @@ export class SurfingView extends ItemView {
 
 			leaf.setPinned(true);
 			leaf.tabHeaderInnerTitleEl.parentElement?.parentElement?.addClass(
-				"same-tab"
+				"same-tab",
 			);
 			return;
 		} else {
@@ -197,7 +203,7 @@ export class SurfingView extends ItemView {
 					if (view) {
 						(view as unknown as SurfingView).navigate(
 							state.url,
-							true
+							true,
 						);
 					}
 					app.workspace.getLeafById(newLeafID)?.rebuildView();
@@ -229,7 +235,7 @@ export class SurfingView extends ItemView {
 
 	openInpecter() {
 		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId()
+			this.webviewEl.getWebContentsId(),
 		);
 		webContents.openDevTools();
 	}
@@ -240,18 +246,28 @@ export class SurfingView extends ItemView {
 		if (this.plugin.settings.bookmarkManager.openBookMark) {
 			this.bookmarkBar = new BookMarkBar(
 				this.leaf.view as SurfingView,
-				this.plugin
+				this.plugin,
 			);
 			this.bookmarkBar.onload();
 		}
+
+		this.webViewContainerEl = this.contentEl.createDiv({
+			cls: "wb-webview-container",
+		});
 
 		const doc = this.contentEl.doc;
 		this.webviewEl = doc.createElement("webview");
 		this.webviewEl.setAttribute("allowpopups", "");
 		// @ts-ignore
-		this.webviewEl.partition = "persist:surfing-vault-" + this.app.appId;
+		if (this.plugin.settings.sessionIsolation) {
+			this.webviewEl.partition =
+				"surfing-vault-" + this.app.appId + "-" + this.leaf.id;
+		} else {
+			this.webviewEl.partition =
+				"persist:surfing-vault-" + this.app.appId;
+		}
 		this.webviewEl.addClass("wb-frame");
-		this.contentEl.appendChild(this.webviewEl);
+		this.webViewContainerEl.appendChild(this.webviewEl);
 
 		if (this.currentUrl) this.navigate(this.currentUrl);
 
@@ -262,7 +278,7 @@ export class SurfingView extends ItemView {
 		this.webviewEl.addEventListener("dom-ready", async (event: any) => {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(
-				this.webviewEl.getWebContentsId()
+				this.webviewEl.getWebContentsId(),
 			);
 
 			// Open new browser tab if the web view requests it.
@@ -304,7 +320,7 @@ export class SurfingView extends ItemView {
 					console.log("focus search bar via keyboard");
 					if (
 						!this.plugin.settings.ignoreList.find((item: string) =>
-							this.currentUrl.contains(item.toLowerCase())
+							this.currentUrl.contains(item.toLowerCase()),
 						)
 					) {
 						webContents
@@ -312,7 +328,7 @@ export class SurfingView extends ItemView {
 								`
 											document.activeElement instanceof HTMLInputElement
 										`,
-								true
+								true,
 							)
 							.then((result: any) => {
 								if (!result) this.headerBar.focus();
@@ -333,7 +349,7 @@ export class SurfingView extends ItemView {
 					this.searchBox = new searchBox(
 						this.leaf,
 						webContents,
-						this.plugin
+						this.plugin,
 					);
 				}
 			});
@@ -349,12 +365,12 @@ export class SurfingView extends ItemView {
 					let link = "";
 					// eslint-disable-next-line no-useless-escape
 					const timeString = highlightFormat.match(
-						/\{TIME\:[^\{\}\[\]]*\}/g
+						/\{TIME\:[^\{\}\[\]]*\}/g,
 					)?.[0];
 					if (timeString) {
 						// eslint-disable-next-line no-useless-escape
 						const momentTime = moment().format(
-							timeString.replace(/{TIME:([^\}]*)}/g, "$1")
+							timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
 						);
 						link = highlightFormat.replace(timeString, momentTime);
 						return link;
@@ -368,11 +384,11 @@ export class SurfingView extends ItemView {
 						if(e.ctrlKey || e.metaKey) {
 							e.dataTransfer.clearData();
 							const selectionText = document.getSelection().toString();
-							
+
 							let tempText = encodeURIComponent(selectionText);
 							const chineseRegex = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
 							const englishSentence = selectionText.split('\\n');
-							
+
 							if (selectionText.match(chineseRegex)?.length > 50) {
 								if (englishSentence.length > 1) {
 									const fistSentenceWords = englishSentence[0];
@@ -389,19 +405,19 @@ export class SurfingView extends ItemView {
 
 								tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
 							}
-							
+
 							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
 							let link = "";
 							if ("${highlightFormat}".includes("{TIME")) {
 								link = "${getCurrentTime()}";
 							}
 							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
-						
+
 							e.dataTransfer.setData('text/plain', link);
 						}
 					});
 					`,
-						true
+						true,
 					)
 					.then((result: any) => {});
 			} catch (err) {
@@ -421,7 +437,7 @@ export class SurfingView extends ItemView {
 					this.favicon.src = event.favicons[0];
 				this.leaf.tabHeaderInnerIconEl.empty();
 				this.leaf.tabHeaderInnerIconEl.appendChild(this.favicon);
-			}
+			},
 		);
 
 		this.webviewEl.addEventListener("page-title-updated", (event: any) => {
@@ -432,7 +448,7 @@ export class SurfingView extends ItemView {
 			this.app.workspace.trigger(
 				"surfing:page-change",
 				event.title,
-				this
+				this,
 			);
 		});
 
@@ -445,7 +461,7 @@ export class SurfingView extends ItemView {
 			(event: any) => {
 				this.navigate(event.url, true, false);
 				this.menu?.close();
-			}
+			},
 		);
 
 		this.webviewEl.addEventListener("new-window", (event: any) => {
@@ -480,28 +496,26 @@ export class SurfingView extends ItemView {
 		// })
 
 		doc.contains(this.contentEl)
-			? this.contentEl.appendChild(this.webviewEl)
+			? this.webViewContainerEl.appendChild(this.webviewEl)
 			: this.contentEl.onNodeInserted(() => {
 					if (this.loaded) return;
 					else this.loaded = true;
 					this.contentEl.doc === doc
-						? this.contentEl.appendChild(this.webviewEl)
+						? this.webViewContainerEl.appendChild(this.webviewEl)
 						: this.createWebview();
-			  });
+				});
 	};
 
 	async onOpen() {
 		// Allow views to replace this views.
 		this.navigation = true;
 
-		
-
 		// Create search bar in the header bar.
 		this.headerBar = new HeaderBar(
 			this.titleContainerEl,
 			this.plugin,
 			this,
-			true
+			true,
 		);
 		this.headerBar.onLoad();
 
@@ -517,7 +531,7 @@ export class SurfingView extends ItemView {
 		if (this.omnisearchEnabled)
 			this.searchContainer = new OmniSearchContainer(
 				this.leaf,
-				this.plugin
+				this.plugin,
 			);
 		if (this.omnisearchEnabled) this.searchContainer.onload();
 
@@ -530,7 +544,36 @@ export class SurfingView extends ItemView {
 		if (this.menu) this.menu.close();
 	}
 
+	async onClose() {
+		this.menu?.close();
+		this.hoverPopover?.hide();
+	}
+
 	initHeaderButtons() {
+		if (Platform.isDesktop && this.plugin.settings.aiAssistant.enabled) {
+			this.addAction(
+				"bot",
+				t("Toggle Surfing AI Assistant Sidebar"),
+				() => {
+					const leaves = this.app.workspace.getLeavesOfType(
+						WEB_BROWSER_AI_VIEW_ID,
+					);
+					if (leaves.length > 0) {
+						this.app.workspace.revealLeaf(leaves[0]);
+						(leaves[0].view as AIAssistantView).focusInput();
+					} else {
+						const rightLeaf =
+							this.app.workspace.getRightLeaf(false);
+						rightLeaf?.setViewState({
+							type: WEB_BROWSER_AI_VIEW_ID,
+						});
+						if (rightLeaf) {
+							this.app.workspace.revealLeaf(rightLeaf);
+						}
+					}
+				},
+			);
+		}
 		this.addAction("settings", t("settings"), () => {
 			//@ts-expect-error, private method
 			app.setting.open();
@@ -538,72 +581,36 @@ export class SurfingView extends ItemView {
 			app.setting.openTabById("surfing");
 		});
 		this.addAction("star", t("star"), async () => {
-			const jsonData = await loadJson(this.plugin);
-			const bookmarks = jsonData.bookmarks;
-			try {
-				const isBookmarkExist = bookmarks.some((bookmark) => {
-					if (bookmark.url === this.currentUrl) {
-						return true;
-					} else {
-						return false;
-					}
-				});
-
-				if (!isBookmarkExist) {
-					// @ts-ignore
-					const webContents = remote.webContents.fromId(
-						this.webviewEl.getWebContentsId()
-					);
-
-					let description = "";
-					try {
-						webContents
-							.executeJavaScript(
-								`
-							document.querySelector('meta[name="description"]')?.content
-						`
-							)
-							.then((result: any) => {
-								if (result) description = result;
-							});
-					} catch (err) {
-						console.error(err);
-					}
-
-					const categories =
-						this.plugin.settings.bookmarkManager.defaultCategory
-							.split(",")
-							.map((c) => c.trim());
-
-					bookmarks.unshift({
-						id: String(hashCode(this.currentUrl)),
-						name: this.currentTitle,
-						url: this.currentUrl,
-						description: description,
-						category: categories.length > 0 ? categories : ["ROOT"],
-						tags: "",
-						created: moment().valueOf(),
-						modified: moment().valueOf(),
-					});
-
-					await saveJson(this.plugin, {
-						bookmarks: bookmarks,
-						categories: jsonData.categories,
-					});
-
-					updateBookmarkBar(
-						this.plugin,
-						bookmarks,
-						jsonData.categories,
-						true
-					);
-				} else {
-					new Notice("Bookmark already exists.");
-				}
-			} catch (err) {
-				new Notice("Failed to add bookmark.");
-				console.log(err);
+			if (isUrlBookmarked(this.plugin, this.currentUrl)) {
+				new Notice("Bookmark already exists.");
+				return;
 			}
+
+			let description = "";
+			try {
+				// @ts-ignore
+				const webContents = remote.webContents.fromId(
+					this.webviewEl.getWebContentsId(),
+				);
+				const result = await webContents.executeJavaScript(
+					`document.querySelector('meta[name="description"]')?.content`,
+				);
+				if (result) description = result;
+			} catch (err) {
+				console.error(err);
+			}
+
+			const category =
+				this.plugin.settings.bookmarkManager.defaultCategory || "ROOT";
+
+			await createBookmarkFile(this.plugin, {
+				url: this.currentUrl,
+				name: this.currentTitle,
+				description,
+				tags: [],
+				category: [category],
+			});
+			new Notice("Bookmark saved.");
 		});
 		if (this.plugin.settings.bookmarkManager.sendToReadWise)
 			this.addAction("book", t("Send to ReadWise"), async () => {
@@ -612,7 +619,7 @@ export class SurfingView extends ItemView {
 						"https://readwise.io/save?title=" +
 							encodeURIComponent(title) +
 							"&url=" +
-							encodeURIComponent(url)
+							encodeURIComponent(url),
 					);
 				};
 
@@ -639,12 +646,12 @@ export class SurfingView extends ItemView {
 		const currentUrl = this.currentUrl?.match(regex)?.[0];
 		if (!currentUrl) return;
 		const currentSearchEngine = searchEngines.find((engine) =>
-			engine.url.startsWith(currentUrl)
+			engine.url.startsWith(currentUrl),
 		);
 		if (!currentSearchEngine) return;
 		// @ts-ignore
 		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId()
+			this.webviewEl.getWebContentsId(),
 		);
 
 		try {
@@ -653,7 +660,7 @@ export class SurfingView extends ItemView {
 					`
 											document.querySelector('input')?.value
 										`,
-					true
+					true,
 				)
 				.then((result: any) => {
 					this.searchContainer.update(result?.toLowerCase());
@@ -725,16 +732,16 @@ export class SurfingView extends ItemView {
 								`
 											document.body.outerHTML
 										`,
-								true
+								true,
 							)
 							.then(async (result: any) => {
 								const url = params.pageURL.replace(
 									/\?(.*)/g,
-									""
+									"",
 								);
 								const parseContent = result.replaceAll(
 									/src="(?!(https|http))([^"]*)"/g,
-									'src="' + url + '$2"'
+									'src="' + url + '$2"',
 								);
 								const content = htmlToMarkdown(parseContent);
 								// @ts-ignore
@@ -744,16 +751,16 @@ export class SurfingView extends ItemView {
 								const file = await self.app.vault.create(
 									(self.plugin.settings.markdownPath
 										? self.plugin.settings.markdownPath +
-										  "/"
+											"/"
 										: "/") +
 										currentTitle +
 										".md",
-									content
+									content,
 								);
 								await self.app.workspace.openLinkText(
 									file.path,
 									"",
-									true
+									true,
 								);
 							});
 						console.log("Page Title copied to clipboard");
@@ -819,12 +826,12 @@ export class SurfingView extends ItemView {
 								: "/") +
 								currentTitle +
 								".md",
-							content
+							content,
 						);
 						await self.app.workspace.openLinkText(
 							file.path,
 							"",
-							true
+							true,
 						);
 					});
 			});
@@ -852,26 +859,26 @@ export class SurfingView extends ItemView {
 
 								tempText =
 									encodeURIComponent(
-										fistSentenceWords.slice(0, 3)
+										fistSentenceWords.slice(0, 3),
 									) +
 									"," +
 									encodeURIComponent(
 										lastSentenceWords.slice(
 											lastSentenceWords.length - 4,
-											lastSentenceWords.length
-										)
+											lastSentenceWords.length,
+										),
 									);
 							} else {
 								tempText =
 									encodeURIComponent(
-										params.selectionText.substring(0, 8)
+										params.selectionText.substring(0, 8),
 									) +
 									"," +
 									encodeURIComponent(
 										params.selectionText.substring(
 											params.selectionText.length - 8,
-											params.selectionText.length
-										)
+											params.selectionText.length,
+										),
 									);
 							}
 						} else if (englishSentence.length > 1) {
@@ -884,16 +891,16 @@ export class SurfingView extends ItemView {
 
 							tempText =
 								encodeURIComponent(
-									fistSentenceWords.slice(0, 3).join(" ")
+									fistSentenceWords.slice(0, 3).join(" "),
 								) +
 								"," +
 								encodeURIComponent(
 									lastSentenceWords
 										.slice(
 											lastSentenceWords.length - 1,
-											lastSentenceWords.length
+											lastSentenceWords.length,
 										)
-										.join(" ")
+										.join(" "),
 								);
 							// tempText = encodeURIComponent(englishWords.slice(0, 2).join(' ')) + "," + encodeURIComponent(englishWords.slice(englishWords.length - 1, englishWords.length).join(' '));
 						}
@@ -904,22 +911,25 @@ export class SurfingView extends ItemView {
 							tempText;
 						const selectionText = params.selectionText.replace(
 							/\n/g,
-							" "
+							" ",
 						);
 						let link = "";
 						if (highlightFormat.contains("{TIME")) {
 							// eslint-disable-next-line no-useless-escape
 							const timeString = highlightFormat.match(
-								/\{TIME\:[^\{\}\[\]]*\}/g
+								/\{TIME\:[^\{\}\[\]]*\}/g,
 							)?.[0];
 							if (timeString) {
 								// eslint-disable-next-line no-useless-escape
 								const momentTime = moment().format(
-									timeString.replace(/{TIME:([^\}]*)}/g, "$1")
+									timeString.replace(
+										/{TIME:([^\}]*)}/g,
+										"$1",
+									),
 								);
 								link = highlightFormat.replace(
 									timeString,
-									momentTime
+									momentTime,
 								);
 							}
 						}
@@ -962,7 +972,7 @@ export class SurfingView extends ItemView {
 											}
 											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
 										`,
-								true
+								true,
 							)
 							.then((result: any) => {
 								clipboard.writeText(
@@ -972,7 +982,7 @@ export class SurfingView extends ItemView {
 											.replace(/&p=[1-9]{1,}/g, "") +
 										"](" +
 										result +
-										")"
+										")",
 								); // Will be the JSON object from the fetch call
 							});
 						console.log("Page URL copied to clipboard");
@@ -1021,7 +1031,7 @@ export class SurfingView extends ItemView {
 						? {
 								x: e.data.split(" ")[1],
 								y: e.data.split(" ")[2],
-						  }
+							}
 						: { x: e.x, y: e.y };
 				const realRect = this.webviewEl.getClientRects();
 				const rect: {
@@ -1038,7 +1048,7 @@ export class SurfingView extends ItemView {
 					webContents
 						.executeJavaScript(
 							`window.getSelection().toString()`,
-							true
+							true,
 						)
 						.then((result: any) => {
 							selectionText = result;
@@ -1069,7 +1079,7 @@ export class SurfingView extends ItemView {
 				this.hoverPopover = new HoverPopover(
 					<any>this.contentEl,
 					null,
-					100
+					100,
 				);
 
 				const realRect = this.webviewEl.getClientRects();
@@ -1091,7 +1101,7 @@ export class SurfingView extends ItemView {
 
 				this.hoverPopover.hoverEl.toggleClass(
 					"surfing-hover-popover",
-					true
+					true,
 				);
 
 				const parentEl = this.hoverPopover.hoverEl.createEl("div", {
@@ -1111,7 +1121,7 @@ export class SurfingView extends ItemView {
 						`
 										window.getComputedStyle( document.body ,null).getPropertyValue('background-color');
 							`,
-						true
+						true,
 					)
 					.then((result: any) => {
 						const colorArr = result
@@ -1121,7 +1131,7 @@ export class SurfingView extends ItemView {
 						const brightness = Math.sqrt(
 							colorArr[0] ** 2 * 0.241 +
 								colorArr[1] ** 2 * 0.691 +
-								colorArr[2] ** 2 * 0.068
+								colorArr[2] ** 2 * 0.068,
 						);
 
 						// If the background color is dark, set the theme to dark.
@@ -1194,27 +1204,446 @@ export class SurfingView extends ItemView {
 
 		// https://cdn.jsdelivr.net/npm/darkreader/darkreader.min.js
 		webContents.executeJavaScript(`
-			window.addEventListener('mouseover', (e) => {
-				if(!e.target) return;
-				if(!e.ctrlKey && !e.metaKey) return;
-				// Tag name is a tag
-				if(e.target.tagName.toLowerCase() === 'a'){
-					window.myPostPort?.postMessage('link ' + e.clientX + ' ' + e.clientY + ' ' + e.target.href);
-				}
+				window.addEventListener('mouseover', (e) => {
+					if(!e.target) return;
+					if(!e.ctrlKey && !e.metaKey) return;
+					// Tag name is a tag
+					if(e.target.tagName.toLowerCase() === 'a'){
+						window.myPostPort?.postMessage('link ' + e.clientX + ' ' + e.clientY + ' ' + e.target.href);
+					}
+				});
+			`);
+	}
+
+	private getWebContents() {
+		if (!this.webviewEl) return null;
+		// @ts-ignore
+		return remote.webContents.fromId(this.webviewEl.getWebContentsId());
+	}
+
+	async getAIAssistantPageContext(
+		includePageText: boolean,
+		maxPageTextLength: number,
+	): Promise<AssistantPageContext> {
+		const fallback: AssistantPageContext = {
+			url: this.currentUrl || "",
+			title: this.currentTitle || "",
+			selectionText: "",
+			pageText: "",
+			headings: [],
+			links: [],
+		};
+		const webContents = this.getWebContents();
+		if (!webContents) return fallback;
+
+		// No hard 12000 cap — let callers (MCP vs sidebar) control the limit
+		const safeMaxLen = Math.max(400, maxPageTextLength);
+		try {
+			// Wait for dynamic content (React/Vue/SPA) to stabilize before extraction
+			await this.waitForDOMStability(webContents);
+
+			const context = await webContents.executeJavaScript(
+				`
+					(() => {
+						const normalizeText = (text) => (text || "").toString().trim();
+						const selectedText = normalizeText(window.getSelection()?.toString());
+
+						// Headings with level info
+						const allHeadings = Array.from(document.querySelectorAll("h1, h2, h3, h4"))
+							.map((h) => {
+								const level = "#".repeat(parseInt(h.tagName[1]));
+								return level + " " + normalizeText(h.textContent);
+							})
+							.filter((s) => s.length > 2)
+							.slice(0, 50);
+
+						// Links with text and href
+						const links = Array.from(document.querySelectorAll("a[href]"))
+							.map((a) => {
+								const text = normalizeText(a.textContent);
+								const href = a.href;
+								if (!href) return null;
+								return text ? "[" + text.slice(0, 60) + "](" + href + ")" : href;
+							})
+							.filter(Boolean)
+							.filter((v, i, arr) => arr.indexOf(v) === i)
+							.slice(0, 50);
+
+						let pageText = "";
+						if (${includePageText}) {
+							const maxLen = ${safeMaxLen};
+
+							// Primary: structured DOM-to-text serialization
+							let out = "";
+							function walk(node) {
+								if (out.length >= maxLen) return;
+								if (node.nodeType === 3) {
+									const t = node.textContent.replace(/[\\t ]+/g, " ");
+									if (t.trim()) out += t;
+									return;
+								}
+								if (node.nodeType !== 1) return;
+								const el = node;
+								const tag = el.tagName;
+								const style = window.getComputedStyle(el);
+								if (style.display === "none" || style.visibility === "hidden") return;
+								if (/^(SCRIPT|STYLE|NOSCRIPT|SVG|IFRAME)$/.test(tag)) return;
+
+								const prefix = {
+									H1: "\\n# ", H2: "\\n## ", H3: "\\n### ", H4: "\\n#### ",
+									P: "\\n", DIV: "\\n", BLOCKQUOTE: "\\n> ",
+									BR: "\\n", HR: "\\n---\\n",
+								}[tag] || "";
+								if (prefix) out += prefix;
+
+								if (tag === "A" && el.href) {
+									const text = normalizeText(el.textContent).slice(0, 80);
+									if (text) { out += "[" + text + "](" + el.href + ")"; return; }
+								}
+								if (tag === "IMG") {
+									const alt = el.alt || el.title || "";
+									if (alt) out += "[img: " + alt.slice(0, 40) + "]";
+									return;
+								}
+								if (tag === "LI") {
+									const parent = el.parentElement;
+									if (parent && parent.tagName === "OL") {
+										const idx = Array.from(parent.children).indexOf(el) + 1;
+										out += "\\n" + idx + ". ";
+									} else {
+										out += "\\n- ";
+									}
+								}
+								if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+									const label = el.placeholder || el.getAttribute("aria-label") || el.name || "";
+									out += "[" + tag.toLowerCase() + (label ? ": " + label.slice(0, 30) : "") + "]";
+									return;
+								}
+								if (tag === "BUTTON") {
+									out += "[btn: " + normalizeText(el.textContent).slice(0, 30) + "]";
+									return;
+								}
+								for (const child of el.childNodes) walk(child);
+								if (/^(P|DIV|LI|TR|BLOCKQUOTE|SECTION|ARTICLE|HEADER|FOOTER)$/.test(tag)) {
+									if (!out.endsWith("\\n")) out += "\\n";
+								}
+							}
+							walk(document.body);
+							pageText = out.replace(/\\n{3,}/g, "\\n\\n").trim().slice(0, maxLen);
+
+							// Fallback: if DOM walker got very little text, use innerText
+							// This handles React/Vue/SPA apps where content is in virtual DOM
+							if (pageText.length < 200) {
+								const innerText = (document.body.innerText || "")
+									.replace(/\\n{3,}/g, "\\n\\n")
+									.trim()
+									.slice(0, maxLen);
+								if (innerText.length > pageText.length) {
+									pageText = innerText;
+								}
+							}
+						}
+
+						return {
+							url: location.href || "",
+							title: document.title || "",
+							selectionText: selectedText.slice(0, 1500),
+							pageText,
+							headings: allHeadings,
+							links,
+						};
+					})()
+					`,
+				true,
+			);
+
+			return {
+				url: context?.url || fallback.url,
+				title: context?.title || fallback.title,
+				selectionText: context?.selectionText || "",
+				pageText: context?.pageText || "",
+				headings: Array.isArray(context?.headings)
+					? context.headings
+					: [],
+				links: Array.isArray(context?.links) ? context.links : [],
+			};
+		} catch (error) {
+			console.error("Failed to collect AI page context: ", error);
+			return fallback;
+		}
+	}
+
+	/**
+	 * Wait for DOM to stabilize after initial load — handles React/Vue/SPA hydration.
+	 * Uses MutationObserver to detect when DOM mutations stop for a quiet period.
+	 */
+	private async waitForDOMStability(
+		webContents: any,
+		quietMs = 800,
+		timeoutMs = 5000,
+	): Promise<void> {
+		try {
+			await webContents.executeJavaScript(
+				`
+				new Promise((resolve) => {
+					if (document.readyState !== 'complete') {
+						window.addEventListener('load', () => startObserving(), { once: true });
+					} else {
+						startObserving();
+					}
+					function startObserving() {
+						let timer = null;
+						const observer = new MutationObserver(() => {
+							if (timer) clearTimeout(timer);
+							timer = setTimeout(() => {
+								observer.disconnect();
+								resolve();
+							}, ${quietMs});
+						});
+						observer.observe(document.body, {
+							childList: true, subtree: true, characterData: true
+						});
+						// If no mutations happen within quietMs, resolve immediately
+						timer = setTimeout(() => {
+							observer.disconnect();
+							resolve();
+						}, ${quietMs});
+						// Hard timeout
+						setTimeout(() => {
+							observer.disconnect();
+							resolve();
+						}, ${timeoutMs});
+					}
+				})
+				`,
+				true,
+			);
+		} catch {
+			// Non-critical — continue with extraction even if stability wait fails
+		}
+	}
+
+	private async executeActionScript(script: string): Promise<string> {
+		const webContents = this.getWebContents();
+		if (!webContents) return t("Webview is not ready.");
+		try {
+			const result = await webContents.executeJavaScript(script, true);
+			if (typeof result === "string") return result;
+			if (result === undefined || result === null) return "";
+			return JSON.stringify(result);
+		} catch (error) {
+			return error instanceof Error ? error.message : String(error);
+		}
+	}
+
+	async executeAIAssistantAction(action: AssistantAction): Promise<string> {
+		const actionType = String(action.type || "")
+			.toLowerCase()
+			.trim();
+		if (!actionType) return t("Action type is required.");
+
+		if (actionType === "navigate" || actionType === "open") {
+			const targetUrl = String(action.url || "").trim();
+			if (!targetUrl) return t("Missing url in navigate action.");
+			this.navigate(targetUrl);
+			await this.waitForPageLoad();
+			return `${t("Opened")}: ${targetUrl}`;
+		}
+		if (actionType === "open_new_tab") {
+			const targetUrl = String(action.url || "").trim();
+			if (!targetUrl) return t("Missing url in open_new_tab action.");
+			// Create leaf directly to avoid same-tab reuse and listener conflicts
+			this.app.workspace.getLeaf(true).setViewState({
+				type: WEB_BROWSER_VIEW_ID,
+				active: true,
+				state: { url: targetUrl },
 			});
-		`);
+			return `${t("Opened in new tab")}: ${targetUrl}`;
+		}
+		if (actionType === "back") {
+			// @ts-ignore
+			this.leaf?.history.back();
+			await this.waitForPageLoad();
+			return t("Moved back in history.");
+		}
+		if (actionType === "forward") {
+			// @ts-ignore
+			this.leaf?.history.forward();
+			await this.waitForPageLoad();
+			return t("Moved forward in history.");
+		}
+		if (actionType === "reload" || actionType === "refresh") {
+			this.refresh();
+			await this.waitForPageLoad();
+			return t("Reloaded current page.");
+		}
+		if (actionType === "click") {
+			const selector = String(action.selector || "").trim();
+			if (!selector) return t("Missing selector in click action.");
+			return this.executeActionScript(`
+					(() => {
+						const selector = ${JSON.stringify(selector)};
+						const element = document.querySelector(selector);
+						if (!element) return "Selector not found: " + selector;
+						element.dispatchEvent(new MouseEvent("click", {
+							bubbles: true,
+							cancelable: true,
+							view: window
+						}));
+						if (typeof element.click === "function") {
+							element.click();
+						}
+						return "Clicked " + selector;
+					})()
+				`);
+		}
+		if (actionType === "type" || actionType === "input") {
+			const selector = String(action.selector || "").trim();
+			if (!selector) return t("Missing selector in type action.");
+			const value = String(action.text || "");
+			const shouldEnter = Boolean(action.enter);
+			return this.executeActionScript(`
+					(() => {
+						const selector = ${JSON.stringify(selector)};
+						const value = ${JSON.stringify(value)};
+						const shouldEnter = ${shouldEnter};
+						const element = document.querySelector(selector);
+						if (!element) return "Selector not found: " + selector;
+						if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLTextAreaElement)) {
+							return "Element is not an input: " + selector;
+						}
+						element.focus();
+						element.value = value;
+						element.dispatchEvent(new Event("input", { bubbles: true }));
+						element.dispatchEvent(new Event("change", { bubbles: true }));
+						if (shouldEnter) {
+							element.dispatchEvent(new KeyboardEvent("keydown", {
+								key: "Enter",
+								code: "Enter",
+								bubbles: true,
+							}));
+						}
+						return "Typed into " + selector;
+					})()
+				`);
+		}
+		if (actionType === "scroll") {
+			const offset = Number(action.y || action.amount || 400);
+			const safeOffset = Number.isNaN(offset) ? 400 : offset;
+			return this.executeActionScript(`
+					(() => {
+						const offset = ${safeOffset};
+						window.scrollBy({
+							top: offset,
+							behavior: "smooth",
+						});
+						return "Scrolled by " + offset + "px";
+					})()
+				`);
+		}
+		if (actionType === "extract") {
+			const selector = String(action.selector || "").trim();
+			if (!selector) {
+				return this.executeActionScript(`
+						(() => {
+							const selection = window.getSelection()?.toString().trim();
+							if (selection) return selection;
+							return (document.body?.innerText || "").trim().slice(0, 1200);
+						})()
+					`);
+			}
+			return this.executeActionScript(`
+					(() => {
+						const selector = ${JSON.stringify(selector)};
+						const element = document.querySelector(selector);
+						if (!element) return "Selector not found: " + selector;
+						return (element.textContent || "").trim();
+					})()
+				`);
+		}
+		if (actionType === "script" || actionType === "evaluate") {
+			const script = String(action.script || "").trim();
+			if (!script) return t("Missing script in evaluate action.");
+			return this.executeActionScript(script);
+		}
+
+		return `${t("Unsupported action type")}: ${actionType}`;
+	}
+
+	waitForPageLoad(timeout = 10000): Promise<void> {
+		return new Promise((resolve) => {
+			if (!this.webviewEl) {
+				resolve();
+				return;
+			}
+			let settled = false;
+			const done = () => {
+				if (settled) return;
+				settled = true;
+				this.webviewEl?.removeEventListener("did-finish-load", onLoad);
+				resolve();
+			};
+			const onLoad = () => done();
+			this.webviewEl.addEventListener("did-finish-load", onLoad);
+			setTimeout(done, timeout);
+		});
+	}
+
+	getCurrentPageInfo(): { url: string; title: string } {
+		return { url: this.currentUrl || "", title: this.currentTitle || "" };
+	}
+
+	showReadingIndicator(show: boolean): void {
+		const webContents = this.getWebContents();
+		if (!webContents) return;
+		try {
+			if (show) {
+				webContents.executeJavaScript(
+					`
+					(() => {
+						if (document.getElementById('__surfing_ai_reading')) return;
+						const overlay = document.createElement('div');
+						overlay.id = '__surfing_ai_reading';
+						overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:2147483647;border:2px solid rgba(124,58,237,0.5);animation:__surfing_pulse 2s ease-in-out infinite;';
+						const badge = document.createElement('div');
+						badge.style.cssText = 'position:fixed;top:8px;right:8px;background:rgba(124,58,237,0.9);color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;font-family:system-ui,sans-serif;z-index:2147483647;pointer-events:none;display:flex;align-items:center;gap:6px;';
+						badge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> AI Reading...';
+						overlay.appendChild(badge);
+						const style = document.createElement('style');
+						style.id = '__surfing_ai_reading_style';
+						style.textContent = '@keyframes __surfing_pulse{0%,100%{border-color:rgba(124,58,237,0.5)}50%{border-color:rgba(124,58,237,0.15)}}';
+						document.head.appendChild(style);
+						document.body.appendChild(overlay);
+					})()
+					`,
+					true,
+				);
+			} else {
+				webContents.executeJavaScript(
+					`
+					(() => {
+						const el = document.getElementById('__surfing_ai_reading');
+						if (el) el.remove();
+						const st = document.getElementById('__surfing_ai_reading_style');
+						if (st) st.remove();
+					})()
+					`,
+					true,
+				);
+			}
+		} catch {
+			// Non-critical
+		}
 	}
 
 	clearHistory(): void {
 		// @ts-ignore
-		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId()
-		);
+		const webContents = this.getWebContents();
 		if (!webContents) return;
 
 		webContents.clearHistory();
 		webContents.executeJavaScript(
-			"history.pushState({}, '', location.href)"
+			"history.pushState({}, '', location.href)",
 		);
 
 		this.leaf.history.backHistory.splice(0);
@@ -1250,7 +1679,7 @@ export class SurfingView extends ItemView {
 				// Enable the arrow highlight on the back arrow because there's now back history.
 				this.headerEl.children[1].children[0].setAttribute(
 					"aria-disabled",
-					"false"
+					"false",
 				);
 			}
 		}
@@ -1292,12 +1721,12 @@ export class SurfingView extends ItemView {
 			const currentSearchEngine = allSearchEngine.find(
 				(engine) =>
 					engine.name.toLowerCase() ===
-					this.plugin.settings.defaultSearchEngine
+					this.plugin.settings.defaultSearchEngine,
 			);
 			console.log(
 				currentSearchEngine,
 				allSearchEngine,
-				this.plugin.settings.defaultSearchEngine
+				this.plugin.settings.defaultSearchEngine,
 			);
 
 			// @ts-ignore
@@ -1322,7 +1751,7 @@ export class SurfingView extends ItemView {
 	getCurrentTimestamp(editor?: Editor) {
 		// @ts-ignore
 		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId()
+			this.webviewEl.getWebContentsId(),
 		);
 		webContents
 			.executeJavaScript(
@@ -1338,7 +1767,7 @@ export class SurfingView extends ItemView {
 					var timeStr= "";
 					timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr;
 				`,
-				true
+				true,
 			)
 			.then((result: any) => {
 				const timestamp =
@@ -1347,7 +1776,7 @@ export class SurfingView extends ItemView {
 				editor?.replaceRange(timestamp, editor?.getCursor());
 				if (originalCursor)
 					editor?.setCursor(
-						editor?.offsetToPos(originalCursor + timestamp.length)
+						editor?.offsetToPos(originalCursor + timestamp.length),
 					);
 			});
 	}
@@ -1356,7 +1785,7 @@ export class SurfingView extends ItemView {
 	refresh() {
 		// @ts-ignore
 		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId()
+			this.webviewEl.getWebContentsId(),
 		);
 		webContents.reload();
 	}
@@ -1368,12 +1797,12 @@ export class SurfingView extends ItemView {
 			let link = "";
 			// eslint-disable-next-line no-useless-escape
 			const timeString = highlightFormat.match(
-				/\{TIME\:[^\{\}\[\]]*\}/g
+				/\{TIME\:[^\{\}\[\]]*\}/g,
 			)?.[0];
 			if (timeString) {
 				// eslint-disable-next-line no-useless-escape
 				const momentTime = moment().format(
-					timeString.replace(/{TIME:([^\}]*)}/g, "$1")
+					timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
 				);
 				link = highlightFormat.replace(timeString, momentTime);
 				return link;
@@ -1391,7 +1820,7 @@ export class SurfingView extends ItemView {
 
 		// @ts-ignore
 		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId()
+			this.webviewEl.getWebContentsId(),
 		);
 
 		webContents
@@ -1428,7 +1857,7 @@ export class SurfingView extends ItemView {
 				link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
 
 				`,
-				true
+				true,
 			)
 			.then((result: any) => {
 				clipboard.writeText(result);
