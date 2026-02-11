@@ -4,16 +4,20 @@
  * using Pointer Events so it works within our custom tree view.
  */
 
+import { Component } from "obsidian";
+
 export interface DragReorderCallbacks {
 	/** Called when user drops a node at a new index among its siblings. */
 	onReorder(nodeId: string, newIndex: number): void;
+	/** Called when user drops a node onto a group. */
+	onMoveToGroup(nodeId: string, groupId: string): void;
 }
 
 const DRAG_THRESHOLD = 5; // px before entering drag mode
 const SCROLL_EDGE = 50; // px from edge to start auto-scroll
 const SCROLL_SPEED = 8; // base px per frame
 
-export class DragReorder {
+export class DragReorder extends Component {
 	private container: HTMLElement;
 	private callbacks: DragReorderCallbacks;
 
@@ -27,12 +31,15 @@ export class DragReorder {
 	private scrollInterval = 0;
 	private currentDropIndex = -1;
 	private siblings: HTMLElement[] = [];
+	private dropTargetGroupId: string | null = null;
+	private highlightedGroupEl: HTMLElement | null = null;
 
 	// Bound handlers for cleanup
 	private boundPointerMove: (e: PointerEvent) => void;
 	private boundPointerUp: (e: PointerEvent) => void;
 
 	constructor(container: HTMLElement, callbacks: DragReorderCallbacks) {
+		super();
 		this.container = container;
 		this.callbacks = callbacks;
 		this.boundPointerMove = this.onPointerMove.bind(this);
@@ -69,8 +76,20 @@ export class DragReorder {
 		this.ghostEl.style.left = `${e.clientX + 8}px`;
 		this.ghostEl.style.top = `${e.clientY - 12}px`;
 
-		// Find drop position among siblings
-		this.updateDropIndicator(e.clientY);
+		// Check if hovering over a group node
+		const groupTarget = this.findGroupTarget(e.clientX, e.clientY);
+		if (groupTarget) {
+			// Hovering over a group — highlight it, hide reorder indicator
+			this.dropTargetGroupId = groupTarget.id;
+			this.highlightGroup(groupTarget.el);
+			if (this.indicator) this.indicator.style.display = "none";
+			this.currentDropIndex = -1;
+		} else {
+			// Not over a group — show reorder indicator
+			this.dropTargetGroupId = null;
+			this.clearGroupHighlight();
+			this.updateDropIndicator(e.clientY);
+		}
 
 		// Auto-scroll
 		this.handleAutoScroll(e.clientY);
@@ -80,8 +99,12 @@ export class DragReorder {
 		document.removeEventListener("pointermove", this.boundPointerMove);
 		document.removeEventListener("pointerup", this.boundPointerUp);
 
-		if (this.dragging && this.currentDropIndex >= 0) {
-			this.callbacks.onReorder(this.sourceId, this.currentDropIndex);
+		if (this.dragging) {
+			if (this.dropTargetGroupId) {
+				this.callbacks.onMoveToGroup(this.sourceId, this.dropTargetGroupId);
+			} else if (this.currentDropIndex >= 0) {
+				this.callbacks.onReorder(this.sourceId, this.currentDropIndex);
+			}
 		}
 
 		this.exitDragMode();
@@ -136,6 +159,8 @@ export class DragReorder {
 			clearInterval(this.scrollInterval);
 			this.scrollInterval = 0;
 		}
+		this.clearGroupHighlight();
+		this.dropTargetGroupId = null;
 		document.body.classList.remove("is-grabbing");
 		this.dragging = false;
 		this.siblings = [];
@@ -193,7 +218,41 @@ export class DragReorder {
 		}
 	}
 
-	destroy(): void {
+	/** Find group .tree-item-self under cursor, excluding the source node. */
+	private findGroupTarget(
+		x: number,
+		y: number
+	): { id: string; el: HTMLElement } | null {
+		const els = this.container.querySelectorAll<HTMLElement>(
+			'.tree-item[data-group-id] > .tree-item-self'
+		);
+		for (const selfEl of els) {
+			const treeItem = selfEl.closest('.tree-item') as HTMLElement;
+			const groupId = treeItem?.dataset.groupId;
+			if (!groupId || groupId === this.sourceId) continue;
+			const rect = selfEl.getBoundingClientRect();
+			if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+				return { id: groupId, el: selfEl };
+			}
+		}
+		return null;
+	}
+
+	private highlightGroup(el: HTMLElement): void {
+		if (this.highlightedGroupEl === el) return;
+		this.clearGroupHighlight();
+		el.classList.add("surfing-drop-target-group");
+		this.highlightedGroupEl = el;
+	}
+
+	private clearGroupHighlight(): void {
+		if (this.highlightedGroupEl) {
+			this.highlightedGroupEl.classList.remove("surfing-drop-target-group");
+			this.highlightedGroupEl = null;
+		}
+	}
+
+	onunload(): void {
 		this.exitDragMode();
 		document.removeEventListener("pointermove", this.boundPointerMove);
 		document.removeEventListener("pointerup", this.boundPointerUp);

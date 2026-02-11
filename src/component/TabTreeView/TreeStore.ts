@@ -40,8 +40,8 @@ export class TreeStore {
 		this.notify();
 	}
 
-	getChildren(parentId: number): TreeNode[] {
-		return this.nodes.filter((n) => n.parent === parentId);
+	getChildren(parentId: number | string): TreeNode[] {
+		return this.nodes.filter((n) => String(n.parent) === String(parentId));
 	}
 
 	findNode(id: string): TreeNode | undefined {
@@ -52,16 +52,33 @@ export class TreeStore {
 		return this.nodes.some((n) => n.id === id);
 	}
 
+	/** Move a node into a different parent group. */
+	moveToGroup(nodeId: string, newParentId: string): void {
+		const node = this.findNode(nodeId);
+		if (!node) return;
+		if (String(node.parent) === newParentId) return;
+		const idx = this.nodes.findIndex((n) => n.id === nodeId);
+		if (idx === -1) return;
+		// Keep root parent as number 0 for backwards compatibility
+		const parent: number | string = newParentId === "0" ? 0 : newParentId;
+		this.nodes = [
+			...this.nodes.slice(0, idx),
+			{ ...node, parent },
+			...this.nodes.slice(idx + 1),
+		];
+		this.notify();
+	}
+
 	/** Move a node to `newIndex` among its same-parent siblings. */
 	reorderNode(nodeId: string, newIndex: number): void {
 		const node = this.findNode(nodeId);
 		if (!node) return;
-		const parentId = node.parent;
+		const parentStr = String(node.parent);
 
 		// Extract siblings in current order
 		const siblings: TreeNode[] = [];
 		for (const n of this.nodes) {
-			if (n.parent === parentId) siblings.push(n);
+			if (String(n.parent) === parentStr) siblings.push(n);
 		}
 		const oldIdx = siblings.findIndex((n) => n.id === nodeId);
 		if (oldIdx === -1) return;
@@ -73,7 +90,7 @@ export class TreeStore {
 		const result: TreeNode[] = [];
 		let si = 0;
 		for (const n of this.nodes) {
-			if (n.parent === parentId) {
+			if (String(n.parent) === parentStr) {
 				result.push(siblings[si++]);
 			} else {
 				result.push(n);

@@ -10,13 +10,15 @@ export const WEB_BROWSER_TAB_TREE_ID = "surfing-tab-tree";
 
 export class TabTreeView extends ItemView {
 	private store: TreeStore;
-	private dragReorder: DragReorder | null = null;
-	private unsubscribeStore: (() => void) | null = null;
+	private dragReorder: DragReorder;
 	private containerEl_tree: HTMLElement;
 	private collapsedGroups: Set<string> = new Set();
 	private selectedNodeId: string | null = null;
 
-	constructor(leaf: WorkspaceLeaf, public plugin: SurfingPlugin) {
+	constructor(
+		leaf: WorkspaceLeaf,
+		public plugin: SurfingPlugin,
+	) {
 		super(leaf);
 		this.plugin = plugin;
 	}
@@ -53,18 +55,27 @@ export class TabTreeView extends ItemView {
 		}));
 		this.store = new TreeStore(initial);
 
-		// Set up drag reorder
-		this.dragReorder = new DragReorder(this.containerEl_tree, {
-			onReorder: (nodeId, newIndex) => {
-				this.store.reorderNode(nodeId, newIndex);
-			},
-		});
+		// Set up drag reorder as child component (auto-unloads with this view)
+		this.dragReorder = this.addChild(
+			new DragReorder(this.containerEl_tree, {
+				onReorder: (nodeId, newIndex) => {
+					this.store.reorderNode(nodeId, newIndex);
+				},
+				onMoveToGroup: (nodeId, groupId) => {
+					const node = this.store.findNode(nodeId);
+					if (node && node.data?.fileType === "workspace") return;
+					this.store.moveToGroup(nodeId, groupId);
+				},
+			}),
+		);
 
-		// Subscribe to store changes
-		this.unsubscribeStore = this.store.subscribe(() => {
-			this.renderTree();
-			this.persistTree();
-		});
+		// Subscribe to store changes (auto-cleanup via this.register)
+		this.register(
+			this.store.subscribe(() => {
+				this.renderTree();
+				this.persistTree();
+			}),
+		);
 
 		// Initial sync from workspace if tree is empty
 		this.syncFromWorkspace();
@@ -76,15 +87,14 @@ export class TabTreeView extends ItemView {
 				"surfing:page-change",
 				(url: string, view: SurfingView) => {
 					this.updateTabData(view, url);
-				}
-			)
+				},
+			),
 		);
 
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
-				const leaves = this.app.workspace.getLeavesOfType(
-					WEB_BROWSER_VIEW_ID
-				);
+				const leaves =
+					this.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
 				if (leaves.length === 0) {
 					this.store.setNodes([]);
 					return;
@@ -117,11 +127,11 @@ export class TabTreeView extends ItemView {
 						this.store.removeNode(node.id);
 					}
 				}
-			})
+			}),
 		);
 
-		// Context menu for container
-		this.containerEl_tree.addEventListener("contextmenu", (e) => {
+		// Context menu for container (auto-cleanup via registerDomEvent)
+		this.registerDomEvent(this.containerEl_tree, "contextmenu", (e) => {
 			// Only fire if clicking on the container background, not on a tree item
 			if ((e.target as HTMLElement).closest(".tree-item")) return;
 			e.preventDefault();
@@ -133,14 +143,10 @@ export class TabTreeView extends ItemView {
 	}
 
 	protected async onClose(): Promise<void> {
-		if (this.unsubscribeStore) {
-			this.unsubscribeStore();
-			this.unsubscribeStore = null;
-		}
-		if (this.dragReorder) {
-			this.dragReorder.destroy();
-			this.dragReorder = null;
-		}
+		// Cleanup is handled automatically:
+		// - DragReorder via this.addChild() → Component.unload()
+		// - Store subscription via this.register()
+		// - Container contextmenu via this.registerDomEvent()
 	}
 
 	private syncFromWorkspace(): void {
@@ -161,8 +167,7 @@ export class TabTreeView extends ItemView {
 			}
 		}
 
-		const leaves =
-			this.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
+		const leaves = this.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
 		const nodes: TreeNode[] = leaves.map((leaf) => ({
 			id: leaf.id,
 			parent: 0,
@@ -244,6 +249,7 @@ export class TabTreeView extends ItemView {
 	private renderGroupNode(node: TreeNode, parentEl: HTMLElement): void {
 		const isCollapsed = this.collapsedGroups.has(node.id);
 		const treeItem = parentEl.createDiv({ cls: "tree-item" });
+		treeItem.dataset.groupId = node.id;
 
 		// Self row
 		const selfEl = treeItem.createDiv({
@@ -261,8 +267,17 @@ export class TabTreeView extends ItemView {
 		collapseIcon.style.transform = isCollapsed
 			? "rotate(0deg)"
 			: "rotate(90deg)";
-		collapseIcon.addEventListener("click", (e) => {
-			e.stopPropagation();
+		// Click is handled on the whole selfEl row below
+
+		// Folder icon
+		const folderIcon = selfEl.createDiv({ cls: "tree-item-icon" });
+		setIcon(folderIcon, "folder");
+
+		// Group name
+		selfEl.createDiv({ cls: "tree-item-inner", text: node.text });
+
+		// Click anywhere on the row to toggle collapse
+		selfEl.addEventListener("click", () => {
 			if (this.collapsedGroups.has(node.id)) {
 				this.collapsedGroups.delete(node.id);
 			} else {
@@ -271,12 +286,12 @@ export class TabTreeView extends ItemView {
 			this.renderTree();
 		});
 
-		// Folder icon
-		const folderIcon = selfEl.createDiv({ cls: "tree-item-icon" });
-		setIcon(folderIcon, "folder");
-
-		// Group name
-		selfEl.createDiv({ cls: "tree-item-inner", text: node.text });
+		// Context menu for group
+		selfEl.addEventListener("contextmenu", (e) => {
+			e.stopPropagation();
+			e.preventDefault();
+			this.showGroupContextMenu(e, node);
+		});
 
 		// Drag handle
 		selfEl.addEventListener("pointerdown", (e) => {
@@ -288,9 +303,7 @@ export class TabTreeView extends ItemView {
 			const childrenEl = treeItem.createDiv({
 				cls: "tree-item-children",
 			});
-			const children = this.store.getChildren(
-				parseInt(node.id) || (node.id as any)
-			);
+			const children = this.store.getChildren(node.id);
 			for (const child of children) {
 				this.renderLeafNode(child, childrenEl);
 			}
@@ -370,23 +383,45 @@ export class TabTreeView extends ItemView {
 			item.setTitle("New Group")
 				.setIcon("folder")
 				.onClick(() => {
-					new SaveWorkspaceModal(
-						this.app,
-						this.plugin,
-						(result) => {
-							this.store.addNode({
-								id: random(16),
-								parent: 0,
-								droppable: true,
-								text: result,
-								data: {
-									fileType: "workspace",
-									fileSize: "",
-									icon: "folder",
-								},
-							});
-						}
-					).open();
+					new SaveWorkspaceModal(this.app, this.plugin, (result) => {
+						this.store.addNode({
+							id: random(16),
+							parent: 0,
+							droppable: true,
+							text: result,
+							data: {
+								fileType: "workspace",
+								fileSize: "",
+								icon: "folder",
+							},
+						});
+					}).open();
+				});
+		});
+		menu.showAtPosition({ x: e.clientX, y: e.clientY });
+	}
+
+	private showGroupContextMenu(e: MouseEvent, node: TreeNode): void {
+		const menu = new Menu();
+		menu.addItem((item) => {
+			item.setTitle("Rename Group")
+				.setIcon("pencil")
+				.onClick(() => {
+					new SaveWorkspaceModal(this.app, this.plugin, (result) => {
+						this.store.updateNode(node.id, { text: result });
+					}).open();
+				});
+		});
+		menu.addItem((item) => {
+			item.setTitle("Delete Group")
+				.setIcon("trash")
+				.onClick(() => {
+					// Move children back to root before deleting
+					const children = this.store.getChildren(node.id);
+					for (const child of children) {
+						this.store.moveToGroup(child.id, "0");
+					}
+					this.store.removeNode(node.id);
 				});
 		});
 		menu.showAtPosition({ x: e.clientX, y: e.clientY });

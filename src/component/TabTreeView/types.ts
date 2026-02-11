@@ -6,7 +6,7 @@ export type CustomData = {
 
 export interface TreeNode {
 	id: string;
-	parent: number;
+	parent: number | string;
 	droppable: boolean;
 	text: string;
 	data: CustomData;
