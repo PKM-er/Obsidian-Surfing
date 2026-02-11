@@ -1,6 +1,6 @@
 import { Notice, Platform } from "obsidian";
 import type { AIProvider, AIProviderContext, AIProviderEvent } from "../types";
-import type { ThreadEvent, ThreadItem } from "@openai/codex-sdk";
+import { Codex, type ThreadEvent, type ThreadItem } from "@openai/codex-sdk";
 
 export class CodexSdkProvider implements AIProvider {
 	readonly name = "codex-sdk";
@@ -85,8 +85,6 @@ export class CodexSdkProvider implements AIProvider {
 	): Promise<void> {
 		const resolvedPath = this.resolveCodexBinary(context.pluginDir);
 
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const { Codex } = require("@openai/codex-sdk") as any;
 		const codex = new Codex({
 			codexPathOverride: resolvedPath,
 			config:

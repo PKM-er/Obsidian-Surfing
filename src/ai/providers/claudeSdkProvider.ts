@@ -1,12 +1,13 @@
 import { Notice } from "obsidian";
 import type { AIProvider, AIProviderContext, AIProviderEvent } from "../types";
-import type {
-	Options,
-	SDKMessage,
-	SDKAssistantMessage,
-	SDKResultMessage,
-	SDKSystemMessage,
-	SDKUserMessage,
+import {
+	query,
+	type Options,
+	type SDKMessage,
+	type SDKAssistantMessage,
+	type SDKResultMessage,
+	type SDKSystemMessage,
+	type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
 /**
@@ -27,10 +28,6 @@ export class ClaudeSdkProvider implements AIProvider {
 		onEvent: (event: AIProviderEvent) => void,
 		signal: AbortSignal,
 	): Promise<void> {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const { query } = require("@anthropic-ai/claude-agent-sdk") as {
-			query: (typeof import("@anthropic-ai/claude-agent-sdk"))["query"];
-		};
 		const abortController = new AbortController();
 		const onAbort = () => abortController.abort();
 		signal.addEventListener("abort", onAbort, { once: true });
