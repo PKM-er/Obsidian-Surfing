@@ -1,78 +1,132 @@
-import path from 'path';
-import {defineConfig} from 'vite';
-import react from '@vitejs/plugin-react';
-import terser from '@rollup/plugin-terser';
-import replace from '@rollup/plugin-replace';
-import resolve from '@rollup/plugin-node-resolve';
+import path from "path";
+import { defineConfig } from "vite";
+import terser from "@rollup/plugin-terser";
+import replace from "@rollup/plugin-replace";
+import resolve from "@rollup/plugin-node-resolve";
 
-export default defineConfig(({mode}) => {
+// Obsidian loads plugins via app:// protocol, which breaks
+// fileURLToPath(import.meta.url) in bundled SDKs (codex-sdk, claude-agent-sdk).
+// This plugin rewrites import.meta.url to a safe file:// URL at build time.
+function obsidianImportMetaPlugin() {
 	return {
-		plugins: [react()],
+		name: "obsidian-import-meta-url",
+		resolveImportMeta(property, { moduleId }) {
+			if (property === "url") {
+				const fileUrl = `file:///${moduleId.replace(/\\/g, "/")}`;
+				return JSON.stringify(fileUrl);
+			}
+			return null;
+		},
+	};
+}
+
+export default defineConfig(({ mode }) => {
+	return {
+		plugins: [],
 		build: {
-			sourcemap: mode === 'development' ? 'inline' : false,
-			minify: mode === 'development' ? false : true,
+			sourcemap: mode === "development" ? "inline" : false,
+			minify: mode === "development" ? false : true,
 			// Use Vite lib mode https://vitejs.dev/guide/build.html#library-mode
 			lib: {
-				entry: path.resolve(__dirname, './src/surfingIndex.ts'),
-				formats: ['cjs'],
+				entry: path.resolve(__dirname, "./src/surfingIndex.ts"),
+				formats: ["cjs"],
 			},
 			rollupOptions: {
 				plugins: [
-					mode === 'development'
-						? ''
+					obsidianImportMetaPlugin(),
+					mode === "development"
+						? ""
 						: terser({
-							compress: {
-								defaults: false,
-								drop_console: true,
-							},
-							mangle: {
-								eval: true,
-								module: true,
-								toplevel: true,
-								safari10: true,
-								properties: false,
-							},
-							output: {
-								comments: false,
-								ecma: '2020',
-							},
-						}),
+								compress: {
+									defaults: false,
+									drop_console: true,
+								},
+								mangle: {
+									eval: true,
+									module: true,
+									toplevel: true,
+									safari10: true,
+									properties: false,
+								},
+								output: {
+									comments: false,
+									ecma: "2020",
+								},
+							}),
 					resolve({
 						browser: false,
 					}),
 					replace({
 						preventAssignment: true,
-						'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+						"process.env.NODE_ENV": JSON.stringify(
+							process.env.NODE_ENV,
+						),
 					}),
 				],
 				treeshake: true,
 				output: {
 					// Overwrite default Vite output fileName
-					entryFileNames: 'main.js',
-					assetFileNames: 'styles.css',
+					entryFileNames: "main.js",
+					assetFileNames: "styles.css",
 				},
 				external: [
-					'obsidian',
-					'electron',
-					'@codemirror/autocomplete',
-					'@codemirror/collab',
-					'@codemirror/commands',
-					'@codemirror/language',
-					'@codemirror/lint',
-					'@codemirror/search',
-					'@codemirror/state',
-					'@codemirror/view',
-					'@lezer/common',
-					'@lezer/highlight',
-					'@lezer/lr',
+					"obsidian",
+					"electron",
+					"child_process",
+					"crypto",
+					"events",
+					"fs",
+					"fs/promises",
+					"http",
+					"https",
+					"net",
+					"os",
+					"path",
+					"process",
+					"readline",
+					"stream",
+					"tls",
+					"url",
+					"util",
+					"zlib",
+					"node:child_process",
+					"node:crypto",
+					"node:events",
+					"node:fs",
+					"node:fs/promises",
+					"node:http",
+					"node:https",
+					"node:net",
+					"node:os",
+					"node:path",
+					"node:process",
+					"node:readline",
+					"node:stream",
+					"node:tls",
+					"node:url",
+					"node:util",
+					"node:zlib",
+					"@codemirror/autocomplete",
+					"@codemirror/collab",
+					"@codemirror/commands",
+					"@codemirror/language",
+					"@codemirror/lint",
+					"@codemirror/search",
+					"@codemirror/state",
+					"@codemirror/view",
+					"@lezer/common",
+					"@lezer/highlight",
+					"@lezer/lr",
+					"@openai/codex-sdk",
+					"@anthropic-ai/claude-agent-sdk",
 				],
 			},
 			emptyOutDir: false,
-			outDir: '.',
+			outDir: ".",
 		},
 		resolve: {
 			alias: {
-				'@': path.resolve(__dirname, './src'),
+				"@": path.resolve(__dirname, "./src"),
 			},
 		},
 	};
