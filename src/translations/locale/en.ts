@@ -157,6 +157,7 @@ export default {
 	"Custom AI Arguments": "Custom AI Arguments",
 	"Use placeholders: {prompt}, {url}, {title}, {selection}, {page_text}.":
 		"Use placeholders: {prompt}, {url}, {title}, {selection}, {page_text}.",
+	"Toggle Reader Mode": "Toggle Reader Mode",
 	"Toggle Surfing AI Assistant Sidebar":
 		"Toggle Surfing AI Assistant Sidebar",
 	"Focus Surfing AI Assistant Input": "Focus Surfing AI Assistant Input",
@@ -214,6 +215,7 @@ export default {
 	"Go Back": "Go Back",
 	"Go Forward": "Go Forward",
 	Reload: "Reload",
+	"All done": "TODOs completed",
 	"Actions Completed": "Actions Completed",
 	"Page Updated": "Page Updated",
 	"Export Selected": "Export Selected",

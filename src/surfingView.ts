@@ -1,20 +1,18 @@
 import {
 	Editor,
-	HoverPopover,
-	htmlToMarkdown,
 	ItemView,
+	MarkdownRenderer,
 	MarkdownView,
-	Menu,
-	MenuItem,
 	moment,
 	Notice,
 	Platform,
 	ViewStateResult,
 	WorkspaceLeaf,
 } from "obsidian";
+import Defuddle from "defuddle";
 import { HeaderBar } from "./component/HeaderBar";
 // @ts-ignore
-import { clipboard, remote } from "electron";
+import { clipboard } from "electron";
 import SurfingPlugin from "./surfingIndex";
 import { t } from "./translations/helper";
 import searchBox from "./component/SearchBox";
@@ -22,7 +20,6 @@ import { SEARCH_ENGINES } from "./surfingPluginSetting";
 import { OmniSearchContainer } from "./component/OmniSearchContainer";
 import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
 import { createBookmarkFile, isUrlBookmarked } from "./utils/bookmarkStore";
-import { PopoverWebView } from "./component/PopoverWebView";
 import type {
 	AssistantAction,
 	AssistantPageContext,
@@ -31,6 +28,8 @@ import type {
 import type { AIAssistantView } from "./component/AIAssistantView";
 import { ContentScriptInjector } from "./component/ContentScriptInjector";
 import { AIPageBridge } from "./component/AIPageBridge";
+import { ContextMenuHandler } from "./component/ContextMenuHandler";
+import { WebviewManager } from "./component/WebviewManager";
 import {
 	WEB_BROWSER_VIEW_ID,
 	type WebBrowserViewState,
@@ -49,34 +48,44 @@ export class SurfingView extends ItemView implements AssistantHost {
 
 	headerBar: HeaderBar;
 	favicon: HTMLImageElement;
-	webviewEl: HTMLWebViewElement & { getWebContentsId(): number };
-	private menu: Menu;
-
-	private hoverPopover: HoverPopover;
 	private searchContainer: OmniSearchContainer;
 
 	bookmarkBar: BookMarkBar;
-	private webViewContainerEl: HTMLElement;
-
-	private loaded = false;
-
-	private doc: Document;
 
 	private omnisearchEnabled: boolean;
 
 	private contentInjector: ContentScriptInjector;
 	private aiPageBridge: AIPageBridge;
+	private contextMenuHandler: ContextMenuHandler;
+	private webviewManager: WebviewManager;
+	private readerModeActive = false;
+	private readerOverlayEl: HTMLElement | null = null;
+
+	get webviewEl(): HTMLWebViewElement & { getWebContentsId(): number } {
+		return this.webviewManager?.webviewEl;
+	}
 
 	constructor(leaf: WorkspaceLeaf, plugin: SurfingPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 		this.contentInjector = new ContentScriptInjector(plugin);
+		this.contextMenuHandler = new ContextMenuHandler({
+			plugin,
+			getUrl: () => this.currentUrl,
+			getTitle: () => this.currentTitle,
+			leaf: this.leaf,
+			contentEl: this.contentEl,
+			webviewEl: this.webviewEl as unknown as HTMLElement,
+			navigateFn: (url: string) => this.navigate(url),
+			copyHighLightFn: () => this.copyHighLight(),
+		});
 		this.aiPageBridge = new AIPageBridge({
 			getWebContents: () => this.getWebContents(),
 			getCurrentUrl: () => this.currentUrl,
 			getCurrentTitle: () => this.currentTitle,
 			navigate: (url: string) => this.navigate(url),
-			waitForPageLoad: (timeout?: number) => this.waitForPageLoad(timeout),
+			waitForPageLoad: (timeout?: number) =>
+				this.waitForPageLoad(timeout),
 			refresh: () => this.refresh(),
 			getLeaf: () => this.leaf,
 			getContentEl: () => this.contentEl,
@@ -257,10 +266,8 @@ export class SurfingView extends ItemView implements AssistantHost {
 	}
 
 	openInpecter() {
-		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId(),
-		);
-		webContents.openDevTools();
+		const webContents = this.getWebContents();
+		if (webContents) webContents.openDevTools();
 	}
 
 	createWebview = () => {
@@ -274,259 +281,187 @@ export class SurfingView extends ItemView implements AssistantHost {
 			this.bookmarkBar.onload();
 		}
 
-		this.webViewContainerEl = this.contentEl.createDiv({
-			cls: "wb-webview-container",
-		});
+		this.webviewManager = new WebviewManager({
+			plugin: this.plugin,
+			appId: this.app.appId,
+			leafId: this.leaf.id,
+			contentEl: this.contentEl,
+			sessionIsolation: this.plugin.settings.sessionIsolation,
+			getCurrentUrl: () => this.currentUrl,
+			recreateWebview: () => this.createWebview(),
+			callbacks: {
+				onDomReady: async (webContents: any) => {
+					// Open new browser tab if the web view requests it.
+					webContents.setWindowOpenHandler((event: any) => {
+						SurfingView.spawnWebBrowserView(this.plugin, true, {
+							url: event.url,
+							active: event.disposition !== "background-tab",
+						});
+						return { action: "allow" };
+					});
 
-		const doc = this.contentEl.doc;
-		this.webviewEl = doc.createElement("webview");
-		this.webviewEl.setAttribute("allowpopups", "");
-		// @ts-ignore
-		if (this.plugin.settings.sessionIsolation) {
-			this.webviewEl.partition =
-				"surfing-vault-" + this.app.appId + "-" + this.leaf.id;
-		} else {
-			this.webviewEl.partition =
-				"persist:surfing-vault-" + this.app.appId;
-		}
-		this.webviewEl.addClass("wb-frame");
-		this.webViewContainerEl.appendChild(this.webviewEl);
+					await this.contextMenuHandler.register(
+						webContents,
+						this.webviewEl,
+					);
+					await this.contentInjector.inject(webContents);
+				},
+				onKeyboardEvent: (
+					emulatedKeyboardEvent: KeyboardEvent,
+					webContents: any,
+				) => {
+					// TODO: Allow set hotkey in webview;
+					if (
+						this.plugin.settings.focusSearchBarViaKeyboard &&
+						emulatedKeyboardEvent.key === "/"
+					) {
+						console.log("focus search bar via keyboard");
+						if (
+							!this.plugin.settings.ignoreList.find(
+								(item: string) =>
+									this.currentUrl.contains(
+										item.toLowerCase(),
+									),
+							)
+						) {
+							webContents
+								.executeJavaScript(
+									`document.activeElement instanceof HTMLInputElement`,
+									true,
+								)
+								.then((result: any) => {
+									if (!result) this.headerBar.focus();
+								});
+							return;
+						}
+					}
+
+					activeDocument.body.dispatchEvent(emulatedKeyboardEvent);
+
+					if (
+						emulatedKeyboardEvent.ctrlKey &&
+						emulatedKeyboardEvent.key === "f"
+					) {
+						this.searchBox = new searchBox(
+							this.leaf,
+							webContents,
+							this.plugin,
+						);
+					}
+				},
+				onDragStartInject: (webContents: any) => {
+					const highlightFormat =
+						this.plugin.settings.highlightFormat;
+					const getCurrentTime = () => {
+						let link = "";
+						// eslint-disable-next-line no-useless-escape
+						const timeString = highlightFormat.match(
+							/\{TIME\:[^\{\}\[\]]*\}/g,
+						)?.[0];
+						if (timeString) {
+							// eslint-disable-next-line no-useless-escape
+							const momentTime = moment().format(
+								timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
+							);
+							link = highlightFormat.replace(
+								timeString,
+								momentTime,
+							);
+							return link;
+						}
+						return link;
+					};
+					webContents
+						.executeJavaScript(
+							`
+						window.addEventListener('dragstart', (e) => {
+							if(e.ctrlKey || e.metaKey) {
+								e.dataTransfer.clearData();
+								const selectionText = document.getSelection().toString();
+
+								let tempText = encodeURIComponent(selectionText);
+								const chineseRegex = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
+								const englishSentence = selectionText.split('\\n');
+
+								if (selectionText.match(chineseRegex)?.length > 50) {
+									if (englishSentence.length > 1) {
+										const fistSentenceWords = englishSentence[0];
+										const lastSentenceWords = englishSentence[englishSentence.length - 1];
+
+										tempText = encodeURIComponent(fistSentenceWords.slice(0, 4)) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 4, lastSentenceWords.length));
+									} else {
+										tempText = encodeURIComponent(selectionText.substring(0, 8)) + "," + encodeURIComponent(selectionText.substring(selectionText.length - 8, selectionText.length));
+									}
+								} else if (englishSentence.length > 1) {
+
+									const fistSentenceWords = englishSentence[0].split(' ');
+									const lastSentenceWords = englishSentence[englishSentence.length - 1].split(' ');
+
+									tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
+								}
+
+								const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
+								let link = "";
+								if ("${highlightFormat}".includes("{TIME")) {
+									link = "${getCurrentTime()}";
+								}
+								link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+
+								e.dataTransfer.setData('text/plain', link);
+							}
+						});
+						`,
+							true,
+						)
+						.then((result: any) => {});
+				},
+				onFocus: () => {
+					this.app.workspace.setActiveLeaf(this.leaf);
+					activeDocument.body.dispatchEvent(
+						new MouseEvent("click", { bubbles: true }),
+					);
+				},
+				onFaviconUpdate: (favicons: string[]) => {
+					if (favicons[0] !== undefined)
+						this.favicon.src = favicons[0];
+					this.leaf.tabHeaderInnerIconEl.empty();
+					this.leaf.tabHeaderInnerIconEl.appendChild(this.favicon);
+				},
+				onTitleUpdate: (title: string) => {
+					if (this.omnisearchEnabled) this.updateSearchBox();
+					this.leaf.tabHeaderInnerTitleEl.innerText = title;
+					this.currentTitle = title;
+
+					this.app.workspace.trigger(
+						"surfing:page-change",
+						title,
+						this,
+					);
+				},
+				onNavigate: (url: string) => {
+					if (this.readerModeActive) {
+						this.readerOverlayEl?.remove();
+						this.readerOverlayEl = null;
+						this.readerModeActive = false;
+						this.webviewEl.style.display = "";
+					}
+					this.navigate(url, true, false);
+				},
+				onMenuClose: () => {
+					this.contextMenuHandler?.close();
+				},
+				onDestroyed: () => {
+					this.createWebview();
+				},
+			},
+		});
+		this.webviewManager.create();
 
 		if (this.currentUrl) this.navigate(this.currentUrl);
 
 		this.headerBar.addOnSearchBarEnterListener((url: string) => {
 			this.navigate(url);
 		});
-
-		this.webviewEl.addEventListener("dom-ready", async (event: any) => {
-			// @ts-ignore
-			const webContents = remote.webContents.fromId(
-				this.webviewEl.getWebContentsId(),
-			);
-
-			// Open new browser tab if the web view requests it.
-			webContents.setWindowOpenHandler((event: any) => {
-				SurfingView.spawnWebBrowserView(this.plugin, true, {
-					url: event.url,
-					active: event.disposition !== "background-tab",
-				});
-				return {
-					action: "allow",
-				};
-			});
-
-			await this.registerContextMenuInWebcontents(webContents);
-			await this.contentInjector.inject(webContents);
-
-			// For getting keyboard event from webview
-			webContents.on("before-input-event", (event: any, input: any) => {
-				if (input.type !== "keyDown") {
-					return;
-				}
-
-				// Create a fake KeyboardEvent from the data provided
-				const emulatedKeyboardEvent = new KeyboardEvent("keydown", {
-					code: input.code,
-					key: input.key,
-					shiftKey: input.shift,
-					altKey: input.alt,
-					ctrlKey: input.control,
-					metaKey: input.meta,
-					repeat: input.isAutoRepeat,
-				});
-
-				// TODO: Allow set hotkey in webview;
-				if (
-					this.plugin.settings.focusSearchBarViaKeyboard &&
-					emulatedKeyboardEvent.key === "/"
-				) {
-					console.log("focus search bar via keyboard");
-					if (
-						!this.plugin.settings.ignoreList.find((item: string) =>
-							this.currentUrl.contains(item.toLowerCase()),
-						)
-					) {
-						webContents
-							.executeJavaScript(
-								`
-											document.activeElement instanceof HTMLInputElement
-										`,
-								true,
-							)
-							.then((result: any) => {
-								if (!result) this.headerBar.focus();
-							});
-						return;
-					}
-				}
-
-				// TODO Detect pressed hotkeys if exists in default hotkeys list
-				// If so, prevent default and execute the hotkey
-				// If not, send the event to the webview
-				activeDocument.body.dispatchEvent(emulatedKeyboardEvent);
-
-				if (
-					emulatedKeyboardEvent.ctrlKey &&
-					emulatedKeyboardEvent.key === "f"
-				) {
-					this.searchBox = new searchBox(
-						this.leaf,
-						webContents,
-						this.plugin,
-					);
-				}
-			});
-
-			// TODO: Do we need to show a link that cursor hovering?
-			// webContents.on("update-target-url", (event: Event, url: string) => {
-			// 	console.log("update-target-url", url);
-			// })
-
-			try {
-				const highlightFormat = this.plugin.settings.highlightFormat;
-				const getCurrentTime = () => {
-					let link = "";
-					// eslint-disable-next-line no-useless-escape
-					const timeString = highlightFormat.match(
-						/\{TIME\:[^\{\}\[\]]*\}/g,
-					)?.[0];
-					if (timeString) {
-						// eslint-disable-next-line no-useless-escape
-						const momentTime = moment().format(
-							timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
-						);
-						link = highlightFormat.replace(timeString, momentTime);
-						return link;
-					}
-					return link;
-				};
-				webContents
-					.executeJavaScript(
-						`
-					window.addEventListener('dragstart', (e) => {
-						if(e.ctrlKey || e.metaKey) {
-							e.dataTransfer.clearData();
-							const selectionText = document.getSelection().toString();
-
-							let tempText = encodeURIComponent(selectionText);
-							const chineseRegex = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
-							const englishSentence = selectionText.split('\\n');
-
-							if (selectionText.match(chineseRegex)?.length > 50) {
-								if (englishSentence.length > 1) {
-									const fistSentenceWords = englishSentence[0];
-									const lastSentenceWords = englishSentence[englishSentence.length - 1];
-
-									tempText = encodeURIComponent(fistSentenceWords.slice(0, 4)) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 4, lastSentenceWords.length));
-								} else {
-									tempText = encodeURIComponent(selectionText.substring(0, 8)) + "," + encodeURIComponent(selectionText.substring(selectionText.length - 8, selectionText.length));
-								}
-							} else if (englishSentence.length > 1) {
-
-								const fistSentenceWords = englishSentence[0].split(' ');
-								const lastSentenceWords = englishSentence[englishSentence.length - 1].split(' ');
-
-								tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
-							}
-
-							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
-							let link = "";
-							if ("${highlightFormat}".includes("{TIME")) {
-								link = "${getCurrentTime()}";
-							}
-							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
-
-							e.dataTransfer.setData('text/plain', link);
-						}
-					});
-					`,
-						true,
-					)
-					.then((result: any) => {});
-			} catch (err) {
-				console.error("Failed to add event: ", err);
-			}
-		});
-
-		// When focus set current leaf active;
-		this.webviewEl.addEventListener("focus", (event: any) => {
-			this.app.workspace.setActiveLeaf(this.leaf);
-		});
-
-		this.webviewEl.addEventListener(
-			"page-favicon-updated",
-			(event: any) => {
-				if (event.favicons[0] !== undefined)
-					this.favicon.src = event.favicons[0];
-				this.leaf.tabHeaderInnerIconEl.empty();
-				this.leaf.tabHeaderInnerIconEl.appendChild(this.favicon);
-			},
-		);
-
-		this.webviewEl.addEventListener("page-title-updated", (event: any) => {
-			if (this.omnisearchEnabled) this.updateSearchBox();
-			this.leaf.tabHeaderInnerTitleEl.innerText = event.title;
-			this.currentTitle = event.title;
-
-			this.app.workspace.trigger(
-				"surfing:page-change",
-				event.title,
-				this,
-			);
-		});
-
-		this.webviewEl.addEventListener("will-navigate", (event: any) => {
-			this.navigate(event.url, true, false);
-		});
-
-		this.webviewEl.addEventListener(
-			"did-navigate-in-page",
-			(event: any) => {
-				this.navigate(event.url, true, false);
-				this.menu?.close();
-			},
-		);
-
-		this.webviewEl.addEventListener("new-window", (event: any) => {
-			event.preventDefault();
-		});
-
-		this.webviewEl.addEventListener("did-attach-webview", (event: any) => {
-			console.log("Webview attached");
-		});
-
-		this.webviewEl.addEventListener("destroyed", () => {
-			if (doc !== this.contentEl.doc) {
-				console.log("Webview destroyed");
-				this.webviewEl.detach();
-				this.createWebview();
-			}
-		});
-
-		// TODO: Support dark reader soon.
-		// this.frame.addEventListener("did-finish-load", (event: any) => {
-		// 	// @ts-ignore
-		// 	const webContents = remote.webContents.fromId(this.frame.getWebContentsId());
-		//
-		// 	webContents.executeJavaScript(`
-		// 				window.addEventListener('DOMContentLoaded', ()=>{
-		// 					DarkReader.setFetchMethod(window.fetch);
-		// 					DarkReader.enable({brightness: 100, contrast: 90, sepia: 10});
-		// 					console.log("hlewo");
-		// 				});
-		// 			`, true).then((result: any) => {
-		// 	});
-		// })
-
-		doc.contains(this.contentEl)
-			? this.webViewContainerEl.appendChild(this.webviewEl)
-			: this.contentEl.onNodeInserted(() => {
-					if (this.loaded) return;
-					else this.loaded = true;
-					this.contentEl.doc === doc
-						? this.webViewContainerEl.appendChild(this.webviewEl)
-						: this.createWebview();
-				});
 	};
 
 	async onOpen() {
@@ -564,15 +499,18 @@ export class SurfingView extends ItemView implements AssistantHost {
 
 	onload() {
 		super.onload();
-		if (this.menu) this.menu.close();
+		this.contextMenuHandler?.close();
 	}
 
 	async onClose() {
-		this.menu?.close();
-		this.hoverPopover?.hide();
+		this.contextMenuHandler?.close();
 	}
 
 	initHeaderButtons() {
+		this.addAction("book-open", t("Toggle Reader Mode"), () => {
+			this.toggleReaderMode();
+		});
+
 		if (Platform.isDesktop && this.plugin.settings.aiAssistant.enabled) {
 			this.addAction(
 				"bot",
@@ -611,11 +549,8 @@ export class SurfingView extends ItemView implements AssistantHost {
 
 			let description = "";
 			try {
-				// @ts-ignore
-				const webContents = remote.webContents.fromId(
-					this.webviewEl.getWebContentsId(),
-				);
-				const result = await webContents.executeJavaScript(
+				const webContents = this.getWebContents();
+				const result = await webContents?.executeJavaScript(
 					`document.querySelector('meta[name="description"]')?.content`,
 				);
 				if (result) description = result;
@@ -672,10 +607,8 @@ export class SurfingView extends ItemView implements AssistantHost {
 			engine.url.startsWith(currentUrl),
 		);
 		if (!currentSearchEngine) return;
-		// @ts-ignore
-		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId(),
-		);
+		const webContents = this.getWebContents();
+		if (!webContents) return;
 
 		try {
 			webContents
@@ -693,502 +626,8 @@ export class SurfingView extends ItemView implements AssistantHost {
 		}
 	}
 
-	createMenu = (webContents: any, params: any) => {
-		if (this.menu) {
-			this.menu?.close();
-		}
-
-		const self = this;
-		this.menu = new Menu() as Menu;
-
-		const navigateBack = () => {
-			// @ts-ignore
-			this.leaf?.history.back();
-		};
-
-		const navigateForward = () => {
-			// @ts-ignore
-			this.leaf?.history.forward();
-		};
-
-		if (!params.selectionText) {
-			this.menu
-				.addItem((item: MenuItem) => {
-					item.setTitle(t("Refresh Current Page"));
-					item.setIcon("refresh-ccw");
-					item.onClick(() => {
-						this.leaf?.rebuildView();
-					});
-				})
-				.addItem((item: MenuItem) => {
-					item.setTitle(t("Back"));
-					item.setIcon("arrow-left");
-					item.onClick(() => {
-						navigateBack();
-					});
-				})
-				.addItem((item: MenuItem) => {
-					item.setTitle(t("Forward"));
-					item.setIcon("arrow-right");
-					item.onClick(() => {
-						navigateForward();
-					});
-				})
-				.addSeparator();
-		}
-
-		this.menu
-			.addItem((item: MenuItem) => {
-				item.setTitle(t("Open Current URL In External Browser"));
-				item.setIcon("link");
-				item.onClick(() => {
-					window.open(params.pageURL, "_blank");
-				});
-			})
-			.addItem((item: MenuItem) => {
-				item.setTitle(t("Save Current Page As Markdown"));
-				item.setIcon("download");
-				item.onClick(async () => {
-					try {
-						webContents
-							.executeJavaScript(
-								`
-											document.body.outerHTML
-										`,
-								true,
-							)
-							.then(async (result: any) => {
-								const url = params.pageURL.replace(
-									/\?(.*)/g,
-									"",
-								);
-								const parseContent = result.replaceAll(
-									/src="(?!(https|http))([^"]*)"/g,
-									'src="' + url + '$2"',
-								);
-								const content = htmlToMarkdown(parseContent);
-								// @ts-ignore
-								const currentTitle = webContents
-									.getTitle()
-									.replace(/[/\\?%*:|"<>]/g, "-");
-								const file = await self.app.vault.create(
-									(self.plugin.settings.markdownPath
-										? self.plugin.settings.markdownPath +
-											"/"
-										: "/") +
-										currentTitle +
-										".md",
-									content,
-								);
-								await self.app.workspace.openLinkText(
-									file.path,
-									"",
-									true,
-								);
-							});
-						console.log("Page Title copied to clipboard");
-					} catch (err) {
-						console.error("Failed to copy: ", err);
-					}
-				});
-			})
-			.addItem((item: MenuItem) => {
-				item.setTitle(t("Copy Current Viewport As Image"));
-				item.setIcon("image");
-				item.onClick(async () => {
-					try {
-						// Copy Image to Clipboard
-						webContents.capturePage().then(async (image: any) => {
-							clipboard.writeImage(image);
-						});
-					} catch (err) {
-						console.error("Failed to copy: ", err);
-					}
-				});
-			});
-
-		if (params.selectionText) {
-			this.menu.addSeparator();
-			this.menu.addItem((item: MenuItem) => {
-				item.setTitle(t("Search Text"));
-				item.setIcon("search");
-				item.onClick(() => {
-					try {
-						SurfingView.spawnWebBrowserView(self.plugin, true, {
-							url: params.selectionText,
-						});
-					} catch (err) {
-						console.error("Failed to copy: ", err);
-					}
-				});
-			});
-			this.menu.addSeparator();
-			this.menu.addItem((item: MenuItem) => {
-				item.setTitle(t("Copy Plain Text"));
-				item.setIcon("copy");
-				item.onClick(() => {
-					try {
-						navigator.clipboard.writeText(params.selectionText);
-					} catch (err) {
-						console.error("Failed to copy: ", err);
-					}
-				});
-			});
-			this.menu.addItem((item: MenuItem) => {
-				item.setTitle("Save selection as markdown")
-					.setIcon("download")
-					.onClick(async () => {
-						const content = params.selectionText;
-						// @ts-ignore
-						const currentTitle = webContents
-							.getTitle()
-							.replace(/[/\\?%*:|"<>]/g, "-");
-						const file = await self.app.vault.create(
-							(self.plugin.settings.markdownPath
-								? self.plugin.settings.markdownPath + "/"
-								: "/") +
-								currentTitle +
-								".md",
-							content,
-						);
-						await self.app.workspace.openLinkText(
-							file.path,
-							"",
-							true,
-						);
-					});
-			});
-			const highlightFormat = this.plugin.settings.highlightFormat;
-			this.menu.addItem((item: MenuItem) => {
-				item.setTitle(t("Copy Link to Highlight"));
-				item.setIcon("link");
-				item.onClick(() => {
-					try {
-						// eslint-disable-next-line no-useless-escape
-						let tempText = encodeURIComponent(params.selectionText);
-						const chineseRegex =
-							/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
-						const englishSentence =
-							params.selectionText.split("\n");
-
-						if (
-							params.selectionText.match(chineseRegex)?.length >
-							50
-						) {
-							if (englishSentence.length > 1) {
-								const fistSentenceWords = englishSentence[0];
-								const lastSentenceWords =
-									englishSentence[englishSentence.length - 1];
-
-								tempText =
-									encodeURIComponent(
-										fistSentenceWords.slice(0, 3),
-									) +
-									"," +
-									encodeURIComponent(
-										lastSentenceWords.slice(
-											lastSentenceWords.length - 4,
-											lastSentenceWords.length,
-										),
-									);
-							} else {
-								tempText =
-									encodeURIComponent(
-										params.selectionText.substring(0, 8),
-									) +
-									"," +
-									encodeURIComponent(
-										params.selectionText.substring(
-											params.selectionText.length - 8,
-											params.selectionText.length,
-										),
-									);
-							}
-						} else if (englishSentence.length > 1) {
-							const fistSentenceWords =
-								englishSentence[0].split(" ");
-							const lastSentenceWords =
-								englishSentence[
-									englishSentence.length - 1
-								].split(" ");
-
-							tempText =
-								encodeURIComponent(
-									fistSentenceWords.slice(0, 3).join(" "),
-								) +
-								"," +
-								encodeURIComponent(
-									lastSentenceWords
-										.slice(
-											lastSentenceWords.length - 1,
-											lastSentenceWords.length,
-										)
-										.join(" "),
-								);
-							// tempText = encodeURIComponent(englishWords.slice(0, 2).join(' ')) + "," + encodeURIComponent(englishWords.slice(englishWords.length - 1, englishWords.length).join(' '));
-						}
-
-						const linkToHighlight =
-							params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") +
-							"#:~:text=" +
-							tempText;
-						const selectionText = params.selectionText.replace(
-							/\n/g,
-							" ",
-						);
-						let link = "";
-						if (highlightFormat.contains("{TIME")) {
-							// eslint-disable-next-line no-useless-escape
-							const timeString = highlightFormat.match(
-								/\{TIME\:[^\{\}\[\]]*\}/g,
-							)?.[0];
-							if (timeString) {
-								// eslint-disable-next-line no-useless-escape
-								const momentTime = moment().format(
-									timeString.replace(
-										/{TIME:([^\}]*)}/g,
-										"$1",
-									),
-								);
-								link = highlightFormat.replace(
-									timeString,
-									momentTime,
-								);
-							}
-						}
-						link = (link != "" ? link : highlightFormat)
-							.replace(/\{URL\}/g, linkToHighlight)
-							.replace(/\{CONTENT\}/g, selectionText);
-						clipboard.writeText(link);
-					} catch (err) {
-						console.error("Failed to copy: ", err);
-					}
-				});
-			});
-		}
-
-		if (params.pageURL?.contains("bilibili.com/")) {
-			this.menu.addSeparator();
-			this.menu.addItem((item: MenuItem) => {
-				item.setTitle(t("Copy Video Timestamp"));
-				item.setIcon("link");
-				item.onClick(() => {
-					try {
-						webContents
-							.executeJavaScript(
-								`
-											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
-											var timeYMSArr=time.split(':');
-											var joinTimeStr='00h00m00s';
-											if(timeYMSArr.length===3){
-												 joinTimeStr=timeYMSArr[0]+'h'+timeYMSArr[1]+'m'+timeYMSArr[2]+'s';
-											}else if(timeYMSArr.length===2){
-												 joinTimeStr=timeYMSArr[0]+'m'+timeYMSArr[1]+'s';
-											}
-											var timeStr= "";
-											var pageStrMatch = window.location.href.match(/(p=[1-9]{1,})/g);
-											var pageStr = "";
-											if(typeof pageStrMatch === "object" && pageStrMatch?.length > 0){
-											    pageStr = '&' + pageStrMatch[0];
-											}else if(typeof pageStrMatch === "string") {
-											    pageStr = '&' + pageStrMatch;
-											}
-											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
-										`,
-								true,
-							)
-							.then((result: any) => {
-								clipboard.writeText(
-									"[" +
-										result
-											.split("?t=")[1]
-											.replace(/&p=[1-9]{1,}/g, "") +
-										"](" +
-										result +
-										")",
-								); // Will be the JSON object from the fetch call
-							});
-						console.log("Page URL copied to clipboard");
-					} catch (err) {
-						console.error("Failed to copy: ", err);
-					}
-				});
-			});
-		}
-
-		this.menu.showAtPosition({
-			x: params.x,
-			y: params.y,
-		});
-	};
-
-	async registerContextMenuInWebcontents(webContents: any) {
-		webContents.executeJavaScript(`
-			window.addEventListener('contextmenu', (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				e.stopImmediatePropagation();
-				window.myPostPort?.postMessage('contextmenu ' + e.clientX + ' ' + e.clientY);
-			 })
-		 `);
-
-		await webContents.executeJavaScript(`
-			window.addEventListener("message", (e) => {
-				window.myPostPort = e.ports[0];
-			})
-			document.addEventListener('click', (e) => {
-				window.myPostPort?.postMessage('click');
-			});
-			document.addEventListener('scroll', (e) => {
-				window.myPostPort?.postMessage('scroll');
-			});0
-
-		`);
-
-		const ch = new MessageChannel();
-		ch.port1.onmessage = (e: any) => {
-			if (e.data === "contextmenu" || e.data?.startsWith("contextmenu")) {
-				this.menu?.close();
-				const { x, y } =
-					e.data.split(" ").length > 1
-						? {
-								x: e.data.split(" ")[1],
-								y: e.data.split(" ")[2],
-							}
-						: { x: e.x, y: e.y };
-				const realRect = this.webviewEl.getClientRects();
-				const rect: {
-					x: number;
-					y: number;
-				} = {
-					x: parseInt(x, 10) + realRect[0].x,
-					y: parseInt(y, 10) + realRect[0].y,
-				};
-
-				const pageUrl = this.currentUrl;
-				let selectionText = "";
-				try {
-					webContents
-						.executeJavaScript(
-							`window.getSelection().toString()`,
-							true,
-						)
-						.then((result: any) => {
-							selectionText = result;
-
-							console.log(rect, pageUrl, selectionText);
-
-							this.createMenu(webContents, {
-								...rect,
-								pageURL: pageUrl,
-								selectionText: selectionText,
-							});
-						});
-				} catch (err) {
-					console.error("Failed to copy: ", err);
-				}
-				return;
-			}
-
-			if (e.data && e.data.startsWith("link ")) {
-				console.log(e.data);
-				if (this.hoverPopover) this.hoverPopover.hide();
-				const x = e.data.split(" ")[1];
-				const y = e.data.split(" ")[2];
-				const url = e.data.split(" ")[3];
-				console.log(url);
-				if (!url) return;
-				if (!url.startsWith("http")) return;
-				this.hoverPopover = new HoverPopover(
-					<any>this.contentEl,
-					null,
-					100,
-				);
-
-				const realRect = this.webviewEl.getClientRects();
-				const rect: {
-					x: number;
-					y: number;
-				} = {
-					x: parseInt(x, 10) + realRect[0].x,
-					y: parseInt(y, 10) + realRect[0].y,
-				};
-
-				setTimeout(() => {
-					this.hoverPopover.position({
-						x: rect.x,
-						y: rect.y,
-						doc: this.doc,
-					});
-				}, 100);
-
-				this.hoverPopover.hoverEl.toggleClass(
-					"surfing-hover-popover",
-					true,
-				);
-
-				const parentEl = this.hoverPopover.hoverEl.createEl("div", {
-					cls: "surfing-hover-popover-container",
-				});
-				const webView = new PopoverWebView(parentEl, url, this.plugin);
-				webView.onload();
-				return;
-			}
-
-			if (e.data !== "darkreader-failed") {
-				this.menu?.close();
-				this.hoverPopover?.hide();
-			} else if (e.data === "darkreader-failed") {
-				webContents
-					.executeJavaScript(
-						`
-										window.getComputedStyle( document.body ,null).getPropertyValue('background-color');
-							`,
-						true,
-					)
-					.then((result: any) => {
-						const colorArr = result
-							.slice(result.indexOf("(") + 1, result.indexOf(")"))
-							.split(", ");
-
-						const brightness = Math.sqrt(
-							colorArr[0] ** 2 * 0.241 +
-								colorArr[1] ** 2 * 0.691 +
-								colorArr[2] ** 2 * 0.068,
-						);
-
-						// If the background color is dark, set the theme to dark.
-						if (brightness > 120) {
-							webContents.insertCSS(`
-							html {
-								filter: invert(90%) hue-rotate(180deg);
-							}
-
-							img, svg, div[class*="language-"] {
-								filter: invert(110%) hue-rotate(180deg);
-								opacity: .8;
-							}
-
-							video, canvas {
-								filter: invert(110%) hue-rotate(180deg);
-								opacity: 1;
-							}
-					`);
-						}
-					});
-			}
-		};
-
-		await (this.webviewEl as any).contentWindow.postMessage(`test`, "*", [
-			ch.port2,
-		]);
-	}
-
-
 	private getWebContents() {
-		if (!this.webviewEl) return null;
-		// @ts-ignore
-		return remote.webContents.fromId(this.webviewEl.getWebContentsId());
+		return this.webviewManager?.getWebContents() ?? null;
 	}
 
 	// -- AssistantHost delegation --
@@ -1197,7 +636,10 @@ export class SurfingView extends ItemView implements AssistantHost {
 		includePageText: boolean,
 		maxPageTextLength: number,
 	): Promise<AssistantPageContext> {
-		return this.aiPageBridge.getAIAssistantPageContext(includePageText, maxPageTextLength);
+		return this.aiPageBridge.getAIAssistantPageContext(
+			includePageText,
+			maxPageTextLength,
+		);
 	}
 
 	async executeAIAssistantAction(action: AssistantAction): Promise<string> {
@@ -1205,22 +647,9 @@ export class SurfingView extends ItemView implements AssistantHost {
 	}
 
 	waitForPageLoad(timeout = 10000): Promise<void> {
-		return new Promise((resolve) => {
-			if (!this.webviewEl) {
-				resolve();
-				return;
-			}
-			let settled = false;
-			const done = () => {
-				if (settled) return;
-				settled = true;
-				this.webviewEl?.removeEventListener("did-finish-load", onLoad);
-				resolve();
-			};
-			const onLoad = () => done();
-			this.webviewEl.addEventListener("did-finish-load", onLoad);
-			setTimeout(done, timeout);
-		});
+		return (
+			this.webviewManager?.waitForPageLoad(timeout) ?? Promise.resolve()
+		);
 	}
 
 	getCurrentPageInfo(): { url: string; title: string } {
@@ -1232,17 +661,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 	}
 
 	clearHistory(): void {
-		// @ts-ignore
-		const webContents = this.getWebContents();
-		if (!webContents) return;
-
-		webContents.clearHistory();
-		webContents.executeJavaScript(
-			"history.pushState({}, '', location.href)",
-		);
-
-		this.leaf.history.backHistory.splice(0);
-		this.leaf.history.forwardHistory.splice(0);
+		this.webviewManager?.clearHistory(this.leaf.history);
 	}
 
 	getState(): WebBrowserViewState {
@@ -1344,10 +763,8 @@ export class SurfingView extends ItemView implements AssistantHost {
 
 	// TODO: Combine this with context menu method.
 	getCurrentTimestamp(editor?: Editor) {
-		// @ts-ignore
-		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId(),
-		);
+		const webContents = this.getWebContents();
+		if (!webContents) return;
 		webContents
 			.executeJavaScript(
 				`
@@ -1376,13 +793,79 @@ export class SurfingView extends ItemView implements AssistantHost {
 			});
 	}
 
-	// TODO: Refresh the page.
 	refresh() {
-		// @ts-ignore
-		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId(),
-		);
-		webContents.reload();
+		this.webviewManager?.refresh();
+	}
+
+	async toggleReaderMode(): Promise<void> {
+		if (this.readerModeActive) {
+			this.readerOverlayEl?.remove();
+			this.readerOverlayEl = null;
+			this.readerModeActive = false;
+			this.webviewEl.style.display = "";
+			return;
+		}
+
+		const webContents = this.getWebContents();
+		if (!webContents) return;
+
+		try {
+			await AIPageBridge.waitForDOMStability(webContents);
+
+			const html: string = await webContents.executeJavaScript(
+				`document.documentElement.outerHTML`,
+				true,
+			);
+
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(html, "text/html");
+
+			const baseEl = doc.createElement("base");
+			baseEl.href = this.currentUrl.replace(/\?(.*)/g, "");
+			doc.head.prepend(baseEl);
+
+			const result = new Defuddle(doc, {
+				url: this.currentUrl,
+				markdown: true,
+			}).parse();
+
+			const markdown = result.content || "";
+
+			const containerEl = this.webviewManager.getContainerEl();
+			this.readerOverlayEl = containerEl.createDiv({
+				cls: "wb-reader-mode-overlay",
+			});
+
+			this.readerOverlayEl.createEl("h1", {
+				cls: "wb-reader-mode-title",
+				text: result.title || this.currentTitle,
+			});
+
+			if (result.author || result.published) {
+				const metaEl = this.readerOverlayEl.createDiv({
+					cls: "wb-reader-mode-meta",
+				});
+				if (result.author) metaEl.createSpan({ text: result.author });
+				if (result.published)
+					metaEl.createSpan({ text: result.published });
+			}
+
+			const contentEl = this.readerOverlayEl.createDiv({
+				cls: "wb-reader-mode-content",
+			});
+			await MarkdownRenderer.render(
+				this.app,
+				markdown,
+				contentEl,
+				"",
+				this,
+			);
+
+			this.webviewEl.style.display = "none";
+			this.readerModeActive = true;
+		} catch (err) {
+			console.error("Reader mode failed:", err);
+		}
 	}
 
 	copyHighLight() {
@@ -1413,10 +896,8 @@ export class SurfingView extends ItemView implements AssistantHost {
 			return highlightFormat.includes("{TIME");
 		};
 
-		// @ts-ignore
-		const webContents = remote.webContents.fromId(
-			this.webviewEl.getWebContentsId(),
-		);
+		const webContents = this.getWebContents();
+		if (!webContents) return;
 
 		webContents
 			.executeJavaScript(
