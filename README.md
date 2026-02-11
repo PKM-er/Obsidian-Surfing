@@ -36,11 +36,20 @@ have been possible without it.
 	- Default search engine: setting item
 	- Default copy highlighted template: setting item (currently only supports very simple templates), please avoid
 	  using some special characters
+	- AI assistant sidebar: a right panel can chat with local Codex/Claude CLI and trigger page actions
 	- Support browsing history: Jump back and forth to the page
 	- Clear browsing history: command panel
 	- All links are opened in the same panel on the right: Settings
 	- Toggle whether to open in the same panel on the right: command panel
 	- Simple dark mode: just simple
+
+### AI Assistant Sidebar
+
+You can enable `AI Assistant Sidebar` in `Settings > Surfing > General` to show a right-side chat panel in each Surfing page.
+
+- Default providers include `Codex` and `Claude Code`, and both can be mapped to local CLI commands.
+- Supports placeholders in command arguments: `{prompt}`, `{url}`, `{title}`, `{selection}`, `{page_text}`.
+- The assistant can return structured actions (`navigate`, `click`, `type`, `scroll`, `extract`, etc.) to operate the current page.
 
 ## Usage
 
