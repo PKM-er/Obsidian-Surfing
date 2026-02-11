@@ -1,17 +1,13 @@
 import SurfingPlugin from "../../surfingIndex";
-import { Bookmark, CategoryType } from "../../types/bookmark";
+import { BookmarkFileItem } from "../../utils/bookmarkStore";
 import { BookMarkItem } from "./BookMarkItem";
 import { ItemView, setIcon } from "obsidian";
-import { initializeJson, loadJson } from "../../utils/json";
-import { WEB_BROWSER_BOOKMARK_MANAGER_ID } from "../../surfingBookmarkManager";
 
 export class BookMarkBar {
 	private view: ItemView;
 	private plugin: SurfingPlugin;
 	private BookmarkBarEl: HTMLElement;
 	private BookmarkBarContainerEl: HTMLElement;
-	private bookmarkData: Bookmark[] = [];
-	private categoryData: CategoryType[] = [];
 
 	constructor(view: ItemView, plugin: SurfingPlugin) {
 		this.view = view;
@@ -19,86 +15,94 @@ export class BookMarkBar {
 	}
 
 	async onload() {
+		// Remove existing bar if re-loading
+		const existing = this.view.contentEl.querySelector(".wb-bookmark-bar");
+		if (existing) existing.detach();
+
 		this.BookmarkBarEl = this.view.contentEl.createEl("div", {
-			cls: "wb-bookmark-bar"
-		})
+			cls: "wb-bookmark-bar",
+		});
 
 		this.renderIcon();
 
-		try {
-			const { bookmarks, categories } = await loadJson(this.plugin);
-			this.bookmarkData = bookmarks;
-			this.categoryData = categories;
-		} catch (e) {
-			if (this.bookmarkData?.length === 0 || !this.bookmarkData) {
-				await initializeJson(this.plugin);
-				const { bookmarks, categories } = await loadJson(this.plugin);
-				this.bookmarkData = bookmarks;
-				this.categoryData = categories;
-			}
-		}
-
-		// this.convertToBookmarkFolder(this.bookmarkData);
-		this.render(this.bookmarkData, this.categoryData);
+		const bookmarks = this.plugin.bookmarkCache;
+		this.render(bookmarks);
 	}
 
 	renderIcon() {
 		const bookmarkManagerEl = this.BookmarkBarEl.createEl("div", {
-			cls: "wb-bookmark-manager-entry"
+			cls: "wb-bookmark-manager-entry",
 		});
 
 		const bookmarkManagerIconEl = bookmarkManagerEl.createEl("div", {
 			cls: "wb-bookmark-manager-icon",
-		})
+		});
 
 		bookmarkManagerEl.onclick = async () => {
-			const workspace = this.plugin.app.workspace;
-			workspace.detachLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID);
-			await workspace.getLeaf(false).setViewState({ type: WEB_BROWSER_BOOKMARK_MANAGER_ID });
-			workspace.revealLeaf(workspace.getLeavesOfType(WEB_BROWSER_BOOKMARK_MANAGER_ID)[0]);
-		}
+			// Open bookmarks folder in file explorer
+			const folderPath =
+				this.plugin.settings.bookmarkManager.bookmarkFolder ||
+				"surfing-bookmarks";
+			const fileExplorer =
+				this.plugin.app.workspace.getLeavesOfType("file-explorer")[0];
+			if (fileExplorer) {
+				this.plugin.app.workspace.revealLeaf(fileExplorer);
+				const folder =
+					this.plugin.app.vault.getAbstractFileByPath(folderPath);
+				if (folder) {
+					// @ts-ignore
+					fileExplorer.view?.revealInFolder?.(folder);
+				}
+			}
+		};
 
 		setIcon(bookmarkManagerIconEl, "bookmark");
 	}
 
-	render(bookmarks: Bookmark[], categories: CategoryType[]) {
-
+	render(bookmarks: BookmarkFileItem[]) {
 		if (this.BookmarkBarContainerEl) this.BookmarkBarContainerEl.detach();
 
-		// Move root to the end;
-		const rootCategory = categories.shift();
-		if (rootCategory) categories.push(rootCategory);
-
 		this.BookmarkBarContainerEl = this.BookmarkBarEl.createEl("div", {
-			cls: "wb-bookmark-bar-container"
+			cls: "wb-bookmark-bar-container",
 		});
 
-		categories?.forEach((item: CategoryType) => {
-			new BookMarkItem(this.BookmarkBarContainerEl, this.plugin, this.view, item, bookmarks).onload();
-		})
-	}
-}
+		// Group bookmarks by their top-level category
+		const categoryMap = new Map<string, BookmarkFileItem[]>();
 
-export const updateBookmarkBar = (plugin: SurfingPlugin, bookmarks: Bookmark[], categories: CategoryType[], refreshBookmarkManager: boolean) => {
-	if (refreshBookmarkManager) {
-		const currentBookmarkLeaves = plugin.app.workspace.getLeavesOfType("surfing-bookmark-manager");
-		if (currentBookmarkLeaves.length > 0) {
-			currentBookmarkLeaves[0].rebuildView();
+		for (const bm of bookmarks) {
+			const topCat = bm.category.length > 0 ? bm.category[0] : "ROOT";
+			if (!categoryMap.has(topCat)) {
+				categoryMap.set(topCat, []);
+			}
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			categoryMap.get(topCat)!.push(bm);
 		}
-	}
 
-	const emptyLeaves = plugin.app.workspace.getLeavesOfType("empty");
-	if (emptyLeaves.length > 0) {
-		emptyLeaves.forEach((leaf) => {
-			leaf.rebuildView();
-		})
-	}
+		// Render non-ROOT folders first, then ROOT items
+		for (const [cat, items] of categoryMap) {
+			if (cat !== "ROOT") {
+				new BookMarkItem(
+					this.BookmarkBarContainerEl,
+					this.plugin,
+					this.view,
+					cat,
+					items,
+					false,
+				).onload();
+			}
+		}
 
-	const surfingLeaves = plugin.app.workspace.getLeavesOfType("surfing-view");
-	if (surfingLeaves.length > 0) {
-		surfingLeaves.forEach((leaf) => {
-			// @ts-ignore
-			leaf.view?.bookmarkBar?.render(bookmarks, categories);
-		})
+		// Render ROOT bookmarks as top-level items
+		const rootItems = categoryMap.get("ROOT") || [];
+		for (const item of rootItems) {
+			new BookMarkItem(
+				this.BookmarkBarContainerEl,
+				this.plugin,
+				this.view,
+				"ROOT",
+				[item],
+				true,
+			).onload();
+		}
 	}
 }

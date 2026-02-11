@@ -2,14 +2,18 @@ import { TextInputSuggest } from "./suggest";
 import type { App } from "obsidian";
 import { SurfingView } from "../../surfingView";
 import SurfingPlugin from "../../surfingIndex";
-import { loadJson } from "../../utils/json";
-import type { Bookmark } from "../../types/bookmark";
+import type { BookmarkFileItem } from "../../utils/bookmarkStore";
 import { getComposedUrl } from "../../utils/url";
 
-export class BookmarkSuggester extends TextInputSuggest<Bookmark> {
+interface BookmarkSuggestion {
+    isSearchFallback: boolean;
+    name: string;
+    url: string;
+    item?: BookmarkFileItem;
+}
+
+export class BookmarkSuggester extends TextInputSuggest<BookmarkSuggestion> {
     private plugin: SurfingPlugin;
-    private bookmarkData: Bookmark[] = [];
-    private suggestions: Bookmark[] = [];
 
     constructor(public app: App, plugin: SurfingPlugin, public inputEl: HTMLInputElement | HTMLTextAreaElement) {
         super(app, inputEl);
@@ -17,69 +21,65 @@ export class BookmarkSuggester extends TextInputSuggest<Bookmark> {
         this.plugin = plugin;
     }
 
-    getSuggestions(inputStr: string): Bookmark[] {
+    getSuggestions(inputStr: string): BookmarkSuggestion[] {
         const inputLowerCase: string = inputStr.toLowerCase();
+        const bookmarks = this.plugin.bookmarkCache;
 
-        try {
-            if (this.suggestions.length === 0) loadJson(this.plugin).then((data) => {
-                this.bookmarkData = data.bookmarks;
-                this.suggestions = this.bookmarkData;
-            });
-        } catch (e) {
-            console.error(e);
+        if (!bookmarks || bookmarks.length === 0) return [];
+
+        const filtered: BookmarkSuggestion[] = bookmarks
+            .filter((item) => {
+                return item.url.toLowerCase().contains(inputLowerCase) || item.name.toLowerCase().contains(inputLowerCase);
+            })
+            .map((item) => ({
+                isSearchFallback: false,
+                name: item.name,
+                url: item.url,
+                item,
+            }));
+
+        if (!filtered || filtered.length === 0) {
+            this.close();
+            return [];
         }
 
-        if (this.suggestions.length === 0) return [];
-
-        const filtered = this.suggestions.filter((item) => {
-            if (item.url.toLowerCase().contains(inputLowerCase) || item.name.toLowerCase().contains(inputLowerCase)) return item;
+        // Add search fallback as first item
+        filtered.unshift({
+            isSearchFallback: true,
+            name: inputLowerCase,
+            url: "",
         });
 
-        if (!filtered) this.close();
-        if (filtered?.length > 0) {
-            filtered.unshift({
-                id: "BOOKMARK",
-                name: inputLowerCase,
-                description: "",
-                url: "",
-                tags: "",
-                category: [],
-                created: 1111111111111,
-                modified: 1111111111111,
-            });
-            return filtered;
-        }
-
-        return filtered ? filtered : [];
+        return filtered;
     }
 
-    renderSuggestion(item: Bookmark, el: HTMLElement): void {
+    renderSuggestion(suggestion: BookmarkSuggestion, el: HTMLElement): void {
         const bookmarkSuggestContainerEl = el.createEl("div", {
             cls: "wb-bookmark-suggest-container"
         });
         bookmarkSuggestContainerEl.createEl("div", {
-            text: item.name,
+            text: suggestion.name,
             cls: "wb-bookmark-suggestion-text"
         });
         bookmarkSuggestContainerEl.createEl("div", {
-            text: item.url,
+            text: suggestion.url,
             cls: "wb-bookmark-suggestion-url"
         });
         el.classList.add("wb-bookmark-suggest-item");
     }
 
-    selectSuggestion(item: Bookmark): void {
-        if (!item) return;
+    selectSuggestion(suggestion: BookmarkSuggestion): void {
+        if (!suggestion) return;
 
-        if (item.id === "BOOKMARK") {
-            const finalUrl = getComposedUrl("", item.name);
+        if (suggestion.isSearchFallback) {
+            const finalUrl = getComposedUrl("", suggestion.name);
             SurfingView.spawnWebBrowserView(this.plugin, false, {url: finalUrl});
 
             this.close();
             return;
         }
 
-        SurfingView.spawnWebBrowserView(this.plugin, false, {url: item.url});
+        SurfingView.spawnWebBrowserView(this.plugin, false, {url: suggestion.url});
         this.close();
         return;
     }

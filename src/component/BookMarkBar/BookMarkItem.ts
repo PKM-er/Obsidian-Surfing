@@ -1,28 +1,37 @@
 import { SurfingView } from "../../surfingView";
 import SurfingPlugin from "../../surfingIndex";
-import { Bookmark, CategoryType } from "../../types/bookmark";
+import { BookmarkFileItem } from "../../utils/bookmarkStore";
 import { ItemView, Menu, setIcon } from "obsidian";
 
 export class BookMarkItem {
 	private parentEl: HTMLElement;
 	private plugin: SurfingPlugin;
-	private readonly item: CategoryType;
+	private readonly categoryName: string;
 	private view: ItemView;
-	private readonly bookmark: Bookmark[];
+	private readonly bookmarks: BookmarkFileItem[];
+	private readonly isRoot: boolean;
 
-	constructor(parentEl: HTMLElement, plugin: SurfingPlugin, view: ItemView, item: CategoryType, bookmark: Bookmark[]) {
+	constructor(
+		parentEl: HTMLElement,
+		plugin: SurfingPlugin,
+		view: ItemView,
+		categoryName: string,
+		bookmarks: BookmarkFileItem[],
+		isRoot: boolean,
+	) {
 		this.parentEl = parentEl;
 		this.plugin = plugin;
-		this.item = item;
+		this.categoryName = categoryName;
 		this.view = view;
-		this.bookmark = bookmark;
+		this.bookmarks = bookmarks;
+		this.isRoot = isRoot;
 	}
 
 	onload() {
-		if (typeof this.item === "object" && (this.item.value || this.item.children) && this.item.value !== "ROOT") {
-			this.renderFolder();
-		} else {
+		if (this.isRoot) {
 			this.renderBookmark();
+		} else {
+			this.renderFolder();
 		}
 	}
 
@@ -32,10 +41,10 @@ export class BookMarkItem {
 		});
 		const folderIconEl = folderEl.createEl("div", {
 			cls: "wb-bookmark-folder-icon",
-		})
+		});
 		folderEl.createEl("div", {
 			cls: "wb-bookmark-folder-title",
-			text: this.item.label,
+			text: this.categoryName,
 		});
 
 		setIcon(folderIconEl, "folder-closed");
@@ -53,60 +62,9 @@ export class BookMarkItem {
 				else currentPos = targetEl.getBoundingClientRect();
 			}
 
-			this.loopMenu(menu, this.item);
-
-			menu.showAtPosition({
-				x: currentPos.left,
-				y: currentPos.bottom,
-			});
-
-		}
-	}
-
-	loopMenu(menu: Menu, category: CategoryType) {
-		if (category?.children) category?.children.forEach((child) => {
-			let subMenu: Menu | undefined;
-			menu.addItem((item) =>
-				subMenu = item.setTitle(child.label).setIcon('folder-closed').setSubmenu()
-			);
-
-			if (!child?.children) {
-				const bookmark = this.bookmark.filter((item) => {
-					if (!item.category.length) return false;
-					return item.category[item.category.length - 1] === child.value;
-				});
-
-				if (bookmark.length > 0) {
-					bookmark.forEach((bookmarkItem) => {
-						subMenu?.addItem((item) => {
-							item.setIcon('surfing')
-								.setTitle(bookmarkItem.name)
-								.onClick((e: MouseEvent) => {
-									// @ts-ignore
-									if (e.shiftKey) {
-										window.open(bookmarkItem.url, "_blank", "external");
-										return;
-									}
-									if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(this.plugin, 	false, { url: bookmarkItem.url });
-									else SurfingView.spawnWebBrowserView(this.plugin, true, { url: bookmarkItem.url });
-								})
-						});
-					});
-				}
-			}
-
-			if (child?.children && subMenu) this.loopMenu(subMenu, child);
-		});
-
-		const bookmark = this.bookmark.filter((item) => {
-			if (!item.category.length) return false;
-			return item.category[item.category.length - 1]?.contains(category.value);
-		});
-
-		if (bookmark.length > 0) {
-			bookmark.forEach((bookmarkItem) => {
+			for (const bookmarkItem of this.bookmarks) {
 				menu.addItem((item) => {
-					item.setIcon('surfing')
+					item.setIcon("surfing")
 						.setTitle(bookmarkItem.name)
 						.onClick((e: MouseEvent) => {
 							if (e.shiftKey) {
@@ -115,43 +73,42 @@ export class BookMarkItem {
 							}
 							if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(this.plugin, false, { url: bookmarkItem.url });
 							else SurfingView.spawnWebBrowserView(this.plugin, true, { url: bookmarkItem.url });
-						})
+						});
 				});
+			}
+
+			menu.showAtPosition({
+				x: currentPos.left,
+				y: currentPos.bottom,
 			});
-		}
+		};
 	}
 
 	renderBookmark() {
-		if (this.bookmark.length === 0) return;
-		const rootBookmark = this.bookmark.filter((item) => (item?.category[0] === this.item?.value && item?.category.length === 1));
+		if (this.bookmarks.length === 0) return;
 
-		if (rootBookmark?.length > 0) {
-			rootBookmark.forEach((bookmarkItem) => {
-				const bookmarkEl = this.parentEl.createEl("div", {
-					cls: "wb-bookmark-item"
-				});
-				const folderIconEl = bookmarkEl.createEl("div", {
-					cls: "wb-bookmark-item-icon",
-				})
-
-				setIcon(folderIconEl, "album");
-
-				bookmarkEl.createEl("div", {
-					cls: "wb-bookmark-item-title",
-					text: bookmarkItem.name,
-				});
-				bookmarkEl.onclick = (e: MouseEvent) => {
-					if (e.shiftKey) {
-						window.open(bookmarkItem.url, "", "external");
-						return;
-					}
-					if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(this.plugin, false, { url: bookmarkItem.url });
-					else SurfingView.spawnWebBrowserView(this.plugin, true, { url: bookmarkItem.url });
-				}
+		for (const bookmarkItem of this.bookmarks) {
+			const bookmarkEl = this.parentEl.createEl("div", {
+				cls: "wb-bookmark-item"
 			});
+			const folderIconEl = bookmarkEl.createEl("div", {
+				cls: "wb-bookmark-item-icon",
+			});
+
+			setIcon(folderIconEl, "album");
+
+			bookmarkEl.createEl("div", {
+				cls: "wb-bookmark-item-title",
+				text: bookmarkItem.name,
+			});
+			bookmarkEl.onclick = (e: MouseEvent) => {
+				if (e.shiftKey) {
+					window.open(bookmarkItem.url, "", "external");
+					return;
+				}
+				if (!e.ctrlKey && !e.metaKey) SurfingView.spawnWebBrowserView(this.plugin, false, { url: bookmarkItem.url });
+				else SurfingView.spawnWebBrowserView(this.plugin, true, { url: bookmarkItem.url });
+			};
 		}
-
-
 	}
-
 }
