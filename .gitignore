@@ -28,3 +28,5 @@ pnpm-lock.yaml
 *.rar
 *.zip
 *.7z
+app.js
+sdk/

@@ -117,8 +117,6 @@ export default defineConfig(({ mode }) => {
 					"@lezer/common",
 					"@lezer/highlight",
 					"@lezer/lr",
-					"@openai/codex-sdk",
-					"@anthropic-ai/claude-agent-sdk",
 				],
 			},
 			emptyOutDir: false,
