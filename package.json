@@ -41,6 +41,7 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/claude-agent-sdk": "^0.2.37",
-		"@openai/codex-sdk": "^0.98.0"
+		"@openai/codex-sdk": "^0.98.0",
+		"defuddle": "^0.6.6"
 	}
 }
