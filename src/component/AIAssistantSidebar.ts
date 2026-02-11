@@ -22,6 +22,16 @@ import {
 export type AssistantProvider = "codex" | "claude" | "custom";
 export type ApprovalMode = "ask" | "auto" | "deny";
 
+export interface InteractiveElement {
+	type: string;
+	text: string;
+	selector: string;
+	href?: string;
+	inputType?: string;
+	placeholder?: string;
+	name?: string;
+}
+
 export interface AssistantPageContext {
 	url: string;
 	title: string;
@@ -29,6 +39,7 @@ export interface AssistantPageContext {
 	pageText: string;
 	headings: string[];
 	links: string[];
+	interactiveElements?: InteractiveElement[];
 }
 
 export interface AssistantAction {
@@ -247,6 +258,8 @@ export class AIAssistantSidebar extends Component {
 			this.chatHistory = [];
 			this.selectedItems.clear();
 			this.sessionApprovedTools.clear();
+			this.plugin.mcpBridge?.clearTodos();
+			this.contextPages = [];
 			await clearChatHistoryDB();
 			await this.renderMessage(
 				"assistant",

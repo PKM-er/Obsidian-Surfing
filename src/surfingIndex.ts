@@ -428,6 +428,7 @@ export default class SurfingPlugin extends Plugin {
 					url: ctx.url,
 					title: ctx.title,
 					pageText: ctx.pageText,
+					interactiveElements: ctx.interactiveElements,
 				};
 			},
 

@@ -12,9 +12,12 @@ export interface MCPBridgeHost {
 	getActiveHost(): AssistantHost | null;
 	maxPageTextLength(): number;
 	// Page operations
-	openPage(
-		url: string,
-	): Promise<{ url: string; title: string; pageText: string }>;
+	openPage(url: string): Promise<{
+		url: string;
+		title: string;
+		pageText: string;
+		interactiveElements?: Array<Record<string, string>>;
+	}>;
 	executeAction(action: Record<string, unknown>): Promise<string>;
 	// Consent gate
 	getApprovalMode(): "ask" | "auto" | "deny";
@@ -74,6 +77,12 @@ export class MCPBridge {
 
 	getTodoItems(): TodoItem[] {
 		return [...this.todoItems];
+	}
+
+	clearTodos(): void {
+		this.todoItems = [];
+		this.todoIdCounter = 0;
+		this.notifyTodoChange();
 	}
 
 	onTodoChange(cb: (items: TodoItem[]) => void): () => void {
@@ -149,7 +158,7 @@ export class MCPBridge {
 			{
 				name: "surfing_get_page_info",
 				description:
-					"Get the current browser page URL, title, headings (h1-h3), and links from Obsidian Surfing.",
+					"Get the current browser page URL, title, headings, links, and interactive elements (buttons, inputs, links with CSS selectors for click/type actions) from Obsidian Surfing.",
 				inputSchema: { type: "object", properties: {}, required: [] },
 			},
 			{
@@ -363,6 +372,8 @@ export class MCPBridge {
 										title: ctx.title || info.title,
 										headings: ctx.headings || [],
 										links: ctx.links || [],
+										interactive_elements:
+											ctx.interactiveElements || [],
 									},
 									null,
 									2,
@@ -402,6 +413,19 @@ export class MCPBridge {
 						parts.push("Selection: " + ctx.selectionText);
 					if (ctx.pageText)
 						parts.push("\nPage Text:\n" + ctx.pageText);
+					if (
+						ctx.interactiveElements &&
+						ctx.interactiveElements.length > 0
+					) {
+						parts.push(
+							"\nInteractive Elements:\n" +
+								JSON.stringify(
+									ctx.interactiveElements,
+									null,
+									2,
+								),
+						);
+					}
 					return {
 						content: [{ type: "text", text: parts.join("\n") }],
 					};
@@ -430,6 +454,19 @@ export class MCPBridge {
 					parts.push("Title: " + (data.title || ""));
 					if (data.pageText)
 						parts.push("\nPage Text:\n" + data.pageText);
+					if (
+						data.interactiveElements &&
+						data.interactiveElements.length > 0
+					) {
+						parts.push(
+							"\nInteractive Elements:\n" +
+								JSON.stringify(
+									data.interactiveElements,
+									null,
+									2,
+								),
+						);
+					}
 					return {
 						content: [{ type: "text", text: parts.join("\n") }],
 					};
@@ -457,6 +494,19 @@ export class MCPBridge {
 					parts.push("Title: " + (data.title || ""));
 					if (data.pageText)
 						parts.push("\nPage Text:\n" + data.pageText);
+					if (
+						data.interactiveElements &&
+						data.interactiveElements.length > 0
+					) {
+						parts.push(
+							"\nInteractive Elements:\n" +
+								JSON.stringify(
+									data.interactiveElements,
+									null,
+									2,
+								),
+						);
+					}
 					return {
 						content: [{ type: "text", text: parts.join("\n") }],
 					};

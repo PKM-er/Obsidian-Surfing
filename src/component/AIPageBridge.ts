@@ -44,7 +44,7 @@ export class AIPageBridge implements AssistantHost {
 		const safeMaxLen = Math.max(400, maxPageTextLength);
 		try {
 			// Wait for dynamic content (React/Vue/SPA) to stabilize before extraction
-			await this.waitForDOMStability(webContents);
+			await AIPageBridge.waitForDOMStability(webContents);
 
 			const context = await webContents.executeJavaScript(
 				`
@@ -148,6 +148,94 @@ export class AIPageBridge implements AssistantHost {
 							}
 						}
 
+						// Interactive elements with CSS selectors for AI click/type actions
+						function getSelector(el) {
+							if (el.id) return "#" + CSS.escape(el.id);
+							// Try aria-label
+							const aria = el.getAttribute("aria-label");
+							if (aria) {
+								const tag = el.tagName.toLowerCase();
+								const sel = tag + '[aria-label="' + aria.replace(/"/g, '\\\\"') + '"]';
+								if (document.querySelectorAll(sel).length === 1) return sel;
+							}
+							// Try name attribute
+							const name = el.getAttribute("name");
+							if (name) {
+								const tag = el.tagName.toLowerCase();
+								const sel = tag + '[name="' + name.replace(/"/g, '\\\\"') + '"]';
+								if (document.querySelectorAll(sel).length === 1) return sel;
+							}
+							// Try data-testid
+							const testId = el.getAttribute("data-testid");
+							if (testId) return '[data-testid="' + testId.replace(/"/g, '\\\\"') + '"]';
+							// Try unique class combination
+							if (el.className && typeof el.className === "string") {
+								const classes = el.className.trim().split(/\\s+/).slice(0, 3);
+								if (classes.length > 0) {
+									const sel = el.tagName.toLowerCase() + "." + classes.map(c => CSS.escape(c)).join(".");
+									try { if (document.querySelectorAll(sel).length === 1) return sel; } catch(e) { /* invalid selector */ }
+								}
+							}
+							// Fallback: nth-of-type path
+							const tag = el.tagName.toLowerCase();
+							const parent = el.parentElement;
+							if (!parent) return tag;
+							const siblings = Array.from(parent.children).filter(c => c.tagName === el.tagName);
+							if (siblings.length === 1) {
+								const parentSel = getSelector(parent);
+								return parentSel + " > " + tag;
+							}
+							const idx = siblings.indexOf(el) + 1;
+							const parentSel = getSelector(parent);
+							return parentSel + " > " + tag + ":nth-of-type(" + idx + ")";
+						}
+
+						const interactiveElements = [];
+						const seenSelectors = new Set();
+						// Buttons
+						document.querySelectorAll("button, [role=button], input[type=button], input[type=submit]").forEach((el) => {
+							const style = window.getComputedStyle(el);
+							if (style.display === "none" || style.visibility === "hidden") return;
+							const text = normalizeText(el.textContent || el.value || el.getAttribute("aria-label") || "").slice(0, 60);
+							if (!text) return;
+							const selector = getSelector(el);
+							if (seenSelectors.has(selector)) return;
+							seenSelectors.add(selector);
+							interactiveElements.push({ type: "button", text, selector });
+						});
+						// Inputs & Textareas
+						document.querySelectorAll("input:not([type=hidden]):not([type=button]):not([type=submit]), textarea, select").forEach((el) => {
+							const style = window.getComputedStyle(el);
+							if (style.display === "none" || style.visibility === "hidden") return;
+							const selector = getSelector(el);
+							if (seenSelectors.has(selector)) return;
+							seenSelectors.add(selector);
+							const tag = el.tagName.toLowerCase();
+							const entry = {
+								type: tag === "select" ? "select" : (tag === "textarea" ? "textarea" : "input"),
+								text: el.placeholder || el.getAttribute("aria-label") || el.name || "",
+								selector,
+							};
+							if (el.type) entry.inputType = el.type;
+							if (el.placeholder) entry.placeholder = el.placeholder;
+							if (el.name) entry.name = el.name;
+							interactiveElements.push(entry);
+						});
+						// Key links (nav, main actions)
+						document.querySelectorAll("a[href]").forEach((el) => {
+							if (interactiveElements.length >= 100) return;
+							const style = window.getComputedStyle(el);
+							if (style.display === "none" || style.visibility === "hidden") return;
+							const text = normalizeText(el.textContent).slice(0, 60);
+							if (!text || text.length < 2) return;
+							const href = el.href;
+							if (!href || href.startsWith("javascript:")) return;
+							const selector = getSelector(el);
+							if (seenSelectors.has(selector)) return;
+							seenSelectors.add(selector);
+							interactiveElements.push({ type: "link", text, selector, href });
+						});
+
 						return {
 							url: location.href || "",
 							title: document.title || "",
@@ -155,6 +243,7 @@ export class AIPageBridge implements AssistantHost {
 							pageText,
 							headings: allHeadings,
 							links,
+							interactiveElements: interactiveElements.slice(0, 100),
 						};
 					})()
 					`,
@@ -170,6 +259,9 @@ export class AIPageBridge implements AssistantHost {
 					? context.headings
 					: [],
 				links: Array.isArray(context?.links) ? context.links : [],
+				interactiveElements: Array.isArray(context?.interactiveElements)
+					? context.interactiveElements
+					: [],
 			};
 		} catch (error) {
 			console.error("Failed to collect AI page context: ", error);
@@ -181,7 +273,7 @@ export class AIPageBridge implements AssistantHost {
 	 * Wait for DOM to stabilize after initial load — handles React/Vue/SPA hydration.
 	 * Uses MutationObserver to detect when DOM mutations stop for a quiet period.
 	 */
-	private async waitForDOMStability(
+	static async waitForDOMStability(
 		webContents: any,
 		quietMs = 800,
 		timeoutMs = 5000,
@@ -257,11 +349,14 @@ export class AIPageBridge implements AssistantHost {
 			const targetUrl = String(action.url || "").trim();
 			if (!targetUrl) return t("Missing url in open_new_tab action.");
 			// Create leaf directly to avoid same-tab reuse and listener conflicts
-			this.provider.getApp().workspace.getLeaf(true).setViewState({
-				type: WEB_BROWSER_VIEW_ID,
-				active: true,
-				state: { url: targetUrl },
-			});
+			this.provider
+				.getApp()
+				.workspace.getLeaf(true)
+				.setViewState({
+					type: WEB_BROWSER_VIEW_ID,
+					active: true,
+					state: { url: targetUrl },
+				});
 			return `${t("Opened in new tab")}: ${targetUrl}`;
 		}
 		if (actionType === "back") {
