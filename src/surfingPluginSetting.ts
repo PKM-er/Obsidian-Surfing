@@ -11,8 +11,12 @@ import {
 import { t } from "./translations/helper";
 import { clipboard } from "electron";
 import SurfingPlugin from "./surfingIndex";
-import { NodeModel } from "@minoru/react-dnd-treeview";
-import { CustomData } from "./component/TabTreeView/types";
+import {
+	checkProviderAvailability,
+	getCachedAvailability,
+} from "./ai/providerFactory";
+import { TreeNode } from "./component/TabTreeView/types";
+import { FilterListEntry } from "./types/adblock";
 
 type settingSearchInfo = {
 	containerEl: HTMLElement;
@@ -31,6 +35,8 @@ export type SearchOptionInfo = {
 	description: string;
 	options?: DropdownRecord[];
 };
+
+export type AIAssistantProvider = "codex" | "claude" | "custom";
 
 export interface SurfingSettings {
 	defaultSearchEngine: string;
@@ -57,42 +63,43 @@ export interface SurfingSettings {
 		openBookMark: boolean;
 		saveBookMark: boolean;
 		sendToReadWise: boolean;
-		pagination: string;
-		category: string;
+		bookmarkFolder: string;
 		defaultCategory: string;
-		defaultColumnList: string[];
-		defaultFilterType: string;
+		bookmarksMigrated: boolean;
 	};
-	treeData: NodeModel<CustomData>[];
+	treeData: TreeNode[];
 	enableHtmlPreview: boolean;
 	supportLivePreviewInlineUrl: boolean;
 	enableTreeView: boolean;
 	focusSearchBarViaKeyboard: boolean;
+	aiAssistant: {
+		enabled: boolean;
+		openByDefault: boolean;
+		defaultProvider: AIAssistantProvider;
+		includePageText: boolean;
+		maxPageTextLength: number;
+		systemPrompt: string;
+		codexCommand: string;
+		claudeCommand: string;
+		customCommand: string;
+		customArgs: string;
+		pageReadBlocklist: string[];
+		enableMCPServer: boolean;
+	};
+	sessionIsolation: boolean;
+	adBlock: {
+		enabled: boolean;
+		filterLists: FilterListEntry[];
+	};
+	elementHiding: {
+		enabled: boolean;
+	};
 }
 
 export interface SearchEngine {
 	name: string;
 	url: string;
 }
-
-const defaultCategory = `- Computer
-    - 算法
-    - 数据结构
-- obsidian
-    - surfing
-    - dataview
-`;
-
-const defaultColumnList = [
-	"name",
-	"description",
-	"url",
-	"category",
-	"tags",
-	"created",
-	"modified",
-	"action",
-];
 
 export const DEFAULT_SETTINGS: SurfingSettings = {
 	defaultSearchEngine: "duckduckgo",
@@ -124,17 +131,37 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 		openBookMark: false,
 		saveBookMark: false,
 		sendToReadWise: false,
-		pagination: "12",
-		category: defaultCategory,
+		bookmarkFolder: "surfing-bookmarks",
 		defaultCategory: "ROOT",
-		defaultColumnList: defaultColumnList,
-		defaultFilterType: "tree",
+		bookmarksMigrated: false,
 	},
 	treeData: [],
 	enableHtmlPreview: true,
 	supportLivePreviewInlineUrl: false,
 	enableTreeView: false,
 	focusSearchBarViaKeyboard: true,
+	aiAssistant: {
+		enabled: true,
+		openByDefault: true,
+		defaultProvider: "codex",
+		includePageText: true,
+		maxPageTextLength: 8000,
+		systemPrompt: "",
+		codexCommand: "codex",
+		claudeCommand: "claude",
+		customCommand: "",
+		customArgs: '"{prompt}"',
+		pageReadBlocklist: [],
+		enableMCPServer: true,
+	},
+	sessionIsolation: false,
+	adBlock: {
+		enabled: false,
+		filterLists: [],
+	},
+	elementHiding: {
+		enabled: true,
+	},
 };
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
@@ -173,6 +200,8 @@ const tabNameToTabIconId: Record<string, string> = {
 	Search: "search",
 	Theme: "brush",
 	Bookmark: "bookmark",
+	"Ad Block": "shield",
+	AI: "bot",
 };
 
 export class DropdownRecord {
@@ -237,29 +266,44 @@ export class SurfingSettingTab extends PluginSettingTab {
 			this.navigateEl,
 			settingsEl,
 			(el: HTMLElement, tabName: string) =>
-				this.generateGeneralSettings(tabName, el)
+				this.generateGeneralSettings(tabName, el),
 		);
 		this.createTabAndContent(
 			"Search",
 			this.navigateEl,
 			settingsEl,
 			(el: HTMLElement, tabName: string) =>
-				this.generateSearchSettings(tabName, el)
+				this.generateSearchSettings(tabName, el),
 		);
 		this.createTabAndContent(
 			"Theme",
 			this.navigateEl,
 			settingsEl,
 			(el: HTMLElement, tabName: string) =>
-				this.generateThemeSettings(tabName, el)
+				this.generateThemeSettings(tabName, el),
 		);
 		this.createTabAndContent(
 			"Bookmark",
 			this.navigateEl,
 			settingsEl,
 			(el: HTMLElement, tabName: string) =>
-				this.generateBookmarkManagerSettings(tabName, el)
+				this.generateBookmarkManagerSettings(tabName, el),
 		);
+		this.createTabAndContent(
+			"Ad Block",
+			this.navigateEl,
+			settingsEl,
+			(el: HTMLElement, tabName: string) =>
+				this.generateAdBlockSettings(tabName, el),
+		);
+		Platform.isDesktop &&
+			this.createTabAndContent(
+				"AI",
+				this.navigateEl,
+				settingsEl,
+				(el: HTMLElement, tabName: string) =>
+					this.generateAISettings(tabName, el),
+			);
 
 		this.createSearchZeroState(settingsEl);
 	}
@@ -302,7 +346,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.search.onChange((value: string) => {
 			if (value === "") {
 				this.navigateEl.children[0].dispatchEvent(
-					new PointerEvent("click")
+					new PointerEvent("click"),
 				);
 			}
 			this.searchSettings(value.toLowerCase());
@@ -313,7 +357,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		tabName: string,
 		navigateEl: HTMLElement,
 		containerEl: HTMLElement,
-		generateTabContent?: (el: HTMLElement, tabName: string) => void
+		generateTabContent?: (el: HTMLElement, tabName: string) => void,
 	) {
 		const displayTabContent = this.selectedTab === tabName;
 		const tabEl = navigateEl.createDiv("wb-navigation-item");
@@ -323,7 +367,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		setIcon(
 			tabEl.createEl("div", { cls: "wb-navigation-item-icon" }),
-			tabNameToTabIconId[tabName]
+			tabNameToTabIconId[tabName],
 		);
 		// @ts-ignore
 		tabEl.createSpan().setText(t(tabName));
@@ -392,7 +436,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		const tabsWithSettingsInSearchResults = new Set<string>();
 		const showSearchResultAndAddTabToResultList = (
 			settingContainer: HTMLElement,
-			tabName: string
+			tabName: string,
 		) => {
 			(settingContainer as HTMLElement).show();
 
@@ -415,7 +459,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 				) {
 					showSearchResultAndAddTabToResultList(
 						settingInfo.containerEl,
-						tabName
+						tabName,
 					);
 				} else if (settingInfo.options) {
 					for (const optionInfo of settingInfo.options) {
@@ -427,7 +471,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						) {
 							showSearchResultAndAddTabToResultList(
 								settingInfo.containerEl,
-								tabName
+								tabName,
 							);
 
 							break;
@@ -443,7 +487,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 								) {
 									showSearchResultAndAddTabToResultList(
 										settingInfo.containerEl,
-										tabName
+										tabName,
 									);
 
 									break;
@@ -477,7 +521,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 	private generateGeneralSettings(
 		tabName: string,
-		wbContainerEl: HTMLElement
+		wbContainerEl: HTMLElement,
 	) {
 		this.addOpenInSameTab(tabName, wbContainerEl);
 		this.addHoverPopover(tabName, wbContainerEl);
@@ -492,9 +536,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addAboutInfo(tabName, wbContainerEl);
 	}
 
+	private generateAISettings(tabName: string, wbContainerEl: HTMLElement) {
+		this.addAIAssistantSettings(tabName, wbContainerEl);
+	}
+
 	private generateSearchSettings(
 		tabName: string,
-		wbContainerEl: HTMLElement
+		wbContainerEl: HTMLElement,
 	): void {
 		this.addInpageSearch(tabName, wbContainerEl);
 		this.addSearchEngine(tabName, wbContainerEl);
@@ -502,7 +550,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 	private generateThemeSettings(
 		tabName: string,
-		wbContainerEl: HTMLElement
+		wbContainerEl: HTMLElement,
 	): void {
 		this.useIconList(tabName, wbContainerEl);
 		this.addDarkMode(tabName, wbContainerEl);
@@ -512,7 +560,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 	private generateBookmarkManagerSettings(
 		tabName: string,
-		wbContainerEl: HTMLElement
+		wbContainerEl: HTMLElement,
 	): void {
 		this.addBookmarkManagerSettings(tabName, wbContainerEl);
 	}
@@ -524,7 +572,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		name = "",
 		description = "",
 		options: SearchOptionInfo[] = [],
-		alias = ""
+		alias = "",
 	) {
 		const settingInfo = {
 			containerEl: containerEl,
@@ -565,7 +613,362 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
+		);
+	}
+
+	private addAIAssistantSettings(
+		tabName: string,
+		wbContainerEl: HTMLElement,
+	) {
+		let settingName = t("Enable Surfing AI Assistant Sidebar");
+		let setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(t("Show a right-side AI chat panel in Surfing view."))
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.aiAssistant.enabled)
+					.onChange(async (value) => {
+						this.plugin.settings.aiAssistant.enabled = value;
+						this.applySettingsUpdate();
+						setTimeout(() => {
+							this.display();
+						}, 200);
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		if (!this.plugin.settings.aiAssistant.enabled) return;
+
+		settingName = t("Open AI Sidebar By Default");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.aiAssistant.openByDefault)
+					.onChange(async (value) => {
+						this.plugin.settings.aiAssistant.openByDefault = value;
+						this.applySettingsUpdate();
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		// Provider availability status
+		const availability = getCachedAvailability();
+
+		settingName = t("Default AI Provider");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addDropdown((dropdown: DropdownComponent) => {
+				const codexLabel = availability.codex
+					? t("Codex")
+					: `${t("Codex")} (${t("not installed")})`;
+				const claudeLabel = availability.claude
+					? t("Claude Code")
+					: `${t("Claude Code")} (${t("not installed")})`;
+				const customLabel = t("Custom");
+				dropdown
+					.addOption("codex", codexLabel)
+					.addOption("claude", claudeLabel)
+					.addOption("custom", customLabel)
+					.setValue(this.plugin.settings.aiAssistant.defaultProvider)
+					.onChange((value) => {
+						this.plugin.settings.aiAssistant.defaultProvider =
+							value as AIAssistantProvider;
+						this.applySettingsUpdate();
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		// Provider availability summary
+		settingName = t("Provider Status");
+		const statusParts: string[] = [];
+		if (availability.codex) {
+			statusParts.push(`Codex: OK`);
+		} else {
+			statusParts.push(`Codex: ${t("not installed")}`);
+		}
+		if (availability.claude) {
+			statusParts.push(`Claude Code: OK`);
+		} else {
+			statusParts.push(`Claude Code: ${t("not installed")}`);
+		}
+		const statusDescEl = createFragment((frag) => {
+			frag.appendText(statusParts.join(" | ") + " ");
+			if (!availability.codex || !availability.claude) {
+				frag.appendText("— ");
+				if (!availability.codex) {
+					const codexLink = frag.createEl("a", {
+						text: t("Install Codex"),
+						href: "https://github.com/openai/codex",
+					});
+					codexLink.setAttr("target", "_blank");
+					frag.appendText(" ");
+				}
+				if (!availability.claude) {
+					const claudeLink = frag.createEl("a", {
+						text: t("Install Claude Code"),
+						href: "https://docs.anthropic.com/en/docs/claude-code/overview",
+					});
+					claudeLink.setAttr("target", "_blank");
+				}
+			}
+			frag.createEl("br");
+			const refreshLink = frag.createEl("a", {
+				text: t("Refresh Status"),
+				href: "#",
+			});
+			refreshLink.addEventListener("click", async (e) => {
+				e.preventDefault();
+				await checkProviderAvailability(
+					this.plugin.settings.aiAssistant,
+				);
+				this.display();
+			});
+		});
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(statusDescEl);
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		settingName = t("Include Current Page Text In Prompt");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.aiAssistant.includePageText)
+					.onChange(async (value) => {
+						this.plugin.settings.aiAssistant.includePageText =
+							value;
+						this.applySettingsUpdate();
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		settingName = t("Max Page Text Length");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addSlider((slider) => {
+				slider
+					.setLimits(500, 12000, 100)
+					.setDynamicTooltip()
+					.setValue(
+						this.plugin.settings.aiAssistant.maxPageTextLength,
+					)
+					.onChange((value) => {
+						this.plugin.settings.aiAssistant.maxPageTextLength =
+							value;
+						this.applySettingsUpdate();
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		settingName = t("AI System Prompt");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(
+				t(
+					"Use placeholders: {prompt}, {url}, {title}, {selection}, {page_text}.",
+				),
+			)
+			.addTextArea((text) => {
+				text.setValue(
+					this.plugin.settings.aiAssistant.systemPrompt,
+				).onChange(async (value) => {
+					this.plugin.settings.aiAssistant.systemPrompt = value;
+					this.applySettingsUpdate();
+				});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		settingName = t("Codex Command");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(
+				t(
+					"Command name or full path to the Codex CLI executable. e.g. codex or C:\\\\Users\\\\you\\\\.npm\\\\codex",
+				),
+			)
+			.addText((text) => {
+				text.setPlaceholder(DEFAULT_SETTINGS.aiAssistant.codexCommand)
+					.setValue(this.plugin.settings.aiAssistant.codexCommand)
+					.onChange(async (value) => {
+						this.plugin.settings.aiAssistant.codexCommand =
+							value.trim();
+						this.applySettingsUpdate();
+						// Re-check availability after path change
+						await checkProviderAvailability(
+							this.plugin.settings.aiAssistant,
+						);
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		settingName = t("Claude Command");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(
+				t(
+					"Command name or full path to the Claude Code executable. e.g. claude or /usr/local/bin/claude",
+				),
+			)
+			.addText((text) => {
+				text.setPlaceholder(DEFAULT_SETTINGS.aiAssistant.claudeCommand)
+					.setValue(this.plugin.settings.aiAssistant.claudeCommand)
+					.onChange(async (value) => {
+						this.plugin.settings.aiAssistant.claudeCommand =
+							value.trim();
+						this.applySettingsUpdate();
+						// Re-check availability after path change
+						await checkProviderAvailability(
+							this.plugin.settings.aiAssistant,
+						);
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		settingName = t("Custom AI Command");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addText((text) => {
+				text.setPlaceholder(DEFAULT_SETTINGS.aiAssistant.customCommand)
+					.setValue(this.plugin.settings.aiAssistant.customCommand)
+					.onChange(async (value) => {
+						this.plugin.settings.aiAssistant.customCommand =
+							value.trim();
+						this.applySettingsUpdate();
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		settingName = t("Custom AI Arguments");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.addText((text) => {
+				text.setPlaceholder(DEFAULT_SETTINGS.aiAssistant.customArgs)
+					.setValue(this.plugin.settings.aiAssistant.customArgs)
+					.onChange(async (value) => {
+						this.plugin.settings.aiAssistant.customArgs = value;
+						this.applySettingsUpdate();
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+		);
+
+		settingName = t("Independent Sessions Per Tab");
+		const settingDesc = t(
+			"Each browser tab gets its own session with separate cookies. Requires reload.",
+		);
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(settingDesc)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.sessionIsolation)
+					.onChange(async (value) => {
+						this.plugin.settings.sessionIsolation = value;
+						this.applySettingsUpdate();
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+			settingDesc,
+		);
+
+		settingName = t("Page Read Blocklist");
+		const blocklistDesc = t(
+			"Domains where AI cannot read page content. Comma-separated, e.g. bank.com,mail.google.com",
+		);
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(blocklistDesc)
+			.addText((text) => {
+				text.setPlaceholder("bank.com, mail.google.com")
+					.setValue(
+						this.plugin.settings.aiAssistant.pageReadBlocklist.join(
+							", ",
+						),
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.aiAssistant.pageReadBlocklist =
+							value
+								.split(",")
+								.map((s) => s.trim())
+								.filter(Boolean);
+						this.applySettingsUpdate();
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+			blocklistDesc,
+		);
+
+		settingName = t("Enable MCP Page Server");
+		const mcpDesc = t("Expose current page as MCP tool for AI CLIs.");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(mcpDesc)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.aiAssistant.enableMCPServer)
+					.onChange(async (value) => {
+						this.plugin.settings.aiAssistant.enableMCPServer =
+							value;
+						this.applySettingsUpdate();
+					});
+			});
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName,
+			mcpDesc,
 		);
 	}
 
@@ -589,7 +992,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 
 		if (!this.plugin.settings.showSearchBarInPage) {
@@ -611,7 +1014,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 	}
 
@@ -630,7 +1033,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 				this.plugin.settings.customSearchEngine.forEach(
 					(value, key) => {
 						aDropdown.addOption(value.name, value.name);
-					}
+					},
 				);
 
 				aDropdown
@@ -646,7 +1049,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 
 		settingName =
@@ -667,7 +1070,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 
 		settingName = t("Focus search bar via keyboard");
@@ -689,7 +1092,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 
 		if (this.plugin.settings.focusSearchBarViaKeyboard) {
@@ -708,7 +1111,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			this.addSettingToMasterSettingsList(
 				tabName,
 				setting.settingEl,
-				settingName
+				settingName,
 			);
 		}
 
@@ -729,7 +1132,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 
 		if (!this.plugin.settings.alwaysShowCustomSearch) {
@@ -754,13 +1157,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 					});
 					await this.plugin.saveSettings();
 					this.display();
-				})
+				}),
 			);
 
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 
 		this.plugin.settings.customSearchEngine.forEach(
@@ -768,11 +1171,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 				settingName = searchEngine.name
 					? searchEngine.name
 					: t("Custom Search") +
-					  `${
+						`${
 							this.plugin.settings.customSearchEngine.length > 1
 								? ` ${index + 1}`
 								: ""
-					  }`;
+						}`;
 				const topLevelSetting = new Setting(wbContainerEl)
 					.setClass("search-engine-setting")
 					.setName(settingName)
@@ -782,25 +1185,25 @@ export class SurfingSettingTab extends PluginSettingTab {
 							.onClick(async () => {
 								this.plugin.settings.customSearchEngine.splice(
 									index,
-									1
+									1,
 								);
 								await this.plugin.saveSettings();
 								this.display();
-							})
+							}),
 					);
 
 				const mainSettingsEl = topLevelSetting.settingEl.createEl(
 					"div",
-					"search-engine-main-settings"
+					"search-engine-main-settings",
 				);
 
 				const mainSettingsNameEl = mainSettingsEl.createEl(
 					"div",
-					"search-engine-main-settings-name"
+					"search-engine-main-settings-name",
 				);
 				const mainSettingsUrlEl = mainSettingsEl.createEl(
 					"div",
-					"search-engine-main-settings-url"
+					"search-engine-main-settings-url",
 				);
 
 				mainSettingsNameEl.createEl("label", { text: t("Name") });
@@ -820,7 +1223,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 								name: target.value,
 							};
 							await this.plugin.saveSettings();
-						}
+						},
 					);
 
 				mainSettingsUrlEl.createEl("label", { text: t("Url") });
@@ -840,15 +1243,15 @@ export class SurfingSettingTab extends PluginSettingTab {
 								url: target.value,
 							};
 							await this.plugin.saveSettings();
-						}
+						},
 					);
 
 				this.addSettingToMasterSettingsList(
 					tabName,
 					topLevelSetting.settingEl,
-					settingName + t("Search Engine")
+					settingName + t("Search Engine"),
 				);
-			}
+			},
 		);
 	}
 
@@ -863,13 +1266,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.markdownPath = value;
 						this.applySettingsUpdate();
-					})
+					}),
 			);
 
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 	}
 
@@ -891,7 +1294,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 
 		if (!this.plugin.settings.customHighlightFormat) {
@@ -900,7 +1303,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		settingName = t("Copy Link to Highlight Format");
 		let settingDesc = t(
-			"Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date."
+			"Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date.",
 		);
 		setting = new Setting(wbContainerEl)
 			.setName(settingName)
@@ -919,19 +1322,19 @@ export class SurfingSettingTab extends PluginSettingTab {
 						}
 						this.plugin.settings.highlightFormat = value;
 						this.applySettingsUpdate();
-					})
+					}),
 			);
 
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
 			settingName,
-			settingDesc
+			settingDesc,
 		);
 
 		settingName = t("Jump to Opened Page");
 		settingDesc = t(
-			"When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view."
+			"When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.",
 		);
 		setting = new Setting(wbContainerEl)
 			.setName(settingName)
@@ -949,7 +1352,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			tabName,
 			setting.settingEl,
 			settingName,
-			settingDesc
+			settingDesc,
 		);
 	}
 
@@ -970,7 +1373,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 	}
 
@@ -993,7 +1396,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			tabName,
 			setting.settingEl,
 			settingName,
-			settingDesc
+			settingDesc,
 		);
 	}
 
@@ -1016,7 +1419,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			tabName,
 			setting.settingEl,
 			settingName,
-			settingDesc
+			settingDesc,
 		);
 	}
 
@@ -1039,14 +1442,14 @@ export class SurfingSettingTab extends PluginSettingTab {
 			tabName,
 			setting.settingEl,
 			settingName,
-			settingDesc
+			settingDesc,
 		);
 	}
 
 	private addInlinePreview(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t("Enable Inline Preview") + " [Deprecated]";
 		const settingDesc = t(
-			"Enable inline preview with surfing. Currently only support Live preview"
+			"Enable inline preview with surfing. Currently only support Live preview",
 		);
 		const setting = new Setting(wbContainerEl)
 			.setName(settingName)
@@ -1065,13 +1468,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 			tabName,
 			setting.settingEl,
 			settingName,
-			settingDesc
+			settingDesc,
 		);
 	}
 
 	private addReplaceIframeInCanvas(
 		tabName: string,
-		wbContainerEl: HTMLElement
+		wbContainerEl: HTMLElement,
 	) {
 		const settingName =
 			t("[Experimental] Replace Iframe In Canvas") +
@@ -1090,7 +1493,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 	}
 
@@ -1114,7 +1517,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 
 		if (!this.plugin.settings.openInObsidianWeb) {
@@ -1136,7 +1539,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		bookmarkLetsBtn.addEventListener("click", (e) => {
 			e.preventDefault();
 			clipboard.writeText(
-				`javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();`
+				`javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();`,
 			);
 			new Notice(t("Copy BookmarkLets Success"));
 		});
@@ -1148,7 +1551,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			bookmarkLetsContainerEl,
-			settingName
+			settingName,
 		);
 	}
 
@@ -1159,7 +1562,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		setIcon(
 			bookmarkLetsContainerEl.createDiv({ cls: "wb-about-icon" }),
-			"surfing"
+			"surfing",
 		);
 
 		bookmarkLetsContainerEl.createEl("div", {
@@ -1181,7 +1584,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			bookmarkLetsContainerEl,
-			"surfing"
+			"surfing",
 		);
 	}
 
@@ -1204,7 +1607,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 	}
 
@@ -1224,7 +1627,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 	}
 
@@ -1244,7 +1647,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			settingName
+			settingName,
 		);
 	}
 
@@ -1257,7 +1660,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			"theme"
+			"theme",
 		);
 
 		settingName = t("Random Icons From Default Art");
@@ -1276,13 +1679,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			setting.settingEl,
-			"theme surfing"
+			"theme surfing",
 		);
 	}
 
 	private addBookmarkManagerSettings(
 		tabName: string,
-		wbContainerEl: HTMLElement
+		wbContainerEl: HTMLElement,
 	) {
 		const openBookmarkManager = new Setting(wbContainerEl)
 			.setName(t("Open BookmarkBar & Bookmark Manager"))
@@ -1299,7 +1702,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			openBookmarkManager.settingEl,
-			t("Open BookmarkBar & Bookmark Manager")
+			t("Open BookmarkBar & Bookmark Manager"),
 		);
 
 		if (!this.plugin.settings.bookmarkManager.openBookMark) return;
@@ -1318,7 +1721,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			saveBookmark.settingEl,
-			t("Save Bookmark When Open URI")
+			t("Save Bookmark When Open URI"),
 		);
 
 		const sendToReadWise = new Setting(wbContainerEl)
@@ -1327,7 +1730,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			.addToggle((toggle) => {
 				toggle
 					.setValue(
-						this.plugin.settings.bookmarkManager.sendToReadWise
+						this.plugin.settings.bookmarkManager.sendToReadWise,
 					)
 					.onChange(async (value) => {
 						this.plugin.settings.bookmarkManager.sendToReadWise =
@@ -1338,60 +1741,40 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			sendToReadWise.settingEl,
-			t("Send to ReadWise")
+			t("Send to ReadWise"),
 		);
 
-		const paginationSetting = new Setting(wbContainerEl)
-			.setName(t("Pagination"))
-			.addText((text) =>
-				text
-					.setPlaceholder(DEFAULT_SETTINGS.bookmarkManager.pagination)
-					.setValue(this.plugin.settings.bookmarkManager.pagination)
-					.onChange(async (value) => {
-						if (value === "") {
-							this.plugin.settings.bookmarkManager.pagination =
-								DEFAULT_SETTINGS.bookmarkManager.pagination;
-							this.applySettingsUpdate();
-							// Force refresh
-							this.display();
-						}
-						this.plugin.settings.bookmarkManager.pagination = value;
-						this.applySettingsUpdate();
-					})
-			);
-		this.addSettingToMasterSettingsList(
-			tabName,
-			paginationSetting.settingEl,
-			t("Pagination")
-		);
-
-		const categorySetting = new Setting(wbContainerEl)
-			.setName(t("Category"))
-			.addTextArea((text) => {
-				text.setPlaceholder(DEFAULT_SETTINGS.bookmarkManager.category)
-					.setValue(this.plugin.settings.bookmarkManager.category)
+		const bookmarkFolder = new Setting(wbContainerEl)
+			.setName(t("Bookmark Folder"))
+			.setDesc(t("Vault folder where bookmark files are stored."))
+			.addText((text) => {
+				text.setPlaceholder(
+					DEFAULT_SETTINGS.bookmarkManager.bookmarkFolder,
+				)
+					.setValue(
+						this.plugin.settings.bookmarkManager.bookmarkFolder,
+					)
 					.onChange((value) => {
-						this.plugin.settings.bookmarkManager.category =
-							value === ""
-								? DEFAULT_SETTINGS.bookmarkManager.category
-								: value;
+						this.plugin.settings.bookmarkManager.bookmarkFolder =
+							value ||
+							DEFAULT_SETTINGS.bookmarkManager.bookmarkFolder;
 						this.applySettingsUpdate();
 					});
 			});
 		this.addSettingToMasterSettingsList(
 			tabName,
-			categorySetting.settingEl,
-			t("Category")
+			bookmarkFolder.settingEl,
+			t("Bookmark Folder"),
 		);
 
 		const defaultCategory = new Setting(wbContainerEl)
-			.setName(t("Default Category (Use , to split)"))
+			.setName(t("Default Category"))
 			.addText((text) => {
 				text.setPlaceholder(
-					DEFAULT_SETTINGS.bookmarkManager.defaultCategory
+					DEFAULT_SETTINGS.bookmarkManager.defaultCategory,
 				)
 					.setValue(
-						this.plugin.settings.bookmarkManager.defaultCategory
+						this.plugin.settings.bookmarkManager.defaultCategory,
 					)
 					.onChange((value) => {
 						this.plugin.settings.bookmarkManager.defaultCategory =
@@ -1402,60 +1785,141 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addSettingToMasterSettingsList(
 			tabName,
 			defaultCategory.settingEl,
-			t("Default Category (Use , to split)")
+			t("Default Category"),
 		);
+	}
 
-		const defaultColumnList = new Setting(wbContainerEl)
-			.setName(t("Default Column List"))
-			.addText((text) => {
-				text.setPlaceholder(
-					DEFAULT_SETTINGS.bookmarkManager.defaultColumnList.join(" ")
-				)
-					.setValue(
-						this.plugin.settings.bookmarkManager.defaultColumnList.join(
-							" "
-						)
-					)
+	private generateAdBlockSettings(
+		tabName: string,
+		wbContainerEl: HTMLElement,
+	) {
+		let settingName = t("Enable Ad Blocking");
+		let setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(t("Block requests to domains in your filter lists."))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.adBlock.enabled)
 					.onChange(async (value) => {
-						if (value === "") {
-							this.plugin.settings.bookmarkManager.defaultColumnList =
-								DEFAULT_SETTINGS.bookmarkManager.defaultColumnList;
-							this.applySettingsUpdate();
-							this.display();
+						this.plugin.settings.adBlock.enabled = value;
+						await this.plugin.saveSettings();
+						if (this.plugin.adBlockManager) {
+							await this.plugin.adBlockManager.reload();
 						}
-						this.plugin.settings.bookmarkManager.defaultColumnList =
-							value.split(" ");
-						this.applySettingsUpdate();
-					});
-			});
+						this.display();
+					}),
+			);
 		this.addSettingToMasterSettingsList(
 			tabName,
-			defaultColumnList.settingEl,
-			t("Default Column List")
+			setting.settingEl,
+			settingName,
 		);
 
-		const defaultFilterType = new Setting(wbContainerEl)
-			.setName(t("Default Category Filter Type"))
-			.addDropdown(async (drowdown: DropdownComponent) => {
-				const aDropdown = drowdown
-					.addOption("tree", t("Tree"))
-					.addOption("menu", t("Menu"));
-
-				aDropdown
-					.setValue(
-						this.plugin.settings.bookmarkManager.defaultFilterType
-					)
+		settingName = t("Enable Element Hiding");
+		setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc(t("Allow picking and hiding page elements."))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.elementHiding.enabled)
 					.onChange(async (value) => {
-						this.plugin.settings.bookmarkManager.defaultFilterType =
-							value;
-						this.applySettingsUpdate();
-					});
-			});
-
+						this.plugin.settings.elementHiding.enabled = value;
+						await this.plugin.saveSettings();
+					}),
+			);
 		this.addSettingToMasterSettingsList(
 			tabName,
-			defaultFilterType.settingEl,
-			t("Default Category Filter Type")
+			setting.settingEl,
+			settingName,
 		);
+
+		if (this.plugin.settings.adBlock.enabled) {
+			settingName = t("Filter Lists");
+			const filterListSetting = new Setting(wbContainerEl)
+				.setName(settingName)
+				.setDesc(t("Manage filter lists for ad blocking."));
+			this.addSettingToMasterSettingsList(
+				tabName,
+				filterListSetting.settingEl,
+				settingName,
+			);
+
+			filterListSetting.addButton((button) =>
+				button.setButtonText("+").onClick(async () => {
+					this.plugin.settings.adBlock.filterLists.push({
+						name: "New Filter",
+						url: "",
+						enabled: true,
+					});
+					await this.plugin.saveSettings();
+					this.display();
+				}),
+			);
+
+			filterListSetting.addButton((button) =>
+				button
+					.setButtonText(t("Reload Filter Lists"))
+					.onClick(async () => {
+						if (this.plugin.adBlockManager) {
+							await this.plugin.adBlockManager.reload();
+							new Notice(t("Filter lists reloaded."));
+						}
+					}),
+			);
+
+			this.plugin.settings.adBlock.filterLists.forEach(
+				(filterList, index) => {
+					const filterSetting = new Setting(wbContainerEl).setClass(
+						"search-engine-setting",
+					);
+
+					filterSetting.addText((text) =>
+						text
+							.setPlaceholder("Name")
+							.setValue(filterList.name)
+							.onChange(async (value) => {
+								this.plugin.settings.adBlock.filterLists[
+									index
+								].name = value;
+								await this.plugin.saveSettings();
+							}),
+					);
+
+					filterSetting.addText((text) =>
+						text
+							.setPlaceholder("URL or vault path")
+							.setValue(filterList.url)
+							.onChange(async (value) => {
+								this.plugin.settings.adBlock.filterLists[
+									index
+								].url = value;
+								await this.plugin.saveSettings();
+							}),
+					);
+
+					filterSetting.addToggle((toggle) =>
+						toggle
+							.setValue(filterList.enabled)
+							.onChange(async (value) => {
+								this.plugin.settings.adBlock.filterLists[
+									index
+								].enabled = value;
+								await this.plugin.saveSettings();
+							}),
+					);
+
+					filterSetting.addExtraButton((button) =>
+						button.setIcon("trash").onClick(async () => {
+							this.plugin.settings.adBlock.filterLists.splice(
+								index,
+								1,
+							);
+							await this.plugin.saveSettings();
+							this.display();
+						}),
+					);
+				},
+			);
+		}
 	}
 }
