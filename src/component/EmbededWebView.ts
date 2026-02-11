@@ -46,6 +46,10 @@ export class EmbededWebView {
 		const doc = this.contentEl.doc;
 		this.webviewEl = doc.createElement("webview");
 		this.webviewEl.setAttribute("allowpopups", "");
+		this.webviewEl.setAttribute(
+			"webpreferences",
+			"nodeIntegration=false, contextIsolation=true, sandbox=true",
+		);
 		this.webviewEl.addClass("wb-frame");
 		const self = this;
 
@@ -64,13 +68,15 @@ export class EmbededWebView {
 		this.webviewEl.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
 			const webContents = remote.webContents.fromId(
-				this.webviewEl.getWebContentsId()
+				this.webviewEl.getWebContentsId(),
 			);
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
 				if (event.disposition !== "foreground-tab") {
-					SurfingView.spawnWebBrowserView(self.plugin, true, { url: event.url });
+					SurfingView.spawnWebBrowserView(self.plugin, true, {
+						url: event.url,
+					});
 					return {
 						action: "allow",
 					};
@@ -105,12 +111,12 @@ export class EmbededWebView {
 					let link = "";
 					// eslint-disable-next-line no-useless-escape
 					const timeString = highlightFormat.match(
-						/\{TIME\:[^\{\}\[\]]*\}/g
+						/\{TIME\:[^\{\}\[\]]*\}/g,
 					)?.[0];
 					if (timeString) {
 						// eslint-disable-next-line no-useless-escape
 						const momentTime = moment().format(
-							timeString.replace(/{TIME:([^\}]*)}/g, "$1")
+							timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
 						);
 						link = highlightFormat.replace(timeString, momentTime);
 						return link;
@@ -137,13 +143,13 @@ export class EmbededWebView {
 								// }
 							}
 							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
-						
+
 							e.dataTransfer.setData('text/plain', link);
 							console.log(e);
 						}
 					});
 					`,
-						true
+						true,
 					)
 					.then((result: any) => {});
 			} catch (err) {
@@ -166,7 +172,7 @@ export class EmbededWebView {
 							click: function () {
 								window.open(params.pageURL, "_blank");
 							},
-						})
+						}),
 					);
 
 					this.menu.append(
@@ -175,7 +181,7 @@ export class EmbededWebView {
 							click: function () {
 								window.open(params.pageURL);
 							},
-						})
+						}),
 					);
 
 					if (params.selectionText) {
@@ -188,17 +194,21 @@ export class EmbededWebView {
 								label: t("Search Text"),
 								click: function () {
 									try {
-										SurfingView.spawnWebBrowserView(self.plugin, true, {
-											url: params.selectionText,
-										});
+										SurfingView.spawnWebBrowserView(
+											self.plugin,
+											true,
+											{
+												url: params.selectionText,
+											},
+										);
 										console.log(
-											"Page URL copied to clipboard"
+											"Page URL copied to clipboard",
 										);
 									} catch (err) {
 										console.error("Failed to copy: ", err);
 									}
 								},
-							})
+							}),
 						);
 						this.menu.append(new MenuItem({ type: "separator" }));
 						this.menu.append(
@@ -208,13 +218,13 @@ export class EmbededWebView {
 									try {
 										webContents.copy();
 										console.log(
-											"Page URL copied to clipboard"
+											"Page URL copied to clipboard",
 										);
 									} catch (err) {
 										console.error("Failed to copy: ", err);
 									}
 								},
-							})
+							}),
 						);
 						const highlightFormat = pluginSettings.highlightFormat;
 						this.menu.append(
@@ -226,11 +236,11 @@ export class EmbededWebView {
 										const linkToHighlight =
 											params.pageURL.replace(
 												/\#\:\~\:text\=(.*)/g,
-												""
+												"",
 											) +
 											"#:~:text=" +
 											encodeURIComponent(
-												params.selectionText
+												params.selectionText,
 											);
 										const selectionText =
 											params.selectionText;
@@ -239,7 +249,7 @@ export class EmbededWebView {
 											// eslint-disable-next-line no-useless-escape
 											const timeString =
 												highlightFormat.match(
-													/\{TIME\:[^\{\}\[\]]*\}/g
+													/\{TIME\:[^\{\}\[\]]*\}/g,
 												)?.[0];
 											if (timeString) {
 												// eslint-disable-next-line no-useless-escape
@@ -247,12 +257,12 @@ export class EmbededWebView {
 													moment().format(
 														timeString.replace(
 															/{TIME:([^\}]*)}/g,
-															"$1"
-														)
+															"$1",
+														),
 													);
 												link = highlightFormat.replace(
 													timeString,
-													momentTime
+													momentTime,
 												);
 											}
 										}
@@ -261,21 +271,21 @@ export class EmbededWebView {
 										)
 											.replace(
 												/\{URL\}/g,
-												linkToHighlight
+												linkToHighlight,
 											)
 											.replace(
 												/\{CONTENT\}/g,
-												selectionText
+												selectionText,
 											);
 										clipboard.writeText(link);
 										console.log(
-											"Link URL copied to clipboard"
+											"Link URL copied to clipboard",
 										);
 									} catch (err) {
 										console.error("Failed to copy: ", err);
 									}
 								},
-							})
+							}),
 						);
 
 						this.menu.popup(webContents);
@@ -308,7 +318,7 @@ export class EmbededWebView {
 											}
 											timeStr = window.location.href.split('?')[0]+'?t=' + joinTimeStr + pageStr;
 										`,
-												true
+												true,
 											)
 											.then((result: any) => {
 												clipboard.writeText(
@@ -317,21 +327,21 @@ export class EmbededWebView {
 															.split("?t=")[1]
 															.replace(
 																/&p=[1-9]{1,}/g,
-																""
+																"",
 															) +
 														"](" +
 														result +
-														")"
+														")",
 												); // Will be the JSON object from the fetch call
 											});
 										console.log(
-											"Page URL copied to clipboard"
+											"Page URL copied to clipboard",
 										);
 									} catch (err) {
 										console.error("Failed to copy: ", err);
 									}
 								},
-							})
+							}),
 						);
 					}
 
@@ -346,7 +356,7 @@ export class EmbededWebView {
 						}
 					}, 0);
 				},
-				false
+				false,
 			);
 		});
 
@@ -360,7 +370,7 @@ export class EmbededWebView {
 			(event: any) => {
 				this.currentUrl = event.url;
 				this.webviewEl.setAttribute("src", event.url);
-			}
+			},
 		);
 
 		this.webviewEl.addEventListener("destroyed", () => {
@@ -376,6 +386,6 @@ export class EmbededWebView {
 					this.contentEl.doc === doc
 						? this.contentEl.appendChild(this.webviewEl)
 						: this.appendWebView();
-			  });
+				});
 	}
 }

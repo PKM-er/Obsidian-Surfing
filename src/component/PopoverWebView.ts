@@ -13,7 +13,7 @@ export class PopoverWebView {
 	private plugin: SurfingPlugin;
 
 	constructor(node: HTMLElement, targetUrl: string, plugin: SurfingPlugin) {
-		this.contentEl = node.createEl("div", {cls: "wb-view-content"});
+		this.contentEl = node.createEl("div", { cls: "wb-view-content" });
 		this.node = node;
 		this.currentUrl = targetUrl;
 		this.plugin = plugin;
@@ -27,22 +27,31 @@ export class PopoverWebView {
 
 	appendWebView() {
 		const doc = this.contentEl.doc;
-		this.webviewEl = doc.createElement('webview');
+		this.webviewEl = doc.createElement("webview");
 		this.webviewEl.setAttribute("allowpopups", "");
+		this.webviewEl.setAttribute(
+			"webpreferences",
+			"nodeIntegration=false, contextIsolation=true, sandbox=true",
+		);
 		this.webviewEl.addClass("wb-frame");
 		const self = this;
 
-		if (this.currentUrl) this.webviewEl.setAttribute("src", this.currentUrl);
+		if (this.currentUrl)
+			this.webviewEl.setAttribute("src", this.currentUrl);
 		// this.node.placeholderEl.innerText = this.node.url;
 
 		this.webviewEl.addEventListener("dom-ready", (event: any) => {
 			// @ts-ignore
-			const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
+			const webContents = remote.webContents.fromId(
+				this.webviewEl.getWebContentsId(),
+			);
 
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
 				if (event.disposition !== "foreground-tab") {
-					SurfingView.spawnWebBrowserView(self.plugin, true, {url: event.url});
+					SurfingView.spawnWebBrowserView(self.plugin, true, {
+						url: event.url,
+					});
 					return {
 						action: "allow",
 					};
@@ -55,16 +64,22 @@ export class PopoverWebView {
 				const getCurrentTime = () => {
 					let link = "";
 					// eslint-disable-next-line no-useless-escape
-					const timeString = highlightFormat.match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
+					const timeString = highlightFormat.match(
+						/\{TIME\:[^\{\}\[\]]*\}/g,
+					)?.[0];
 					if (timeString) {
 						// eslint-disable-next-line no-useless-escape
-						const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
+						const momentTime = moment().format(
+							timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
+						);
 						link = highlightFormat.replace(timeString, momentTime);
 						return link;
 					}
 					return link;
 				};
-				webContents.executeJavaScript(`
+				webContents
+					.executeJavaScript(
+						`
 					window.addEventListener('dragstart', (e) => {
 						if(e.ctrlKey || e.metaKey) {
 							e.dataTransfer.clearData();
@@ -75,40 +90,48 @@ export class PopoverWebView {
 								link = "${getCurrentTime()}";
 							}
 							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
-						
+
 							e.dataTransfer.setData('text/plain', link);
 							console.log(e);
 						}
 					});
-					`, true).then((result: any) => {
-				});
+					`,
+						true,
+					)
+					.then((result: any) => {});
 			} catch (err) {
-				console.error('Failed to add event: ', err);
+				console.error("Failed to add event: ", err);
 			}
 		});
 
+		this.webviewEl.addEventListener(
+			"did-navigate-in-page",
+			(event: any) => {
+				if (event.url.contains("contacts.google.com/widget")) {
+					// @ts-ignore
+					const webContents = remote.webContents.fromId(
+						this.webviewEl.getWebContentsId(),
+					);
+					webContents.stop();
+					return;
+				}
+				this.currentUrl = event.url;
+			},
+		);
 
-		this.webviewEl.addEventListener("did-navigate-in-page", (event: any) => {
-			if (event.url.contains("contacts.google.com/widget")) {
-				// @ts-ignore
-				const webContents = remote.webContents.fromId(this.webviewEl.getWebContentsId());
-				webContents.stop();
-				return;
-			}
-			this.currentUrl = event.url;
-		});
-
-		this.webviewEl.addEventListener('destroyed', () => {
+		this.webviewEl.addEventListener("destroyed", () => {
 			if (doc !== this.contentEl.doc) {
 				this.webviewEl.detach();
 				this.appendWebView();
 			}
 		});
 
-		doc.contains(this.contentEl) ? this.contentEl.appendChild(this.webviewEl) : this.contentEl.onNodeInserted(() => {
-			this.contentEl.doc === doc ? this.contentEl.appendChild(this.webviewEl) : this.appendWebView();
-		});
-
-
+		doc.contains(this.contentEl)
+			? this.contentEl.appendChild(this.webviewEl)
+			: this.contentEl.onNodeInserted(() => {
+					this.contentEl.doc === doc
+						? this.contentEl.appendChild(this.webviewEl)
+						: this.appendWebView();
+				});
 	}
 }
