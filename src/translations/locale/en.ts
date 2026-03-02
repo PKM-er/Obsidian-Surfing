@@ -103,4 +103,13 @@ export default {
 	'Enable inline preview with surfing. Currently only support Live preview': 'Enable inline preview with surfing. Currently only support Live preview',
 	'Enable Tree View in Surfing': 'Enable Tree View in Surfing',
 	'Enable Tree View': 'Enable Tree View',
+	'Scripts': 'Scripts',
+	// Custom Scripts feature
+	'Add new custom script': 'Add new custom script',
+	'Add JavaScript bookmarklets to run in the web browser': 'Add JavaScript bookmarklets to run in the web browser',
+	'Run script': 'Run script',
+	'Script executed': 'Script executed',
+	'Open Webview DevTools': 'Open Webview DevTools',
+	'Debug surfingFetch Status': 'Debug surfingFetch Status',
+	'Run Script': 'Run Script',
 };

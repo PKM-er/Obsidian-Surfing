@@ -13,6 +13,7 @@ import { clipboard } from "electron";
 import SurfingPlugin from "./surfingIndex";
 import { NodeModel } from "@minoru/react-dnd-treeview";
 import { CustomData } from "./component/TabTreeView/types";
+import { refreshBookmarkBarScripts } from "./component/BookMarkBar/BookMarkBar";
 
 type settingSearchInfo = {
 	containerEl: HTMLElement;
@@ -68,11 +69,19 @@ export interface SurfingSettings {
 	supportLivePreviewInlineUrl: boolean;
 	enableTreeView: boolean;
 	focusSearchBarViaKeyboard: boolean;
+	customScripts: CustomScript[];
 }
 
 export interface SearchEngine {
 	name: string;
 	url: string;
+}
+
+export interface CustomScript {
+	id: string;
+	name: string;
+	code: string;
+	enabled: boolean;
 }
 
 const defaultCategory = `- Computer
@@ -135,6 +144,7 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	supportLivePreviewInlineUrl: false,
 	enableTreeView: false,
 	focusSearchBarViaKeyboard: true,
+	customScripts: [],
 };
 // Add search engines here for the future used.
 export const SEARCH_ENGINES: SearchEngine[] = [
@@ -173,6 +183,7 @@ const tabNameToTabIconId: Record<string, string> = {
 	Search: "search",
 	Theme: "brush",
 	Bookmark: "bookmark",
+	Scripts: "code",
 };
 
 export class DropdownRecord {
@@ -259,6 +270,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 			settingsEl,
 			(el: HTMLElement, tabName: string) =>
 				this.generateBookmarkManagerSettings(tabName, el)
+		);
+		this.createTabAndContent(
+			"Scripts",
+			this.navigateEl,
+			settingsEl,
+			(el: HTMLElement, tabName: string) =>
+				this.generateScriptsSettings(tabName, el)
 		);
 
 		this.createSearchZeroState(settingsEl);
@@ -1457,5 +1475,112 @@ export class SurfingSettingTab extends PluginSettingTab {
 			defaultFilterType.settingEl,
 			t("Default Category Filter Type")
 		);
+	}
+
+	private generateScriptsSettings(
+		tabName: string,
+		wbContainerEl: HTMLElement
+	): void {
+		// Initialize customScripts if undefined
+		if (!this.plugin.settings.customScripts) {
+			this.plugin.settings.customScripts = [];
+		}
+
+		// Add new script button
+		const settingName = "Add new custom script";
+		const setting = new Setting(wbContainerEl)
+			.setName(settingName)
+			.setDesc("Add JavaScript bookmarklets to run in the web browser")
+			.addButton((button) =>
+				button.setButtonText("+").onClick(async () => {
+					const newScript: CustomScript = {
+						id: crypto.randomUUID(),
+						name: `Script ${this.plugin.settings.customScripts.length + 1}`,
+						code: "// Your JavaScript code here",
+						enabled: true,
+					};
+					this.plugin.settings.customScripts.push(newScript);
+					await this.plugin.saveSettings();
+					refreshBookmarkBarScripts(this.plugin);
+					this.display();
+				})
+			);
+
+		this.addSettingToMasterSettingsList(
+			tabName,
+			setting.settingEl,
+			settingName
+		);
+
+		// Display existing scripts
+		this.plugin.settings.customScripts.forEach((script, index) => {
+			const scriptContainer = wbContainerEl.createEl("div", {
+				cls: "custom-script-container"
+			});
+
+			// Top row: toggle + name input + delete button
+			const topRow = scriptContainer.createEl("div", {
+				cls: "custom-script-top-row"
+			});
+
+			// Toggle (Obsidian style)
+			const toggleContainer = topRow.createEl("div", {
+				cls: "custom-script-toggle checkbox-container",
+				attr: { "is-enabled": script.enabled ? "true" : "false" }
+			});
+			toggleContainer.classList.toggle("is-enabled", script.enabled);
+			toggleContainer.addEventListener("click", async () => {
+				const newValue = !this.plugin.settings.customScripts[index].enabled;
+				this.plugin.settings.customScripts[index].enabled = newValue;
+				toggleContainer.classList.toggle("is-enabled", newValue);
+				await this.plugin.saveSettings();
+				refreshBookmarkBarScripts(this.plugin);
+			});
+
+			// Name input
+			const nameInput = topRow.createEl("input", {
+				cls: "custom-script-name-input",
+				type: "text",
+				value: script.name,
+				placeholder: "Script name"
+			});
+			nameInput.addEventListener("change", async (evt: Event) => {
+				const target = evt.target as HTMLInputElement;
+				this.plugin.settings.customScripts[index].name = target.value;
+				await this.plugin.saveSettings();
+				refreshBookmarkBarScripts(this.plugin);
+			});
+
+			// Delete button
+			const deleteBtn = topRow.createEl("button", {
+				cls: "custom-script-delete-btn mod-warning",
+				text: "Delete"
+			});
+			deleteBtn.addEventListener("click", async () => {
+				this.plugin.settings.customScripts.splice(index, 1);
+				await this.plugin.saveSettings();
+				refreshBookmarkBarScripts(this.plugin);
+				this.display();
+			});
+
+			// Code textarea (full width)
+			const codeTextarea = scriptContainer.createEl("textarea", {
+				cls: "custom-script-code-input",
+				text: script.code,
+				placeholder: "// Your JavaScript code here"
+			});
+			codeTextarea.rows = 6;
+			codeTextarea.addEventListener("change", async (evt: Event) => {
+				const target = evt.target as HTMLTextAreaElement;
+				this.plugin.settings.customScripts[index].code = target.value;
+				await this.plugin.saveSettings();
+			});
+
+			this.addSettingToMasterSettingsList(
+				tabName,
+				scriptContainer,
+				script.name + " script"
+			);
+		});
 	}
 }

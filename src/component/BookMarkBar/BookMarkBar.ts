@@ -1,9 +1,10 @@
 import SurfingPlugin from "../../surfingIndex";
 import { Bookmark, CategoryType } from "../../types/bookmark";
 import { BookMarkItem } from "./BookMarkItem";
-import { ItemView, setIcon } from "obsidian";
+import { ItemView, Menu, Notice, setIcon } from "obsidian";
 import { initializeJson, loadJson } from "../../utils/json";
 import { WEB_BROWSER_BOOKMARK_MANAGER_ID } from "../../surfingBookmarkManager";
+import { SurfingView } from "../../surfingView";
 
 export class BookMarkBar {
 	private view: ItemView;
@@ -76,6 +77,75 @@ export class BookMarkBar {
 		categories?.forEach((item: CategoryType) => {
 			new BookMarkItem(this.BookmarkBarContainerEl, this.plugin, this.view, item, bookmarks).onload();
 		})
+
+		// Add scripts section
+		this.renderScripts();
+	}
+
+	/**
+	 * Render custom scripts in the bookmark bar.
+	 * Scripts appear after bookmarks, separated by a vertical line.
+	 * Clicking a script executes it via executeCustomScript().
+	 */
+	renderScripts() {
+		const scripts = this.plugin.settings.customScripts?.filter(s => s.enabled) || [];
+		if (scripts.length === 0) return;
+
+		// Add separator
+		const separatorEl = this.BookmarkBarContainerEl.createEl("div", {
+			cls: "wb-bookmark-bar-separator"
+		});
+		separatorEl.createEl("span", { cls: "wb-separator-line" });
+
+		// Add script items
+		scripts.forEach((script) => {
+			const scriptEl = this.BookmarkBarContainerEl.createEl("div", {
+				cls: "wb-bookmark-bar-script-item",
+				attr: { "data-script-id": script.id }
+			});
+
+			const iconEl = scriptEl.createEl("div", {
+				cls: "wb-bookmark-bar-script-icon"
+			});
+			setIcon(iconEl, "code");
+
+			scriptEl.createEl("span", {
+				cls: "wb-bookmark-bar-script-name",
+				text: script.name
+			});
+
+			scriptEl.onclick = async () => {
+				if (this.view instanceof SurfingView) {
+					try {
+						await this.view.executeCustomScript(script.code);
+						new Notice(`Script executed: ${script.name}`);
+					} catch (error) {
+						// Error handled in executeCustomScript
+					}
+				}
+			};
+
+			// Right-click context menu
+			scriptEl.oncontextmenu = (e) => {
+				e.preventDefault();
+				const menu = new Menu();
+				menu.addItem((item) => {
+					item.setTitle("Run script")
+						.setIcon("play")
+						.onClick(async () => {
+							if (this.view instanceof SurfingView) {
+								try {
+									await this.view.executeCustomScript(script.code);
+									new Notice(`Script executed: ${script.name}`);
+								} catch (error) {
+									// Error handled in executeCustomScript
+								}
+							}
+						});
+				});
+				menu.showAtMouseEvent(e);
+			};
+		});
 	}
 }
 
@@ -101,4 +171,29 @@ export const updateBookmarkBar = (plugin: SurfingPlugin, bookmarks: Bookmark[], 
 			leaf.view?.bookmarkBar?.render(bookmarks, categories);
 		})
 	}
+}
+
+export const refreshBookmarkBarScripts = (plugin: SurfingPlugin) => {
+	// Refresh empty views
+	const emptyLeaves = plugin.app.workspace.getLeavesOfType("empty");
+	emptyLeaves.forEach((leaf) => {
+		leaf.rebuildView();
+	});
+
+	// Refresh surfing views - re-render scripts section
+	const surfingLeaves = plugin.app.workspace.getLeavesOfType("surfing-view");
+	surfingLeaves.forEach((leaf) => {
+		// @ts-ignore
+		const bookmarkBar = leaf.view?.bookmarkBar;
+		if (bookmarkBar) {
+			// Remove existing scripts and re-render
+			const container = bookmarkBar.BookmarkBarContainerEl;
+			if (container) {
+				// Remove old separator and scripts
+				container.querySelectorAll('.wb-bookmark-bar-separator, .wb-bookmark-bar-script-item').forEach((el: Element) => el.remove());
+				// Re-render scripts
+				bookmarkBar.renderScripts();
+			}
+		}
+	});
 }

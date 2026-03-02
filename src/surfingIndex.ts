@@ -4,6 +4,7 @@ import {
 	Editor,
 	editorInfoField,
 	EventRef,
+	FuzzySuggestModal,
 	HoverParent,
 	HoverPopover,
 	ItemView,
@@ -33,6 +34,7 @@ import {
 import { t } from "./translations/helper";
 import { around } from "monkey-around";
 import {
+	CustomScript,
 	DEFAULT_SETTINGS,
 	SEARCH_ENGINES,
 	SurfingSettings,
@@ -754,6 +756,65 @@ export default class SurfingPlugin extends Plugin {
 				}
 			},
 		});
+
+		this.addCommand({
+			id: "run-custom-script",
+			name: "Run Script",
+			checkCallback: (checking: boolean) => {
+				const surfingView =
+					this.app.workspace.getActiveViewOfType(SurfingView);
+				const enabledScripts = this.settings.customScripts?.filter(
+					(s) => s.enabled
+				);
+				if (surfingView && enabledScripts && enabledScripts.length > 0) {
+					if (!checking) {
+						new ScriptSuggestModal(
+							this.app,
+							this,
+							surfingView,
+							enabledScripts
+						).open();
+					}
+					return true;
+				}
+			},
+		});
+
+		this.addCommand({
+			id: "open-webview-devtools",
+			name: "Open Webview DevTools",
+			checkCallback: (checking: boolean) => {
+				const surfingView =
+					this.app.workspace.getActiveViewOfType(SurfingView);
+				if (surfingView) {
+					if (!checking) {
+						surfingView.openInpecter();
+					}
+					return true;
+				}
+			},
+		});
+
+		this.addCommand({
+			id: "debug-surfing-fetch",
+			name: "Debug surfingFetch Status",
+			checkCallback: (checking: boolean) => {
+				const surfingView =
+					this.app.workspace.getActiveViewOfType(SurfingView);
+				if (surfingView) {
+					if (!checking) {
+						surfingView.executeCustomScript(`
+							const status = {
+								surfingFetch: typeof window.surfingFetch,
+								callbacks: Object.keys(window._surfingFetchCallbacks || {}).length
+							};
+							alert('surfingFetch: ' + status.surfingFetch + '\\nPending callbacks: ' + status.callbacks);
+						`);
+					}
+					return true;
+				}
+			},
+		});
 	}
 
 	private registerCustomIcon() {
@@ -1357,7 +1418,7 @@ export default class SurfingPlugin extends Plugin {
 								this.contentEl.classList.add(
 									"mod-wb-bookmark-bar"
 								);
-								new BookMarkBar(this, this.plugin).onload();
+								new BookMarkBar(this, self).onload();
 							}
 							if (
 								!this.contentEl.querySelector(
@@ -1599,5 +1660,41 @@ class SaveBookmarkModal extends Modal {
 	onClose() {
 		const { contentEl } = this;
 		contentEl.empty();
+	}
+}
+
+class ScriptSuggestModal extends FuzzySuggestModal<CustomScript> {
+	private plugin: SurfingPlugin;
+	private surfingView: SurfingView;
+	private scripts: CustomScript[];
+
+	constructor(
+		app: App,
+		plugin: SurfingPlugin,
+		surfingView: SurfingView,
+		scripts: CustomScript[]
+	) {
+		super(app);
+		this.plugin = plugin;
+		this.surfingView = surfingView;
+		this.scripts = scripts;
+		this.setPlaceholder("Select a script to run");
+	}
+
+	getItems(): CustomScript[] {
+		return this.scripts;
+	}
+
+	getItemText(script: CustomScript): string {
+		return script.name;
+	}
+
+	async onChooseItem(script: CustomScript): Promise<void> {
+		try {
+			await this.surfingView.executeCustomScript(script.code);
+			new Notice(`Script executed: ${script.name}`);
+		} catch (error) {
+			// Error is already handled in executeCustomScript
+		}
 	}
 }

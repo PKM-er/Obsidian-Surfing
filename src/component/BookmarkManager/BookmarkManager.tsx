@@ -19,7 +19,8 @@ import useStateRef from "react-usestateref";
 import { generateColor, generateTagsOptions, stringToCategory } from "./utils";
 import type { Bookmark, CategoryType } from "../../types/bookmark";
 import { ColumnsType } from "antd/es/table";
-import { CheckboxValueType } from "antd/es/checkbox/Group";
+// CheckboxValueType from antd - define locally for compatibility
+type CheckboxValueType = string | number | boolean;
 import { BookmarkForm } from "./BookmarkForm";
 import BookmarkImporter from "./BookmarkImporter";
 import SurfingPlugin from "src/surfingIndex";
@@ -66,7 +67,7 @@ export default function BookmarkManager(props: Props) {
 	const [tagFiltered, setTagFiltered, tagFilteredRef] = useStateRef<Record<string, FilterValue | null>>({
 		tags: null,
 	});
-	const [categoryFiltered, setCategoryFiltered, categoryFilteredRef] = useStateRef<Record<string, FilterValue | null>>({
+	const [categoryFiltered, setCategoryFiltered] = useStateRef<Record<string, FilterValue | null>>({
 		category: null,
 	});
 	const [sortedInfo, setSortedInfo, sortedInfoRef] = useStateRef<SorterResult<Bookmark>>({

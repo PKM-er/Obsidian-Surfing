@@ -12,7 +12,7 @@ import { CustomNode } from "./CustomNode";
 import { Placeholder } from "./Placeholder";
 import styles from './TabTree.module.css';
 import { CustomDragPreview } from "./CustomDragPreview";
-import { ItemView, Menu } from "obsidian";
+import { Menu } from "obsidian";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "../../surfingView";
 import { random, SaveWorkspaceModal } from "./workspace";
 import { CrownTwoTone } from "@ant-design/icons";
@@ -40,7 +40,7 @@ export const useDndProvider = () => {
 export default function TabTree(props: Props) {
 	const [treeData, setTreeData] = useState<NodeModel<CustomData>[]>(props.plugin.settings.treeData || []);
 	const handleDrop = (newTree: NodeModel<CustomData>[]) => setTreeData(newTree);
-	const {dndArea, handleRef, html5Options} = useDndProvider();
+	const {dndArea, handleRef} = useDndProvider();
 
 	const [selectedNode, setSelectedNode] = useState<NodeModel<CustomData> | null>(null);
 	const handleSelect = (node: NodeModel) => {

@@ -5,7 +5,7 @@ import ReactDOM from "react-dom/client";
 import BookmarkManager from "./component/BookmarkManager/BookmarkManager";
 import { initializeJson, loadJson } from "./utils/json";
 import { Bookmark, CategoryType } from "./types/bookmark";
-import { t } from "./translations/helper";
+// import { t } from "./translations/helper";
 
 export const WEB_BROWSER_BOOKMARK_MANAGER_ID = "surfing-bookmark-manager";
 

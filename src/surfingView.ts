@@ -265,6 +265,62 @@ export class SurfingView extends ItemView {
 				this.webviewEl.getWebContentsId()
 			);
 
+			// ============================================================
+			// surfingFetch: CSP Bypass Proxy
+			// ============================================================
+			// This feature allows custom scripts to make HTTP requests that would
+			// normally be blocked by Content Security Policy (CSP) on websites.
+			//
+			// How it works:
+			// 1. Webview calls surfingFetch() which logs a message with __SURFING_FETCH__ prefix
+			// 2. Obsidian listens via 'console-message' event (reliable for Electron webviews)
+			// 3. Obsidian performs the actual fetch in Node.js context (no CSP restrictions)
+			// 4. Response is sent back via executeJavaScript calling _handleSurfingFetchResponse
+			//
+			// Use case: Call localhost APIs (like Obsidian Local REST API) from sites like ChatGPT
+			// ============================================================
+			webContents.removeAllListeners('console-message');
+			webContents.on('console-message', (event: any, level: number, message: string) => {
+				if (message.startsWith('__SURFING_FETCH__')) {
+					const jsonStr = message.substring('__SURFING_FETCH__'.length);
+					try {
+						const request = JSON.parse(jsonStr);
+						if (request.type === 'surfing-fetch') {
+							const { requestId, url, options } = request;
+
+							const fetchOptions: RequestInit = {
+								method: options.method || 'GET',
+								headers: options.headers || {},
+							};
+							if (options.body && options.method !== 'GET') {
+								fetchOptions.body = options.body;
+							}
+
+							fetch(url, fetchOptions)
+								.then(async (response) => {
+									const text = await response.text();
+									const responseData = {
+										ok: response.ok,
+										status: response.status,
+										statusText: response.statusText,
+										text: text,
+									};
+									webContents.executeJavaScript(
+										`window._handleSurfingFetchResponse('${requestId}', true, ${JSON.stringify(responseData)}, null)`
+									);
+								})
+								.catch((error: Error) => {
+									webContents.executeJavaScript(
+										`window._handleSurfingFetchResponse('${requestId}', false, null, '${error.message.replace(/'/g, "\\'")}')`
+									);
+								});
+						}
+					} catch (e) {
+						// Not a valid surfingFetch message
+					}
+				}
+			});
+
 			// Open new browser tab if the web view requests it.
 			webContents.setWindowOpenHandler((event: any) => {
 				SurfingView.spawnWebBrowserView(this.plugin, true, {
@@ -1001,15 +1057,62 @@ export class SurfingView extends ItemView {
 
 		await webContents.executeJavaScript(`
 			window.addEventListener("message", (e) => {
-				window.myPostPort = e.ports[0];
-			})
+				if (e.ports && e.ports[0]) {
+					window.myPostPort = e.ports[0];
+				}
+			});
 			document.addEventListener('click', (e) => {
 				window.myPostPort?.postMessage('click');
 			});
 			document.addEventListener('scroll', (e) => {
 				window.myPostPort?.postMessage('scroll');
-			});0
+			});
 
+			// surfingFetch: Client-side API for CSP bypass
+			// Usage: const response = await surfingFetch(url, {method, headers, body})
+			// Response: {ok, status, statusText, text}
+			window._surfingFetchCallbacks = window._surfingFetchCallbacks || {};
+			window.surfingFetch = async (url, options = {}) => {
+				return new Promise((resolve, reject) => {
+					const requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+					window._surfingFetchCallbacks[requestId] = { resolve, reject };
+
+					const message = JSON.stringify({
+						type: 'surfing-fetch',
+						requestId: requestId,
+						url: url,
+						options: {
+							method: options.method || 'GET',
+							headers: options.headers || {},
+							body: options.body || null
+						}
+					});
+
+					// Use console.log with special prefix - Obsidian listens via console-message event
+					console.log('__SURFING_FETCH__' + message);
+
+					// Timeout after 30 seconds
+					setTimeout(() => {
+						if (window._surfingFetchCallbacks[requestId]) {
+							window._surfingFetchCallbacks[requestId].reject(new Error('surfingFetch timeout'));
+							delete window._surfingFetchCallbacks[requestId];
+						}
+					}, 30000);
+				});
+			};
+
+			// Handle responses from Obsidian (called via executeJavaScript)
+			window._handleSurfingFetchResponse = (requestId, success, data, error) => {
+				const callback = window._surfingFetchCallbacks[requestId];
+				if (callback) {
+					if (success) {
+						callback.resolve(data);
+					} else {
+						callback.reject(new Error(error || 'surfingFetch failed'));
+					}
+					delete window._surfingFetchCallbacks[requestId];
+				}
+			};
 		`);
 
 		const ch = new MessageChannel();
@@ -1146,9 +1249,7 @@ export class SurfingView extends ItemView {
 			}
 		};
 
-		await (this.webviewEl as any).contentWindow.postMessage(`test`, "*", [
-			ch.port2,
-		]);
+		await (this.webviewEl as any).contentWindow.postMessage('init', '*', [ch.port2]);
 	}
 
 	async registerJavascriptInWebcontents(webContents: any) {
@@ -1359,6 +1460,26 @@ export class SurfingView extends ItemView {
 			this.webviewEl.getWebContentsId()
 		);
 		webContents.reload();
+	}
+
+	/**
+	 * Execute a custom JavaScript script in the webview context.
+	 * Used by the Custom Scripts feature to run user-defined bookmarklets.
+	 * Scripts have access to window.surfingFetch() for CSP-bypassed HTTP requests.
+	 */
+	async executeCustomScript(code: string): Promise<any> {
+		try {
+			// @ts-ignore
+			const webContents = remote.webContents.fromId(
+				this.webviewEl.getWebContentsId()
+			);
+			const result = await webContents.executeJavaScript(code, true);
+			return result;
+		} catch (error: any) {
+			new Notice(`Script error: ${error.message}`);
+			console.error("Custom script error:", error);
+			throw error;
+		}
 	}
 
 	copyHighLight() {
