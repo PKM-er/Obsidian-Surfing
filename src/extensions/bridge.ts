@@ -515,6 +515,9 @@ export default class ChromeExtensionsBridge extends Component implements Channel
     this.activePanel?.render();
     this.syncChannels();
     this.syncCommands();
+    for (const leaf of this.app.workspace.getLeavesOfType(EXTENSION_PAGE_VIEW)) {
+      if (leaf.view instanceof ExtensionPageView) leaf.view.refreshIfStale();
+    }
   }
 
   openManager(): void { new ManagerModal(this.app, this).open(); }

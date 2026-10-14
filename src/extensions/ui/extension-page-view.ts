@@ -42,6 +42,22 @@ export class ExtensionPageView extends ItemView {
     if (this.url) this.showPage();
   }
 
+  /**
+   * Show the page again if it no longer matches where extensions run: a tab
+   * restored at startup opens before its extension is loaded, and a page
+   * from the previous session stops working when extensions move to the
+   * other browser's session.
+   */
+  refreshIfStale(): void {
+    if (!this.url) return;
+    let partition: string | null = null;
+    try { partition = this.plugin.partition(); } catch { /* extensions not running */ }
+    const current = this.webview?.getAttribute('partition') ?? null;
+    if (current !== null && current === partition) return;
+    if (current === null && !this.plugin.recordForUrl(this.url)) return;
+    this.showPage();
+  }
+
   private showPage(): void {
     this.contentEl.empty();
     this.webview = null;

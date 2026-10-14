@@ -852,20 +852,11 @@ button.wb-ai-session-btn {
 	margin-left: 0;
 }
 
-.wb-setting-title {
-	display: flex;
-	justify-content: space-between;
-	flex-direction: row;
-	align-items: center;
-}
-
 .wb-setting-tab-group {
 	display: flex;
+	flex-wrap: wrap;
 	justify-content: flex-start;
-}
-
-.wb-setting-searching {
-	opacity: 0.4;
+	gap: var(--size-4-1);
 }
 
 .wb-tab-settings textarea {
@@ -876,29 +867,48 @@ button.wb-ai-session-btn {
 
 .wb-navigation-item {
 	display: flex;
-	align-items: flex-start;
-	gap: 3px;
-	margin-right: 10px;
-	margin-bottom: 2px;
-	padding: 6px 5px 4px;
-	border-radius: 5px;
+	align-items: center;
+	gap: var(--size-4-1);
+	margin-bottom: -1px;
+	padding: var(--size-4-2) var(--size-4-3);
+	border-bottom: 2px solid transparent;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	cursor: var(--cursor);
 }
 
-.wb-navigation-item-selected {
-	background-color: var(--interactive-accent);
-	color: var(--text-on-accent);
+.wb-navigation-item:hover {
+	color: var(--text-normal);
 }
 
+.wb-navigation-item-icon {
+	display: flex;
+}
+
+.wb-navigation-item-icon svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+}
+
+.wb-navigation-item-selected,
+.wb-navigation-item-selected:hover {
+	color: var(--text-accent);
+	border-bottom-color: var(--interactive-accent);
+}
+
+/* The page tabs stay visible while the settings scroll. */
 .wb-setting-header {
-	border-bottom: var(--color-base-40) 0px solid;
+	position: sticky;
+	top: calc(-1 * var(--size-4-8));
+	z-index: 2;
+	margin-bottom: var(--size-4-4);
+	padding-top: var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+	background-color: var(--background-primary);
 }
 
 .wb-tab-settings {
 	margin-bottom: 20px;
-}
-
-.wb-setting-heading {
-	color: var(--color-accent);
 }
 
 .wb-about-icon {
@@ -1691,21 +1701,8 @@ div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
 	height: auto;
 }
 
-/* Settings tab: title bar, search box, tab headings and the "no results" message. */
+/* Settings tab (Obsidian before 1.13): the title above the page tabs. */
 .wb-setting-title > .setting-item-heading {
 	padding: 0;
 	border: none;
-}
-
-.wb-setting-search.setting-item {
-	border: none;
-}
-
-.wb-setting-heading .setting-item-name {
-	color: var(--color-accent);
-}
-
-.wb-search-zero-state {
-	justify-content: center;
-	text-align: center;
 }

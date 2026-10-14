@@ -4,9 +4,10 @@ import {
 	Notice,
 	Platform,
 	PluginSettingTab,
-	SearchComponent,
+	requireApiVersion,
 	setIcon,
 	Setting,
+	SettingDefinitionItem,
 } from "obsidian";
 import { t } from "./translations/helper";
 import { clipboard } from "electron";
@@ -22,26 +23,19 @@ import {
 	DEFAULT_SETTINGS as DEFAULT_BRIDGE_SETTINGS,
 } from "./extensions/types";
 import { renderBridgeSettings } from "./extensions/ui/settings-tab";
+import { groupSettings } from "./utils/settingGroups";
+import {
+	getSurfingDefinitions,
+	readControl,
+	writeControl,
+} from "./settings/definitions";
 import { SEARCH_ENGINES, SearchEngine } from "./searchEngines";
 
 export { SEARCH_ENGINES, type SearchEngine };
 
-type settingSearchInfo = {
-	containerEl: HTMLElement;
-	name: string;
-	description: string;
-	options: SearchOptionInfo[];
-	alias?: string;
-};
 type TabContentInfo = {
 	content: HTMLElement;
-	heading: HTMLElement;
 	navButton: HTMLElement;
-};
-export type SearchOptionInfo = {
-	name: string;
-	description: string;
-	options?: DropdownRecord[];
 };
 
 export type AIAssistantProvider = "codex" | "claude" | "custom";
@@ -201,14 +195,35 @@ export class SurfingSettingTab extends PluginSettingTab {
 		TabContentInfo
 	>();
 	private selectedTab = "General";
-	private search!: SearchComponent;
-	private searchSettingInfo: Map<string, settingSearchInfo[]> = new Map();
-	private searchZeroState!: HTMLDivElement;
 	private navigateEl!: HTMLElement;
 
 	constructor(app: App, plugin: SurfingPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+		if (requireApiVersion("1.11.0")) this.icon = "surfing";
+	}
+
+	/** Obsidian 1.13+ renders and searches the settings from these. */
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return getSurfingDefinitions(this);
+	}
+
+	getControlValue(key: string): unknown {
+		return readControl(this, key);
+	}
+
+	setControlValue(key: string, value: unknown): Promise<void> {
+		return writeControl(this, key, value);
+	}
+
+	/** Rebuild the page after its items changed (Obsidian 1.13+). */
+	refreshSettings() {
+		if (requireApiVersion("1.13.0")) this.update();
+	}
+
+	/** Re-evaluate which settings are visible or disabled (Obsidian 1.13+). */
+	refreshState() {
+		if (requireApiVersion("1.13.0")) this.refreshDomState();
 	}
 
 	public applySettingsUpdate() {
@@ -230,7 +245,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 	private generateSettingsTitle() {
 		const linterHeader = this.containerEl.createDiv("wb-setting-title");
 		new Setting(linterHeader).setName("Web browser").setHeading();
-		this.generateSearchBar(linterHeader);
 	}
 
 	private addTabHeader() {
@@ -291,53 +305,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 				(el: HTMLElement, tabName: string) =>
 					this.generateAISettings(tabName, el),
 			);
-
-		this.createSearchZeroState(settingsEl);
-	}
-
-	generateSearchBar(containerEl: HTMLElement) {
-		// based on https://github.com/valentine195/obsidian-settings-search/blob/master/src/main.ts#L294-L308
-		const searchSetting = new Setting(containerEl);
-		searchSetting.settingEl.addClass("wb-setting-search");
-		searchSetting.addSearch((s: SearchComponent) => {
-			this.search = s;
-		});
-
-		this.search.setPlaceholder(t("Search all settings"));
-
-		this.search.inputEl.oninput = () => {
-			for (const tabInfo of this.tabContent) {
-				const tab = tabInfo[1];
-				tab.navButton.removeClass("wb-navigation-item-selected");
-				tab.content.show();
-				tab.heading.show();
-
-				const searchVal = this.search.getValue();
-				if (this.selectedTab == "" && searchVal.trim() != "") {
-					this.searchSettings(searchVal.toLowerCase());
-				}
-
-				this.selectedTab = "";
-			}
-			this.navigateEl.addClass("wb-setting-searching");
-		};
-
-		// this.search.clearButtonEl.addEventListener('click', () => {
-		// 	this.selectedTab = 'General';
-		// })
-
-		this.search.inputEl.onblur = () => {
-			this.navigateEl.removeClass("wb-setting-searching");
-		};
-
-		this.search.onChange((value: string) => {
-			if (value === "") {
-				this.navigateEl.children[0].dispatchEvent(
-					new PointerEvent("click"),
-				);
-			}
-			this.searchSettings(value.toLowerCase());
-		});
 	}
 
 	createTabAndContent(
@@ -367,38 +334,14 @@ export class SurfingSettingTab extends PluginSettingTab {
 			const tab = this.tabContent.get(tabName);
 			(tab?.content as HTMLElement).show();
 
-			if (this.selectedTab != "") {
-				const tabInfo = this.tabContent.get(this.selectedTab);
-				tabInfo?.navButton.removeClass("wb-navigation-item-selected");
-				(tabInfo?.content as HTMLElement).hide();
-			} else {
-				(this.searchZeroState as HTMLElement).hide();
-
-				for (const settingTab of this.searchSettingInfo) {
-					for (const setting of settingTab[1]) {
-						setting.containerEl.show();
-					}
-				}
-
-				for (const tabInfo of this.tabContent) {
-					const tab = tabInfo[1];
-					tab.heading.hide();
-					if (tabName !== tabInfo[0]) {
-						tab.content.hide();
-					}
-				}
-			}
+			const tabInfo = this.tabContent.get(this.selectedTab);
+			tabInfo?.navButton.removeClass("wb-navigation-item-selected");
+			tabInfo?.content.hide();
 
 			this.selectedTab = tabName;
 		};
 
 		const tabContent = containerEl.createDiv("wb-tab-settings");
-
-		const tabHeader = new Setting(tabContent)
-			.setName(tabName)
-			.setHeading().settingEl;
-		tabHeader.addClass("wb-setting-heading");
-		tabHeader.hide();
 
 		tabContent.id = tabName.toLowerCase().replace(" ", "-");
 		if (!displayTabContent) {
@@ -409,100 +352,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		if (generateTabContent) {
 			generateTabContent(tabContent, tabName);
+			groupSettings(tabContent);
 		}
 
 		this.tabContent.set(tabName, {
 			content: tabContent,
-			heading: tabHeader,
 			navButton: tabEl,
 		});
-	}
-
-	private searchSettings(searchVal: string) {
-		const tabsWithSettingsInSearchResults = new Set<string>();
-		const showSearchResultAndAddTabToResultList = (
-			settingContainer: HTMLElement,
-			tabName: string,
-		) => {
-			settingContainer.show();
-
-			if (!tabsWithSettingsInSearchResults.has(tabName)) {
-				tabsWithSettingsInSearchResults.add(tabName);
-			}
-		};
-
-		for (const tabSettingInfo of this.searchSettingInfo) {
-			const tabName = tabSettingInfo[0];
-			const tabSettings = tabSettingInfo[1];
-			for (const settingInfo of tabSettings) {
-				// check the more common things first and then make sure to search the options since it will be slower to do that
-				// Note: we check for an empty string for searchVal to see if the search is essentially empty which will display all rules
-				if (
-					searchVal.trim() === "" ||
-					settingInfo.alias?.includes(searchVal) ||
-					settingInfo.description.includes(searchVal) ||
-					settingInfo.name.includes(searchVal)
-				) {
-					showSearchResultAndAddTabToResultList(
-						settingInfo.containerEl,
-						tabName,
-					);
-				} else if (settingInfo.options) {
-					for (const optionInfo of settingInfo.options) {
-						if (
-							optionInfo.description
-								.toLowerCase()
-								.includes(searchVal) ||
-							optionInfo.name.toLowerCase().includes(searchVal)
-						) {
-							showSearchResultAndAddTabToResultList(
-								settingInfo.containerEl,
-								tabName,
-							);
-
-							break;
-						} else if (optionInfo.options) {
-							for (const optionsForOption of optionInfo.options) {
-								if (
-									optionsForOption.description
-										.toLowerCase()
-										.includes(searchVal) ||
-									optionsForOption.value
-										.toLowerCase()
-										.includes(searchVal)
-								) {
-									showSearchResultAndAddTabToResultList(
-										settingInfo.containerEl,
-										tabName,
-									);
-
-									break;
-								}
-							}
-						}
-
-						settingInfo.containerEl.hide();
-					}
-				} else {
-					settingInfo.containerEl.hide();
-				}
-			}
-		}
-
-		// display any headings that have setting results and hide any that do not
-		for (const tabInfo of this.tabContent) {
-			if (tabsWithSettingsInSearchResults.has(tabInfo[0])) {
-				tabInfo[1].heading.show();
-			} else {
-				tabInfo[1].heading.hide();
-			}
-		}
-
-		if (tabsWithSettingsInSearchResults.size === 0) {
-			(this.searchZeroState as HTMLElement).show();
-		} else {
-			(this.searchZeroState as HTMLElement).hide();
-		}
 	}
 
 	private generateGeneralSettings(
@@ -556,6 +412,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		const render = () => {
 			content.empty();
 			renderBridgeSettings(content, bridge, render);
+			groupSettings(content);
 		};
 		render();
 	}
@@ -567,41 +424,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addBookmarkManagerSettings(tabName, wbContainerEl);
 	}
 
-	private addSettingToMasterSettingsList(
-		tabName: string,
-		containerEl: HTMLElement,
-		name = "",
-		description = "",
-		options: SearchOptionInfo[] = [],
-		alias = "",
-	) {
-		const settingInfo = {
-			containerEl: containerEl,
-			name: name.toLowerCase(),
-			description: description.toLowerCase(),
-			options: options,
-			alias: alias,
-		};
-
-		if (!this.searchSettingInfo.has(tabName)) {
-			this.searchSettingInfo.set(tabName, [settingInfo]);
-		} else {
-			this.searchSettingInfo.get(tabName)?.push(settingInfo);
-		}
-	}
-
-	private createSearchZeroState(containerEl: HTMLElement) {
-		this.searchZeroState = containerEl.createDiv();
-		(this.searchZeroState as HTMLElement).hide();
-		new Setting(this.searchZeroState)
-			.setName("No matches found")
-			.setHeading()
-			.settingEl.addClass("wb-search-zero-state");
-	}
-
 	private addRefreshButton(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t("Show Refresh Button Near Search Bar");
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -611,12 +436,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 	}
 
 	private addAIAssistantSettings(
@@ -624,7 +443,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		wbContainerEl: HTMLElement,
 	) {
 		let settingName = t("Enable Surfing AI Assistant Sidebar");
-		let setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(t("Show a right-side AI chat panel in Surfing view."))
 			.addToggle((toggle) => {
@@ -638,16 +457,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 						}, 200);
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		if (!this.plugin.settings.aiAssistant.enabled) return;
 
 		settingName = t("Open AI Sidebar By Default");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -657,17 +471,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		// Provider availability status
 		const availability = getCachedAvailability();
 
 		settingName = t("Default AI Provider");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addDropdown((dropdown: DropdownComponent) => {
 				const codexLabel = availability.codex
@@ -688,11 +497,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		// Provider availability summary
 		settingName = t("Provider Status");
@@ -742,17 +546,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 				})();
 			});
 		});
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(statusDescEl);
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		settingName = t("Include Current Page Text In Prompt");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -763,14 +562,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		settingName = t("Max Page Text Length");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addSlider((slider) => {
 				slider
@@ -785,14 +579,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		settingName = t("AI System Prompt");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(
 				t(
@@ -807,14 +596,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 					this.applySettingsUpdate();
 				});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		settingName = t("Codex Command");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(
 				t(
@@ -834,14 +618,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 						);
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		settingName = t("Claude Command");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(
 				t(
@@ -861,14 +640,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 						);
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		settingName = t("Custom AI Command");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addText((text) => {
 				text.setPlaceholder(DEFAULT_SETTINGS.aiAssistant.customCommand)
@@ -879,14 +653,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		settingName = t("Custom AI Arguments");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addText((text) => {
 				text.setPlaceholder(DEFAULT_SETTINGS.aiAssistant.customArgs)
@@ -896,17 +665,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		settingName = t("Independent Sessions Per Tab");
 		const settingDesc = t(
 			"Each browser tab gets its own session with separate cookies. Requires reload.",
 		);
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(settingDesc)
 			.addToggle((toggle) => {
@@ -917,18 +681,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-			settingDesc,
-		);
 
 		settingName = t("Page Read Blocklist");
 		const blocklistDesc = t(
 			"Domains where AI cannot read page content. Comma-separated, e.g. bank.com,mail.google.com",
 		);
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(blocklistDesc)
 			.addText((text) => {
@@ -947,16 +705,10 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-			blocklistDesc,
-		);
 
 		settingName = t("Enable MCP Page Server");
 		const mcpDesc = t("Expose current page as MCP tool for AI CLIs.");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(mcpDesc)
 			.addToggle((toggle) => {
@@ -968,17 +720,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-			mcpDesc,
-		);
 	}
 
 	private addInpageSearch(tabName: string, wbContainerEl: HTMLElement) {
 		let settingName = t("Show Search Bar In Empty Page");
-		let setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -993,18 +739,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 					});
 			});
 
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
-
 		if (!this.plugin.settings.showSearchBarInPage) {
 			return;
 		}
 
 		settingName = "Show last opened files";
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1014,17 +754,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 	}
 
 	private addSearchEngine(tabName: string, wbContainerEl: HTMLElement) {
 		let settingName = t("Default Search Engine");
-		let setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addDropdown(async (drowdown: DropdownComponent) => {
 				const aDropdown = drowdown
@@ -1050,17 +784,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 					});
 			});
 
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
-
 		settingName =
 			t("Show Other Search Engines When Searching") +
 			" " +
 			t("(Reload to take effect)");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1071,14 +799,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 					});
 			});
 
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
-
 		settingName = t("Focus search bar via keyboard");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1093,15 +815,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 					});
 			});
 
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
-
 		if (this.plugin.settings.focusSearchBarViaKeyboard) {
 			settingName = t("Disable / to search when on these sites");
-			setting = new Setting(wbContainerEl)
+			new Setting(wbContainerEl)
 				.setName(settingName)
 				.addText((text) => {
 					text.setPlaceholder(DEFAULT_SETTINGS.ignoreList.join(","))
@@ -1111,16 +827,10 @@ export class SurfingSettingTab extends PluginSettingTab {
 							this.applySettingsUpdate();
 						});
 				});
-
-			this.addSettingToMasterSettingsList(
-				tabName,
-				setting.settingEl,
-				settingName,
-			);
 		}
 
 		settingName = t("Always Show Custom Engines");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1133,12 +843,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 					});
 			});
 
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
-
 		if (!this.plugin.settings.alwaysShowCustomSearch) {
 			return;
 		}
@@ -1149,7 +853,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		}
 
 		settingName = t("Add new custom search engine");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addButton((button) =>
 				button.setButtonText("+").onClick(async () => {
@@ -1163,12 +867,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 					this.display();
 				}),
 			);
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		this.plugin.settings.customSearchEngine.forEach(
 			(searchEngine, index) => {
@@ -1246,19 +944,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						},
 					);
-
-				this.addSettingToMasterSettingsList(
-					tabName,
-					topLevelSetting.settingEl,
-					settingName + t("Search Engine"),
-				);
 			},
 		);
 	}
 
 	private addMarkdownPath(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t("Save As Markdown Path");
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addText((text) =>
 				text
@@ -1269,17 +961,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					}),
 			);
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 	}
 
 	private addHighlightFormat(tabName: string, wbContainerEl: HTMLElement) {
 		let settingName = t("Custom Link to Highlight Format");
-		let setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1292,12 +978,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 					});
 			});
 
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
-
 		if (!this.plugin.settings.customHighlightFormat) {
 			return;
 		}
@@ -1306,7 +986,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		let settingDesc = t(
 			"Set copy link to text fragment format. [{CONTENT}]({URL}) By default. You can also set {TIME:YYYY-MM-DD HH:mm:ss} to get the current date.",
 		);
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(settingDesc)
 			.addText((text) =>
@@ -1326,18 +1006,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-			settingDesc,
-		);
-
 		settingName = t("Jump to Opened Page");
 		settingDesc = t(
 			"When click on the URL from same domain name in the note, jump to the same surfing view rather than opening a new Surfing view.",
 		);
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(settingDesc)
 			.addToggle((toggle) => {
@@ -1348,18 +1021,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-			settingDesc,
-		);
 	}
 
 	private addOpenInSameTab(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t("Open URL In Same Tab");
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1370,18 +1036,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.display();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 	}
 
 	private addHoverPopover(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t("Hover Popover");
 		const settingDesc = t("Show a popover when hover on the link.");
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(settingDesc)
 			.addToggle((toggle) => {
@@ -1392,19 +1052,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-			settingDesc,
-		);
 	}
 
 	private addEnableHTMLPreview(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t("Enable HTML Preview");
 		const settingDesc = t("Enable HTML Preview in Surfing");
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(settingDesc)
 			.addToggle((toggle) => {
@@ -1415,19 +1068,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-			settingDesc,
-		);
 	}
 
 	private addTreeView(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t("Enable Tree View");
 		const settingDesc = t("Enable Tree View in Surfing");
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(settingDesc)
 			.addToggle((toggle) => {
@@ -1438,13 +1084,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-			settingDesc,
-		);
 	}
 
 	private addInlinePreview(tabName: string, wbContainerEl: HTMLElement) {
@@ -1452,7 +1091,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		const settingDesc = t(
 			"Enable inline preview with surfing. Currently only support Live preview",
 		);
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(settingDesc)
 			.addToggle((toggle) => {
@@ -1464,13 +1103,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-			settingDesc,
-		);
 	}
 
 	private addReplaceIframeInCanvas(
@@ -1480,7 +1112,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		const settingName =
 			t("[Experimental] Replace Iframe In Canvas") +
 			t("(Reload to take effect)");
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1490,12 +1122,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 	}
 
 	private addOpenInObsidianWeb(tabName: string, wbContainerEl: HTMLElement) {
@@ -1503,7 +1129,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			t("Open URL In Obsidian Web From Other Software") +
 			" " +
 			t("(Reload to take effect)");
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1514,12 +1140,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.display();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		if (!this.plugin.settings.openInObsidianWeb) {
 			return;
@@ -1548,12 +1168,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 			cls: "wb-btn-tip",
 			text: t("   <- Drag or click on me"),
 		});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			bookmarkLetsContainerEl,
-			settingName,
-		);
 	}
 
 	private addAboutInfo(tabName: string, wbContainerEl: HTMLElement) {
@@ -1581,12 +1195,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 			href: url,
 			text: text,
 		});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			bookmarkLetsContainerEl,
-			"surfing",
-		);
 	}
 
 	// TODO: Refresh all empty view.
@@ -1594,7 +1202,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		const settingName =
 			t("Use icon list to replace defult text actions in empty view") +
 			t("(Reload to take effect)");
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1604,17 +1212,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 	}
 
 	private addDarkMode(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = t("Toggle Dark Mode");
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1624,17 +1226,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 	}
 
 	private addRandomBackground(tabName: string, wbContainerEl: HTMLElement) {
 		const settingName = "Random Background";
-		const setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1644,28 +1240,16 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 	}
 
 	private addMyIcons(tabName: string, wbContainerEl: HTMLElement) {
 		let settingName = t("Working On, Not Available Now");
-		let setting = new Setting(wbContainerEl).setName(settingName);
+		const setting = new Setting(wbContainerEl).setName(settingName);
 
 		setting.settingEl.classList.add("wb-theme-settings-working-on");
 
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			"theme",
-		);
-
 		settingName = t("Random Icons From Default Art");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.addToggle((toggle) => {
 				toggle
@@ -1676,19 +1260,13 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			"theme surfing",
-		);
 	}
 
 	private addBookmarkManagerSettings(
 		tabName: string,
 		wbContainerEl: HTMLElement,
 	) {
-		const openBookmarkManager = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(t("Open BookmarkBar & Bookmark Manager"))
 			.addToggle((toggle) => {
 				toggle
@@ -1700,15 +1278,10 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.display();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			openBookmarkManager.settingEl,
-			t("Open BookmarkBar & Bookmark Manager"),
-		);
 
 		if (!this.plugin.settings.bookmarkManager.openBookMark) return;
 
-		const saveBookmark = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(t("Save Bookmark When Open URI"))
 			.addToggle((toggle) => {
 				toggle
@@ -1719,13 +1292,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			saveBookmark.settingEl,
-			t("Save Bookmark When Open URI"),
-		);
 
-		const sendToReadWise = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(t("Send to ReadWise"))
 			.setDesc(t("Add a action in page header to Send to ReadWise."))
 			.addToggle((toggle) => {
@@ -1739,13 +1307,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			sendToReadWise.settingEl,
-			t("Send to ReadWise"),
-		);
 
-		const bookmarkFolder = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(t("Bookmark Folder"))
 			.setDesc(t("Vault folder where bookmark files are stored."))
 			.addText((text) => {
@@ -1762,13 +1325,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			bookmarkFolder.settingEl,
-			t("Bookmark Folder"),
-		);
 
-		const defaultCategory = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(t("Default Category"))
 			.addText((text) => {
 				text.setPlaceholder(
@@ -1783,11 +1341,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.applySettingsUpdate();
 					});
 			});
-		this.addSettingToMasterSettingsList(
-			tabName,
-			defaultCategory.settingEl,
-			t("Default Category"),
-		);
 	}
 
 	private generateAdBlockSettings(
@@ -1795,7 +1348,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		wbContainerEl: HTMLElement,
 	) {
 		let settingName = t("Enable Ad Blocking");
-		let setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(t("Block requests to domains in your filter lists."))
 			.addToggle((toggle) =>
@@ -1810,14 +1363,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.display();
 					}),
 			);
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		settingName = t("Enable Element Hiding");
-		setting = new Setting(wbContainerEl)
+		new Setting(wbContainerEl)
 			.setName(settingName)
 			.setDesc(t("Allow picking and hiding page elements."))
 			.addToggle((toggle) =>
@@ -1828,22 +1376,12 @@ export class SurfingSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
-		this.addSettingToMasterSettingsList(
-			tabName,
-			setting.settingEl,
-			settingName,
-		);
 
 		if (this.plugin.settings.adBlock.enabled) {
 			settingName = t("Filter Lists");
 			const filterListSetting = new Setting(wbContainerEl)
 				.setName(settingName)
 				.setDesc(t("Manage filter lists for ad blocking."));
-			this.addSettingToMasterSettingsList(
-				tabName,
-				filterListSetting.settingEl,
-				settingName,
-			);
 
 			filterListSetting.addButton((button) =>
 				button.setButtonText("+").onClick(async () => {

@@ -312,3 +312,20 @@
   gap: 6px;
   margin-top: 4px;
 }
+
+/* Where extensions run, at the top of Surfing's Extensions settings. */
+.chrome-bridge-status {
+  margin-bottom: var(--size-4-4);
+  padding: var(--size-4-3) var(--size-4-4);
+  border-radius: var(--radius-m);
+  border-left: 3px solid var(--interactive-accent);
+  background-color: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-tight);
+}
+
+.chrome-bridge-status.mod-warning {
+  border-left-color: var(--text-warning);
+  color: var(--text-normal);
+}
