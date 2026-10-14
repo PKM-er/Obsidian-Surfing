@@ -1,7 +1,7 @@
 import { HoverParent, HoverPopover, Menu, MenuItem, WorkspaceLeaf } from "obsidian";
 import { callMoment } from "../utils/moment";
 import Defuddle from "defuddle";
-import { AIPageBridge } from "./AIPageBridge";
+import { waitForDOMStability } from "../utils/domStability";
 import { clipboard } from "electron";
 import type * as Electron from "electron";
 import SurfingPlugin from "../surfingIndex";
@@ -255,7 +255,7 @@ export class ContextMenuHandler {
 				item.setIcon("download");
 				item.onClick(async () => {
 					try {
-						await AIPageBridge.waitForDOMStability(webContents);
+						await waitForDOMStability(webContents);
 
 						const html: unknown =
 								await webContents.executeJavaScript(

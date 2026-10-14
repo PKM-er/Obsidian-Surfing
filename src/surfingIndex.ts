@@ -4,7 +4,6 @@ import {
 	Editor,
 	editorInfoField,
 	EventRef,
-	FileSystemAdapter,
 	HoverParent,
 	HoverPopover,
 	ItemView,
@@ -23,7 +22,6 @@ import {
 	PopoverState,
 	requireApiVersion,
 	setIcon,
-	TFile,
 } from "obsidian";
 import { HeaderBar } from "./component/HeaderBar";
 import { SurfingView, WEB_BROWSER_VIEW_ID } from "./surfingView";
@@ -66,10 +64,6 @@ import {
 	TabTreeView,
 	WEB_BROWSER_TAB_TREE_ID,
 } from "./component/TabTreeView/TabTreeView";
-import {
-	AIAssistantView,
-	WEB_BROWSER_AI_VIEW_ID,
-} from "./component/AIAssistantView";
 import "./App.css";
 import "./extensions/styles.css";
 import { EditorView } from "@codemirror/view";
@@ -78,12 +72,10 @@ import { LastOpenedFiles } from "./component/LastOpenedFiles";
 import { AdBlockManager } from "./adblock/adBlockManager";
 import { ElementHidingManager } from "./adblock/elementHidingManager";
 import { CookieManagerModal } from "./component/CookieManagerModal";
-import { MCPBridge, MCPBridgeHost } from "./utils/mcpBridge";
-import { checkProviderAvailability } from "./ai/providerFactory";
 import ChromeExtensionsBridge from "./extensions/bridge";
+import { McpController } from "./mcp/controller";
 import { webViewerEnabled } from "./extensions/host/targets";
 import { remote } from "electron";
-import * as nodePath from "node:path";
 import type {
 	CanvasLike,
 	CanvasNodeLike,
@@ -103,19 +95,25 @@ function isCanvasUrlNode(node: CanvasNodeLike): node is CanvasUrlNode {
 	return node.url !== undefined;
 }
 
+/** Settings as stored: older versions saved other shapes, so everything is optional. */
+type SavedSettings = Omit<Partial<SurfingSettings>, "mcp"> & {
+	mcp?: Partial<SurfingSettings["mcp"]>;
+	aiAssistant?: unknown;
+};
+
 export default class SurfingPlugin extends Plugin {
 	declare settings: SurfingSettings;
 	settingsTab!: SurfingSettingTab;
 	adBlockManager!: AdBlockManager;
 	elementHidingManager!: ElementHidingManager;
-	mcpBridge: MCPBridge | null = null;
 	bookmarkCache: BookmarkFileItem[] = [];
-	aiChatHistory: unknown[] = [];
 	private onLayoutChangeEventRef!: EventRef;
 	private applyURLDebounceTimer = 0;
 	private urlOpened = false;
 	/** Chrome extensions (desktop only). */
 	chromeExtensions: ChromeExtensionsBridge | null = null;
+	/** The MCP server for external AI agents (desktop only). */
+	mcp: McpController | null = null;
 
 	// private patchInlineUrl = false;
 
@@ -123,6 +121,7 @@ export default class SurfingPlugin extends Plugin {
 		await this.loadSettings();
 		this.checkWebBrowser();
 		if (Platform.isDesktopApp) this.startChromeExtensions();
+		if (Platform.isDesktopApp) this.mcp = this.addChild(new McpController(this));
 
 		// Initialize ad block and element hiding managers
 		this.adBlockManager = new AdBlockManager(this);
@@ -145,12 +144,6 @@ export default class SurfingPlugin extends Plugin {
 			this.registerView(
 				WEB_BROWSER_TAB_TREE_ID,
 				(leaf) => new TabTreeView(leaf, this),
-			);
-		Platform.isDesktop &&
-			this.settings.aiAssistant.enabled &&
-			this.registerView(
-				WEB_BROWSER_AI_VIEW_ID,
-				(leaf) => new AIAssistantView(leaf, this),
 			);
 
 		try {
@@ -175,19 +168,6 @@ export default class SurfingPlugin extends Plugin {
 		}
 
 		this.openTabTreeView();
-		if (Platform.isDesktop) {
-			this.openAIAssistantView();
-			this.registerActiveLeafChangeForAI();
-			void this.startMCPBridge();
-
-			// Check AI provider availability in background (non-blocking)
-			if (this.settings.aiAssistant.enabled) {
-				void checkProviderAvailability(
-					this.settings.aiAssistant,
-					this.getAbsolutePluginDir(),
-				);
-			}
-		}
 		this.updateEmptyLeaves(false);
 		this.registerContextMenu();
 		this.registerCustomURI();
@@ -227,10 +207,6 @@ export default class SurfingPlugin extends Plugin {
 
 	onunload() {
 		this.adBlockManager?.destroy();
-		if (Platform.isDesktop) {
-			this.mcpBridge?.stop();
-			this.mcpBridge = null;
-		}
 		this.app.workspace.offref(this.onLayoutChangeEventRef);
 
 		// Clean up header bar added to "New tab" views when plugin is disabled.
@@ -287,334 +263,6 @@ export default class SurfingPlugin extends Plugin {
 		void this.app.workspace.getLeftLeaf(false)?.setViewState({
 			type: WEB_BROWSER_TAB_TREE_ID,
 		});
-	}
-
-	private openAIAssistantView() {
-		if (!this.settings.aiAssistant.enabled) return;
-		this.app.workspace.onLayoutReady(() => {
-			if (
-				this.app.workspace.getLeavesOfType(WEB_BROWSER_AI_VIEW_ID)
-					.length
-			) {
-				return;
-			}
-			void this.app.workspace.getRightLeaf(false)?.setViewState({
-				type: WEB_BROWSER_AI_VIEW_ID,
-			});
-		});
-	}
-
-	private getAIAssistantView(): AIAssistantView | null {
-		const leaves = this.app.workspace.getLeavesOfType(
-			WEB_BROWSER_AI_VIEW_ID,
-		);
-		if (leaves.length === 0) return null;
-		const view = leaves[0].view;
-		// Guard against deferred views that haven't fully initialized yet
-		if (!(view instanceof AIAssistantView)) return null;
-		return view;
-	}
-
-	private registerActiveLeafChangeForAI() {
-		if (!this.settings.aiAssistant.enabled) return;
-		this.registerEvent(
-			this.app.workspace.on("active-leaf-change", (leaf) => {
-				const aiView = this.getAIAssistantView();
-				if (!aiView) return;
-
-				if (leaf?.view instanceof SurfingView) {
-					// Switching to a SurfingView — update host to this page
-					aiView.setHost(leaf.view);
-					if (this.settings.aiAssistant.openByDefault) {
-						const aiLeaf = this.app.workspace.getLeavesOfType(
-							WEB_BROWSER_AI_VIEW_ID,
-						)[0];
-						if (aiLeaf) {
-							void this.app.workspace.revealLeaf(aiLeaf);
-						}
-					}
-				}
-				// Non-SurfingView: keep the current host (last active page).
-				// The AI sidebar stays connected to the most recent SurfingView.
-			}),
-		);
-
-		// Clean up host when its SurfingView leaf is closed
-		this.registerEvent(
-			this.app.workspace.on("layout-change", () => {
-				const aiView = this.getAIAssistantView();
-				if (!aiView) return;
-				const currentHost = aiView.getHost();
-				if (!currentHost) return;
-				// Check if the host's leaf is still in the workspace
-				const surfingLeaves =
-					this.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
-				const hostStillExists = surfingLeaves.some(
-					(l) => l.view instanceof SurfingView && l.view === currentHost,
-				);
-				if (!hostStillExists) {
-					// Host leaf was closed — fall back to the most recent SurfingView
-					if (surfingLeaves.length > 0) {
-						aiView.setHost(surfingLeaves[0].view as SurfingView);
-					} else {
-						aiView.setHost(null);
-					}
-				}
-			}),
-		);
-	}
-
-	getAbsolutePluginDir(): string {
-		const vaultBase = this.getVaultBasePath();
-		const relDir =
-			this.manifest.dir ||
-			`${this.app.vault.configDir}/plugins/${this.manifest.id}`;
-		return nodePath.resolve(vaultBase, relDir);
-	}
-
-	/** The vault's folder on disk (desktop only). */
-	private getVaultBasePath(): string {
-		const adapter = this.app.vault.adapter;
-		return adapter instanceof FileSystemAdapter ? adapter.getBasePath() : "";
-	}
-
-	private async startMCPBridge() {
-		if (
-			!this.settings.aiAssistant.enabled ||
-			!this.settings.aiAssistant.enableMCPServer
-		)
-			return;
-
-		const pluginDir =
-			this.manifest.dir ||
-			`${this.app.vault.configDir}/plugins/${this.manifest.id}`;
-
-		const maxLen = () => this.settings.aiAssistant.maxPageTextLength;
-
-		// Helper: get any available SurfingView (active first, then most recent)
-		const getAnySurfingView = (): SurfingView | null => {
-			const activeView =
-				this.app.workspace.getActiveViewOfType(SurfingView);
-			if (activeView) return activeView;
-			// Fallback to any open SurfingView leaf (most recently active first)
-			const leaves =
-				this.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
-			if (leaves.length > 0) {
-				leaves.sort((a, b) => b.activeTime - a.activeTime);
-				const view = leaves[0].view;
-				if (view instanceof SurfingView) return view;
-			}
-			return null;
-		};
-
-		// Helper: ensure at least one SurfingView exists; creates a new tab if needed.
-		// Returns the SurfingView after it's ready.
-		const ensureSurfingTab = async (
-			url?: string,
-		): Promise<SurfingView | null> => {
-			const existing = getAnySurfingView();
-			if (existing) return existing;
-			// No SurfingView open — spawn a new one
-			const targetUrl = url || "about:blank";
-			const existingIds = new Set(
-				this.app.workspace
-					.getLeavesOfType(WEB_BROWSER_VIEW_ID)
-					.map((l) => l.id),
-			);
-			SurfingView.spawnWebBrowserView(this, true, { url: targetUrl });
-			for (let i = 0; i < 30; i++) {
-				await new Promise((r) => window.setTimeout(r, 300));
-				const allLeaves =
-					this.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
-				const fresh = allLeaves.find(
-					(l) => !existingIds.has(l.id),
-				);
-				if (fresh && fresh.view instanceof SurfingView) {
-					const view = fresh.view;
-					await view.waitForPageLoad(15000);
-					return view;
-				}
-			}
-			return null;
-		};
-
-		const bridgeHost: MCPBridgeHost = {
-			getActiveHost: () => {
-				return getAnySurfingView();
-			},
-			// MCP calls get a much higher text limit — the AI explicitly requested content
-			maxPageTextLength: () => Math.max(maxLen(), 50000),
-
-			// --- Page operations ---
-			openPage: async (url: string) => {
-				const existingIds = new Set(
-					this.app.workspace
-						.getLeavesOfType(WEB_BROWSER_VIEW_ID)
-						.map((l) => l.id),
-				);
-				SurfingView.spawnWebBrowserView(this, true, { url });
-				// Poll for the new leaf
-				let newView: SurfingView | null = null;
-				for (let i = 0; i < 30; i++) {
-					await new Promise((r) => window.setTimeout(r, 300));
-					const allLeaves =
-						this.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
-					const fresh = allLeaves.find(
-						(l) => !existingIds.has(l.id),
-					);
-					if (fresh && fresh.view instanceof SurfingView) {
-						newView = fresh.view;
-						break;
-					}
-				}
-				if (!newView) {
-					return {
-						url,
-						title: "",
-						pageText: "Failed to open page",
-					};
-				}
-				await newView.waitForPageLoad(15000);
-				const ctx = await newView.getAIAssistantPageContext(
-					true,
-					maxLen(),
-				);
-				return {
-					url: ctx.url,
-					title: ctx.title,
-					pageText: ctx.pageText,
-					interactiveElements: ctx.interactiveElements?.map((element) =>
-						Object.fromEntries(
-							Object.entries(element).filter(
-								(entry): entry is [string, string] =>
-									typeof entry[1] === "string",
-							),
-						),
-					),
-				};
-			},
-
-			executeAction: async (action: Record<string, unknown>) => {
-				let view = getAnySurfingView();
-				if (!view) {
-					// For navigate/open actions, auto-create a new tab
-					const actionType = (
-						typeof action.type === "string" ? action.type : ""
-					).toLowerCase();
-					if (actionType === "navigate" || actionType === "open") {
-						const url =
-							typeof action.url === "string" && action.url
-								? action.url
-								: "about:blank";
-						view = await ensureSurfingTab(url);
-						if (view)
-							return `Opened new tab and navigated to ${url}`;
-						return "Failed to create new Surfing tab";
-					}
-					return "No active Surfing tab. Use surfing_open_page or surfing_navigate to open one first.";
-				}
-				return view.executeAIAssistantAction({
-					...action,
-					type: typeof action.type === "string" ? action.type : "",
-				});
-			},
-
-			// --- Consent gate ---
-			getApprovalMode: () => {
-				const aiView = this.getAIAssistantView();
-				return aiView?.getApprovalMode() ?? "auto";
-			},
-			requestToolApproval: async (
-				toolName: string,
-				toolInput: Record<string, unknown>,
-			) => {
-				const aiView = this.getAIAssistantView();
-				if (!aiView) return true;
-				return aiView.requestMCPToolApproval(toolName, toolInput);
-			},
-
-			// --- Vault operations ---
-			createNote: async (notePath: string, content: string) => {
-				const path = notePath.endsWith(".md")
-					? notePath
-					: notePath + ".md";
-				const existing = this.app.vault.getAbstractFileByPath(path);
-				if (existing) {
-					return JSON.stringify({
-						error: `Note already exists: ${path}`,
-					});
-				}
-				const dir = path.substring(0, path.lastIndexOf("/"));
-				if (dir && !this.app.vault.getAbstractFileByPath(dir)) {
-					await this.app.vault.createFolder(dir);
-				}
-				const file = await this.app.vault.create(path, content);
-				return JSON.stringify({
-					success: true,
-					path: file.path,
-				});
-			},
-			editNote: async (
-				notePath: string,
-				content: string,
-				mode: "append" | "prepend" | "replace",
-			) => {
-				const path = notePath.endsWith(".md")
-					? notePath
-					: notePath + ".md";
-				const file = this.app.vault.getAbstractFileByPath(path);
-				if (!file || !(file instanceof TFile)) {
-					return JSON.stringify({
-						error: `Note not found: ${path}`,
-					});
-				}
-				if (mode === "replace") {
-					await this.app.vault.modify(file, content);
-				} else if (mode === "prepend") {
-					const existing = await this.app.vault.read(file);
-					await this.app.vault.modify(
-						file,
-						content + "\n" + existing,
-					);
-				} else {
-					// append (default)
-					const existing = await this.app.vault.read(file);
-					await this.app.vault.modify(
-						file,
-						existing + "\n" + content,
-					);
-				}
-				return JSON.stringify({
-					success: true,
-					path: file.path,
-					mode,
-				});
-			},
-			readNote: async (notePath: string) => {
-				const path = notePath.endsWith(".md")
-					? notePath
-					: notePath + ".md";
-				const file = this.app.vault.getAbstractFileByPath(path);
-				if (!file || !(file instanceof TFile)) {
-					return JSON.stringify({
-						error: `Note not found: ${path}`,
-					});
-				}
-				const content = await this.app.vault.read(file);
-				return JSON.stringify({ path: file.path, content });
-			},
-		};
-
-		const vaultBasePath = this.getVaultBasePath();
-		this.mcpBridge = new MCPBridge(pluginDir, bridgeHost, vaultBasePath);
-
-		try {
-			await this.mcpBridge.start();
-			await this.mcpBridge.writeFiles(this.app.vault.adapter);
-		} catch (err) {
-			console.error("Surfing: Failed to start MCP bridge:", err);
-			this.mcpBridge = null;
-		}
 	}
 
 	private registerRibbon() {
@@ -1201,48 +849,6 @@ export default class SurfingPlugin extends Plugin {
 				}
 			},
 		});
-
-		if (Platform.isDesktop) {
-			this.addCommand({
-				id: "toggle-ai-assistant-sidebar",
-				name: t("Toggle Surfing AI Assistant Sidebar"),
-				callback: () => {
-					if (!this.settings.aiAssistant.enabled) {
-						new Notice(
-							t(
-								"Enable Surfing AI Assistant Sidebar to use this feature.",
-							),
-						);
-						return;
-					}
-					const leaves = this.app.workspace.getLeavesOfType(
-						WEB_BROWSER_AI_VIEW_ID,
-					);
-					if (leaves.length > 0) {
-						void this.app.workspace.revealLeaf(leaves[0]);
-					} else {
-						void this.app.workspace.getRightLeaf(false)?.setViewState({
-							type: WEB_BROWSER_AI_VIEW_ID,
-						});
-					}
-				},
-			});
-
-			this.addCommand({
-				id: "focus-ai-assistant-input",
-				name: t("Focus Surfing AI Assistant Input"),
-				callback: () => {
-					if (!this.settings.aiAssistant.enabled) return;
-					const leaves = this.app.workspace.getLeavesOfType(
-						WEB_BROWSER_AI_VIEW_ID,
-					);
-					if (leaves.length > 0) {
-						void this.app.workspace.revealLeaf(leaves[0]);
-						(leaves[0].view as AIAssistantView).focusInput();
-					}
-				},
-			});
-		}
 
 		this.addCommand({
 			id: "copy-link-to-highlight",
@@ -2062,15 +1668,58 @@ export default class SurfingPlugin extends Plugin {
 		this.app.embedRegistry.unregisterExtension("htm");
 	}
 
+	/**
+	 * Settings saved by versions that shipped the AI assistant sidebar carry an
+	 * `aiAssistant` block. Keep its page-read blocklist as `mcp.blockedSites`
+	 * and drop the rest.
+	 */
+	private migrateRemovedAISettings(
+		saved: SavedSettings,
+	) {
+		const legacy: unknown = saved.aiAssistant;
+		delete saved.aiAssistant;
+		if (saved.mcp !== undefined) return;
+		if (typeof legacy !== "object" || legacy === null) return;
+		if (!("pageReadBlocklist" in legacy)) return;
+		const blocklist: unknown = legacy.pageReadBlocklist;
+		if (!Array.isArray(blocklist)) return;
+		saved.mcp = {
+			blockedSites: blocklist.filter(
+				(site): site is string => typeof site === "string",
+			),
+		};
+	}
+
+	private sanitizeMcpSettings(
+		saved: Partial<SurfingSettings["mcp"]> | undefined,
+	): SurfingSettings["mcp"] {
+		const defaults = DEFAULT_SETTINGS.mcp;
+		const sites = (value: unknown): string[] =>
+			Array.isArray(value)
+				? value.filter((site): site is string => typeof site === "string")
+				: [];
+		const port = saved?.port;
+		return {
+			enabled: saved?.enabled === true,
+			port:
+				typeof port === "number" && Number.isInteger(port) && port >= 1024 && port <= 65535
+					? port
+					: defaults.port,
+			token: typeof saved?.token === "string" ? saved.token : defaults.token,
+			siteAccess: saved?.siteAccess === "allow" ? "allow" : "ask",
+			approvedSites: sites(saved?.approvedSites),
+			blockedSites: sites(saved?.blockedSites),
+			allowScripts: saved?.allowScripts === true,
+		};
+	}
+
 	async loadSettings() {
-		const saved = ((await this.loadData()) as Partial<SurfingSettings> | null) || {};
+		const saved: SavedSettings =
+			((await this.loadData()) as SavedSettings | null) || {};
+		this.migrateRemovedAISettings(saved);
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
 		// Deep-merge nested objects so new default keys aren't lost
-		this.settings.aiAssistant = Object.assign(
-			{},
-			DEFAULT_SETTINGS.aiAssistant,
-			saved.aiAssistant,
-		);
+		this.settings.mcp = this.sanitizeMcpSettings(saved.mcp);
 		this.settings.adBlock = Object.assign(
 			{},
 			DEFAULT_SETTINGS.adBlock,

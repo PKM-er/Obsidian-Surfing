@@ -4,7 +4,6 @@ import {
 	MarkdownRenderer,
 	MarkdownView,
 	Notice,
-	Platform,
 	ViewStateResult,
 	type App,
 	WorkspaceLeaf,
@@ -22,14 +21,8 @@ import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
 import { createBookmarkFile, isUrlBookmarked } from "./utils/bookmarkStore";
 import { callMoment } from "./utils/moment";
 import { findSearchEngine, isAppLink } from "./utils/url";
-import type {
-	AssistantAction,
-	AssistantPageContext,
-	AssistantHost,
-} from "./component/AIAssistantSidebar";
-import type { AIAssistantView } from "./component/AIAssistantView";
 import { ContentScriptInjector } from "./component/ContentScriptInjector";
-import { AIPageBridge } from "./component/AIPageBridge";
+import { waitForDOMStability } from "./utils/domStability";
 import { ContextMenuHandler } from "./component/ContextMenuHandler";
 import { WebviewManager } from "./component/WebviewManager";
 import {
@@ -39,8 +32,6 @@ import {
 
 // Re-export for backward compatibility
 export { WEB_BROWSER_VIEW_ID, type WebBrowserViewState };
-
-const WEB_BROWSER_AI_VIEW_ID = "surfing-ai-assistant";
 
 /** Obsidian internal: the vault's unique id. */
 interface AppWithId {
@@ -52,7 +43,7 @@ interface HistoryEntry {
 	state?: { state?: { url?: string } };
 }
 
-export class SurfingView extends ItemView implements AssistantHost {
+export class SurfingView extends ItemView {
 	plugin: SurfingPlugin;
 	private searchBox?: searchBox;
 	currentUrl = "";
@@ -67,7 +58,6 @@ export class SurfingView extends ItemView implements AssistantHost {
 	private omnisearchEnabled: boolean;
 
 	private contentInjector: ContentScriptInjector;
-	private aiPageBridge: AIPageBridge;
 	private contextMenuHandler: ContextMenuHandler;
 	private webviewManager!: WebviewManager;
 	private readerModeActive = false;
@@ -92,18 +82,6 @@ export class SurfingView extends ItemView implements AssistantHost {
 			webviewEl: this.webviewEl,
 			navigateFn: (url: string) => this.navigate(url),
 			copyHighLightFn: () => this.copyHighLight(),
-		});
-		this.aiPageBridge = new AIPageBridge({
-			getWebContents: () => this.getWebContents(),
-			getCurrentUrl: () => this.currentUrl,
-			getCurrentTitle: () => this.currentTitle,
-			navigate: (url: string) => this.navigate(url),
-			waitForPageLoad: (timeout?: number) =>
-				this.waitForPageLoad(timeout),
-			refresh: () => this.refresh(),
-			getLeaf: () => this.leaf,
-			getContentEl: () => this.contentEl,
-			getApp: () => this.app,
 		});
 
 		// TODO: Add a search box in next version.
@@ -545,30 +523,6 @@ export class SurfingView extends ItemView implements AssistantHost {
 			void this.toggleReaderMode();
 		});
 
-		if (Platform.isDesktop && this.plugin.settings.aiAssistant.enabled) {
-			this.addAction(
-				"bot",
-				t("Toggle Surfing AI Assistant Sidebar"),
-				() => {
-					const leaves = this.app.workspace.getLeavesOfType(
-						WEB_BROWSER_AI_VIEW_ID,
-					);
-					if (leaves.length > 0) {
-						void this.app.workspace.revealLeaf(leaves[0]);
-						(leaves[0].view as AIAssistantView).focusInput();
-					} else {
-						const rightLeaf =
-							this.app.workspace.getRightLeaf(false);
-						void rightLeaf?.setViewState({
-							type: WEB_BROWSER_AI_VIEW_ID,
-						});
-						if (rightLeaf) {
-							void this.app.workspace.revealLeaf(rightLeaf);
-						}
-					}
-				},
-			);
-		}
 		this.addAction("settings", t("settings"), () => {
 			this.app.setting.open();
 			this.app.setting.openTabById("surfing");
@@ -662,34 +616,11 @@ export class SurfingView extends ItemView implements AssistantHost {
 		return this.webviewManager?.getWebContents() ?? null;
 	}
 
-	// -- AssistantHost delegation --
-
-	async getAIAssistantPageContext(
-		includePageText: boolean,
-		maxPageTextLength: number,
-	): Promise<AssistantPageContext> {
-		return this.aiPageBridge.getAIAssistantPageContext(
-			includePageText,
-			maxPageTextLength,
-		);
-	}
-
-	async executeAIAssistantAction(action: AssistantAction): Promise<string> {
-		return this.aiPageBridge.executeAIAssistantAction(action);
-	}
 
 	waitForPageLoad(timeout = 10000): Promise<void> {
 		return (
 			this.webviewManager?.waitForPageLoad(timeout) ?? Promise.resolve()
 		);
-	}
-
-	getCurrentPageInfo(): { url: string; title: string } {
-		return this.aiPageBridge.getCurrentPageInfo();
-	}
-
-	showReadingIndicator(show: boolean): void {
-		this.aiPageBridge.showReadingIndicator(show);
 	}
 
 	clearHistory(): void {
@@ -860,7 +791,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 		if (!webContents) return;
 
 		try {
-			await AIPageBridge.waitForDOMStability(webContents);
+			await waitForDOMStability(webContents);
 
 			const rawHtml: unknown = await webContents.executeJavaScript(
 				`document.documentElement.outerHTML`,

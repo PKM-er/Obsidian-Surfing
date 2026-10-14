@@ -36,20 +36,12 @@ have been possible without it.
 	- Default search engine: setting item
 	- Default copy highlighted template: setting item (currently only supports very simple templates), please avoid
 	  using some special characters
-	- AI assistant sidebar: a right panel can chat with local Codex/Claude CLI and trigger page actions
 	- Support browsing history: Jump back and forth to the page
 	- Clear browsing history: command panel
 	- All links are opened in the same panel on the right: Settings
 	- Toggle whether to open in the same panel on the right: command panel
 	- Simple dark mode: just simple
 
-### AI Assistant Sidebar
-
-You can enable `AI Assistant Sidebar` in `Settings > Surfing > General` to show a right-side chat panel in each Surfing page.
-
-- Default providers include `Codex` and `Claude Code`, and both can be mapped to local CLI commands.
-- Supports placeholders in command arguments: `{prompt}`, `{url}`, `{title}`, `{selection}`, `{page_text}`.
-- The assistant can return structured actions (`navigate`, `click`, `type`, `scroll`, `extract`, etc.) to operate the current page.
 
 ### Chrome Extensions (experimental, desktop)
 
@@ -60,6 +52,22 @@ Surfing can run Chrome extensions such as Tampermonkey, uBlock Origin Lite, Dark
 - **Use:** every browser tab header has a puzzle button listing your extensions; pinned extensions get their own button with icon and badge. Extension context menu items appear in the page's right-click menu, and manifest commands appear in the command palette, where you can bind hotkeys.
 - **Requirements:** Obsidian installed from a 1.12.4 or later installer (Electron 39 or later). Electron is bound to the installer; on older installs Surfing works as before, without extensions. Extensions can't load while Surfing's *session isolation* is on.
 - **Coming from Chrome Extensions Bridge?** Disable that plugin, then use *Import* in *Settings → Surfing → Extensions*. Extensions installed from local folders get a new extension ID, so their data starts fresh.
+
+### Browser control for AI agents (MCP, desktop)
+
+Surfing can run a local [MCP](https://modelcontextprotocol.io) server so external AI agents (Claude Code, Codex CLI, Cursor, ...) can see and control the web pages open in Obsidian, in Surfing tabs and in the core Web Viewer, much like Claude in Chrome does for Chrome.
+
+- **Enable:** *Settings → Surfing → MCP → Enable MCP server*. Surfing generates an access token and listens on `http://127.0.0.1:27125/mcp` (the port is configurable).
+- **Connect Claude Code:** `claude mcp add --transport http surfing http://127.0.0.1:27125/mcp --header "Authorization: Bearer <token>"`
+- **Connect Codex CLI:** add to `~/.codex/config.toml`:
+  ```toml
+  [mcp_servers.surfing]
+  url = "http://127.0.0.1:27125/mcp"
+  http_headers = { Authorization = "Bearer <token>" }
+  ```
+  The settings page shows these snippets (and one for other clients) with copy buttons. Surfing never writes other apps' config files.
+- **Tools:** `tabs_list`, `tabs_create`, `tabs_activate`, `tabs_close`, `navigate`, `read_page` (elements with refs), `find`, `get_page_text`, `click`, `type`, `key`, `scroll`, `form_input`, `screenshot`, `wait_for`, `console_messages`, and `javascript` (off by default). Clicks, typing and keys are real input events.
+- **Security:** the server listens on 127.0.0.1 only; every request needs the bearer token; requests that carry an `Origin` header (that is, from web pages) or a foreign `Host` are rejected. The first time an agent reads or acts on a site, Obsidian asks you (*Allow this time*, *Always allow*, *Deny*) unless you chose *Allow all sites*. Blocked sites (`example.com` or `*.example.com`) are always refused. Running JavaScript in pages is off unless you turn it on. A tab an agent is controlling shows an *Agent* badge; its menu revokes that site for the session.
 
 ## Usage
 

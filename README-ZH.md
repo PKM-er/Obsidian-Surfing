@@ -43,6 +43,22 @@ Surfing 可以运行 Chrome 扩展，例如篡改猴（Tampermonkey）、uBlock 
 - **要求**：使用 1.12.4 及以上版本的 Obsidian 安装程序（Electron 39 及以上）。Electron 随安装程序固定；旧安装版本中 Surfing 照常可用，只是没有扩展功能。开启 Surfing 的“会话隔离”时无法加载扩展。
 - **从 Chrome Extensions Bridge 迁移**：先停用该插件，再在“设置 → Surfing → 扩展”中点击“导入”。从本地文件夹安装的扩展会得到新的扩展 ID，其数据会重新开始。
 
+### 面向 AI 智能体的浏览器控制（MCP，仅桌面端）
+
+Surfing 可以运行本地 [MCP](https://modelcontextprotocol.io) 服务器，让外部 AI 智能体（Claude Code、Codex CLI、Cursor 等）查看并控制 Obsidian 中打开的网页（Surfing 标签页和核心“网页浏览器”），类似 Claude in Chrome 对 Chrome 的作用。
+
+- **启用**：“设置 → Surfing → MCP → 启用 MCP 服务器”。Surfing 会生成访问令牌，并监听 `http://127.0.0.1:27125/mcp`（端口可修改）。
+- **连接 Claude Code**：`claude mcp add --transport http surfing http://127.0.0.1:27125/mcp --header "Authorization: Bearer <令牌>"`
+- **连接 Codex CLI**：在 `~/.codex/config.toml` 中加入：
+  ```toml
+  [mcp_servers.surfing]
+  url = "http://127.0.0.1:27125/mcp"
+  http_headers = { Authorization = "Bearer <令牌>" }
+  ```
+  设置页提供这些配置片段（以及通用 JSON 片段）和复制按钮。Surfing 不会改写其他应用的配置文件。
+- **工具**：`tabs_list`、`tabs_create`、`tabs_activate`、`tabs_close`、`navigate`、`read_page`（带 ref 的元素列表）、`find`、`get_page_text`、`click`、`type`、`key`、`scroll`、`form_input`、`screenshot`、`wait_for`、`console_messages`，以及默认关闭的 `javascript`。点击、输入和按键都是真实的输入事件。
+- **安全**：服务器只监听 127.0.0.1；每个请求都需要 Bearer 令牌；带有 `Origin` 头（即来自网页）或 `Host` 不符的请求会被拒绝。智能体首次读取或操作某个站点时，Obsidian 会询问你（“本次允许”“始终允许”“拒绝”），除非你选择了“允许所有站点”。被屏蔽的站点（`example.com` 或 `*.example.com`）始终被拒绝。在页面中运行 JavaScript 默认关闭。被智能体控制的标签页会显示“智能体”标记，其菜单可在本次会话中撤销该站点的授权。
+
 ## 使用方法
 
 ### 利用浏览器书签在obsidain中打开网站

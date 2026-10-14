@@ -8,22 +8,6 @@ import {
 	extensionSources,
 } from "./scripts/build-extensions.mjs";
 
-// Obsidian loads plugins via app:// protocol, which breaks
-// fileURLToPath(import.meta.url) in bundled SDKs (codex-sdk, claude-agent-sdk).
-// This plugin rewrites import.meta.url to a safe file:// URL at build time.
-function obsidianImportMetaPlugin() {
-	return {
-		name: "obsidian-import-meta-url",
-		resolveImportMeta(property, { moduleId }) {
-			if (property === "url") {
-				const fileUrl = `file:///${moduleId.replace(/\\/g, "/")}`;
-				return JSON.stringify(fileUrl);
-			}
-			return null;
-		},
-	};
-}
-
 // Embeds the Chrome extension scripts (built with esbuild) into main.js as
 // the virtual module `bridge-assets`; see scripts/build-extensions.mjs.
 function bridgeAssetsPlugin() {
@@ -55,7 +39,6 @@ export default defineConfig(({ mode }) => {
 			},
 			rollupOptions: {
 				plugins: [
-					obsidianImportMetaPlugin(),
 					bridgeAssetsPlugin(),
 					mode === "development"
 						? ""

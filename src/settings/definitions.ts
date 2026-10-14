@@ -7,20 +7,14 @@ import {
 	Notice,
 	Platform,
 	setIcon,
+	Setting,
 	SettingDefinitionItem,
 	SettingGroupItem,
 } from "obsidian";
 import { clipboard } from "electron";
 import { t } from "../translations/helper";
-import type {
-	AIAssistantProvider,
-	SurfingSettingTab,
-} from "../surfingPluginSetting";
+import type { SurfingSettingTab } from "../surfingPluginSetting";
 import { DEFAULT_SETTINGS } from "../surfingPluginSetting";
-import {
-	checkProviderAvailability,
-	getCachedAvailability,
-} from "../ai/providerFactory";
 import { bridgeSettingDefinitions } from "../extensions/ui/settings-tab";
 
 /** Prefix of the keys of the Extensions page: they live in `chromeExtensions`. */
@@ -49,17 +43,6 @@ function text(value: unknown): string {
 	return typeof value === "string" ? value : "";
 }
 
-function splitList(value: unknown, separator: string): string[] {
-	return text(value)
-		.split(separator)
-		.map((s) => s.trim())
-		.filter(Boolean);
-}
-
-const recheckProviders = async (tab: SurfingSettingTab) => {
-	await checkProviderAvailability(tab.plugin.settings.aiAssistant);
-};
-
 const CONTROL_BINDINGS: Record<string, ControlBinding> = {
 	ignoreList: {
 		read: (stored) => (Array.isArray(stored) ? stored.join(",") : ""),
@@ -77,20 +60,18 @@ const CONTROL_BINDINGS: Record<string, ControlBinding> = {
 		write: (value) =>
 			text(value) || DEFAULT_SETTINGS.bookmarkManager.bookmarkFolder,
 	},
-	"aiAssistant.codexCommand": {
-		write: (value) => text(value).trim(),
-		after: recheckProviders,
+	"mcp.enabled": {
+		// The controller generates the token, saves and starts or stops the server.
+		store: async (tab, value) => {
+			await tab.plugin.mcp?.setEnabled(value === true);
+		},
+		after: (tab) => tab.refreshSettings(),
 	},
-	"aiAssistant.claudeCommand": {
-		write: (value) => text(value).trim(),
-		after: recheckProviders,
-	},
-	"aiAssistant.customCommand": {
-		write: (value) => text(value).trim(),
-	},
-	"aiAssistant.pageReadBlocklist": {
-		read: (stored) => (Array.isArray(stored) ? stored.join(", ") : ""),
-		write: (value) => splitList(value, ","),
+	"mcp.port": {
+		store: async (tab, value) => {
+			await tab.plugin.mcp?.setPort(typeof value === "number" ? value : DEFAULT_SETTINGS.mcp.port);
+		},
+		after: (tab) => tab.refreshSettings(),
 	},
 	[`${BRIDGE_KEY_PREFIX}compatibilityEnabled`]: {
 		// The bridge applies the change to the extension files and saves.
@@ -212,12 +193,12 @@ export function getSurfingDefinitions(
 			),
 		});
 	}
-	if (Platform.isDesktop) {
+	if (Platform.isDesktop && tab.plugin.mcp) {
 		pages.push({
 			type: "page",
-			name: t("AI"),
-			desc: t("The AI assistant sidebar, its providers and page access."),
-			items: aiItems(tab),
+			name: t("MCP"),
+			desc: t("Let AI agents see and control the web pages open in Obsidian."),
+			items: mcpItems(tab),
 		});
 	}
 	return pages;
@@ -258,6 +239,13 @@ function generalItems(tab: SurfingSettingTab): SettingDefinitionItem[] {
 				{
 					name: t("Show Refresh Button Near Search Bar"),
 					control: { type: "toggle", key: "showRefreshButton" },
+				},
+				{
+					name: t("Independent Sessions Per Tab"),
+					desc: t(
+						"Each browser tab gets its own session with separate cookies. Requires reload.",
+					),
+					control: { type: "toggle", key: "sessionIsolation" },
 				},
 			],
 		},
@@ -671,187 +659,174 @@ function adBlockItems(tab: SurfingSettingTab): SettingDefinitionItem[] {
 	];
 }
 
-/** The status of the AI providers, with install links and a refresh link. */
-function providerStatus(tab: SurfingSettingTab): DocumentFragment {
-	const availability = getCachedAvailability();
-	const codex = availability.codex
-		? "Codex: OK"
-		: `Codex: ${t("not installed")}`;
-	const claude = availability.claude
-		? "Claude Code: OK"
-		: `Claude Code: ${t("not installed")}`;
-	return createFragment((frag) => {
-		frag.appendText(`${codex} | ${claude} `);
-		if (!availability.codex || !availability.claude) {
-			frag.appendText("— ");
-			if (!availability.codex) {
-				frag.createEl("a", {
-					text: t("Install Codex"),
-					href: "https://github.com/openai/codex",
-				}).setAttr("target", "_blank");
-				frag.appendText(" ");
-			}
-			if (!availability.claude) {
-				frag.createEl("a", {
-					text: t("Install Claude Code"),
-					href: "https://docs.anthropic.com/en/docs/claude-code/overview",
-				}).setAttr("target", "_blank");
-			}
-		}
-		frag.createEl("br");
-		frag.createEl("a", {
-			text: t("Refresh Status"),
-			href: "#",
-		}).addEventListener("click", (e) => {
-			e.preventDefault();
-			void checkProviderAvailability(tab.plugin.settings.aiAssistant).then(
-				() => tab.refreshSettings(),
-			);
-		});
-	});
+/** "abcd…wxyz" for showing a secret without exposing it. */
+export function maskToken(token: string): string {
+	if (!token) return "";
+	return token.length <= 8 ? "•".repeat(token.length) : token.slice(0, 4) + "…" + token.slice(-4);
 }
 
-function aiItems(tab: SurfingSettingTab): SettingDefinitionItem[] {
-	const settings = tab.plugin.settings;
-	const defaults = DEFAULT_SETTINGS.aiAssistant;
-	const enabled = () => settings.aiAssistant.enabled;
-	const availability = getCachedAvailability();
-	const providers: Record<AIAssistantProvider, string> = {
-		codex: availability.codex
-			? t("Codex")
-			: `${t("Codex")} (${t("not installed")})`,
-		claude: availability.claude
-			? t("Claude Code")
-			: `${t("Claude Code")} (${t("not installed")})`,
-		custom: t("Custom"),
-	};
-	const assistant: SettingGroupItem[] = [
-		{
-			name: t("Open AI Sidebar By Default"),
-			control: { type: "toggle", key: "aiAssistant.openByDefault" },
+function mcpItems(tab: SurfingSettingTab): SettingDefinitionItem[] {
+	const plugin = tab.plugin;
+	const settings = plugin.settings.mcp;
+	const controller = plugin.mcp;
+	if (!controller) return [];
+	const enabled = () => settings.enabled;
+	const snippets = controller.snippets();
+	const hidden = (snippet: string) =>
+		settings.token ? snippet.split(settings.token).join(maskToken(settings.token)) : snippet;
+	const snippetRow = (name: string, snippet: string): SettingGroupItem => ({
+		name,
+		visible: enabled,
+		render: (setting) => {
+			setting.settingEl.addClass("wb-mcp-snippet-setting");
+			setting.descEl.createEl("pre", { cls: "wb-mcp-snippet", text: hidden(snippet) });
+			setting.addButton((button) =>
+				button.setButtonText(t("Copy")).onClick(() => {
+					clipboard.writeText(snippet);
+					new Notice(t("Copied."));
+				}),
+			);
 		},
-		{
-			name: t("Default AI Provider"),
-			control: {
-				type: "dropdown",
-				key: "aiAssistant.defaultProvider",
-				options: providers,
+	});
+	const sites = (list: string[]) =>
+		list.map((site) => ({
+			name: site,
+			render: (setting: Setting) => {
+				setting.setName(site);
 			},
-		},
-		{
-			name: t("Provider Status"),
-			desc: providerStatus(tab),
-		},
-		{
-			name: t("Include Current Page Text In Prompt"),
-			control: { type: "toggle", key: "aiAssistant.includePageText" },
-		},
-		{
-			name: t("Max Page Text Length"),
-			control: {
-				type: "slider",
-				key: "aiAssistant.maxPageTextLength",
-				min: 500,
-				max: 12000,
-				step: 100,
-			},
-		},
-		{
-			name: t("AI System Prompt"),
-			desc: t(
-				"Use placeholders: {prompt}, {url}, {title}, {selection}, {page_text}.",
-			),
-			control: { type: "textarea", key: "aiAssistant.systemPrompt" },
-		},
-	];
-	const commands: SettingGroupItem[] = [
-		{
-			name: t("Codex Command"),
-			desc: t(
-				"Command name or full path to the Codex CLI executable. e.g. codex or C:\\\\Users\\\\you\\\\.npm\\\\codex",
-			),
-			control: {
-				type: "text",
-				key: "aiAssistant.codexCommand",
-				placeholder: defaults.codexCommand,
-			},
-		},
-		{
-			name: t("Claude Command"),
-			desc: t(
-				"Command name or full path to the Claude Code executable. e.g. claude or /usr/local/bin/claude",
-			),
-			control: {
-				type: "text",
-				key: "aiAssistant.claudeCommand",
-				placeholder: defaults.claudeCommand,
-			},
-		},
-		{
-			name: t("Custom AI Command"),
-			control: {
-				type: "text",
-				key: "aiAssistant.customCommand",
-				placeholder: defaults.customCommand,
-			},
-		},
-		{
-			name: t("Custom AI Arguments"),
-			control: {
-				type: "text",
-				key: "aiAssistant.customArgs",
-				placeholder: defaults.customArgs,
-			},
-		},
-	];
-	const access: SettingGroupItem[] = [
-		{
-			name: t("Independent Sessions Per Tab"),
-			desc: t(
-				"Each browser tab gets its own session with separate cookies. Requires reload.",
-			),
-			control: { type: "toggle", key: "sessionIsolation" },
-		},
-		{
-			name: t("Page Read Blocklist"),
-			desc: t(
-				"Domains where AI cannot read page content. Comma-separated, e.g. bank.com,mail.google.com",
-			),
-			control: {
-				type: "text",
-				key: "aiAssistant.pageReadBlocklist",
-				placeholder: "bank.com, mail.google.com",
-			},
-		},
-		{
-			name: t("Enable MCP Page Server"),
-			desc: t("Expose current page as MCP tool for AI CLIs."),
-			control: { type: "toggle", key: "aiAssistant.enableMCPServer" },
-		},
-	];
+		}));
+
 	return [
 		{
 			type: "group",
 			items: [
 				{
-					name: t("Enable Surfing AI Assistant Sidebar"),
-					desc: t("Show a right-side AI chat panel in Surfing view."),
-					control: { type: "toggle", key: "aiAssistant.enabled" },
+					name: t("Enable MCP server"),
+					desc: t(
+						"Lets AI agents such as Claude Code and Codex CLI read and control the web pages open in Obsidian. Only programs on this computer that have the access token can connect.",
+					),
+					control: { type: "toggle", key: "mcp.enabled" },
+				},
+				{
+					name: t("Status"),
+					desc: controller.statusText(),
+					visible: enabled,
+				},
+				{
+					name: t("Port"),
+					desc: t("The server listens on this port of 127.0.0.1 only."),
+					control: {
+						type: "number",
+						key: "mcp.port",
+						min: 1024,
+						max: 65535,
+						step: 1,
+						defaultValue: DEFAULT_SETTINGS.mcp.port,
+						validate: (value) =>
+							Number.isInteger(value) && value >= 1024 && value <= 65535
+								? undefined
+								: t("Enter a port between 1024 and 65535."),
+					},
+				},
+				{
+					name: t("Access token"),
+					desc: maskToken(settings.token) || t("Generated when the server is first enabled."),
+					visible: enabled,
+					render: (setting) => {
+						setting.addButton((button) =>
+							button.setButtonText(t("Copy")).onClick(() => {
+								clipboard.writeText(settings.token);
+								new Notice(t("Copied."));
+							}),
+						);
+						setting.addButton((button) =>
+							button
+								.setButtonText(t("Regenerate"))
+								.setWarning()
+								.onClick(async () => {
+									await controller.regenerateToken();
+									new Notice(t("New token generated. Update the clients you connected."));
+									tab.refreshSettings();
+								}),
+						);
+					},
 				},
 			],
 		},
-		{ type: "group", visible: enabled, items: assistant },
 		{
 			type: "group",
-			heading: t("AI commands"),
-			visible: enabled,
-			items: commands,
+			heading: t("Connect a client"),
+			items: [
+				snippetRow("Claude Code", snippets.claudeCode),
+				snippetRow("Codex CLI (~/.codex/config.toml)", snippets.codex),
+				snippetRow(t("Other clients (JSON)"), snippets.json),
+			],
 		},
 		{
 			type: "group",
-			heading: t("Pages and sessions"),
-			visible: enabled,
-			items: access,
+			heading: t("Permissions"),
+			items: [
+				{
+					name: t("Site access"),
+					desc: t("Ask the first time an agent uses a site, or let agents use every site that is not blocked."),
+					control: {
+						type: "dropdown",
+						key: "mcp.siteAccess",
+						options: { ask: t("Ask"), allow: t("Allow all sites") },
+					},
+				},
+				{
+					name: t("Allow running JavaScript in pages"),
+					desc: t(
+						"Warning: lets agents run any code in the pages they control, with access to your logged-in sessions on those sites. Leave off unless you need it.",
+					),
+					control: { type: "toggle", key: "mcp.allowScripts" },
+				},
+			],
+		},
+		{
+			type: "list",
+			heading: t("Approved sites"),
+			emptyState: t("No approved sites. Sites you choose to always allow appear here."),
+			onDelete: (index) => {
+				settings.approvedSites.splice(index, 1);
+				void plugin.saveSettings();
+				tab.refreshSettings();
+			},
+			items: sites(settings.approvedSites),
+		},
+		{
+			type: "list",
+			heading: t("Blocked sites"),
+			emptyState: t("No blocked sites. Agents cannot read or act on blocked sites. Use example.com or *.example.com."),
+			addItem: {
+				name: t("Block a site"),
+				action: () => {
+					settings.blockedSites.push("");
+					void plugin.saveSettings();
+					tab.refreshSettings();
+				},
+			},
+			onDelete: (index) => {
+				settings.blockedSites.splice(index, 1);
+				void plugin.saveSettings();
+				tab.refreshSettings();
+			},
+			items: settings.blockedSites.map((site, index) => ({
+				name: site || t("New blocked site"),
+				aliases: [site],
+				render: (setting: Setting) => {
+					setting.addText((input) =>
+						input
+							.setPlaceholder("example.com")
+							.setValue(site)
+							.onChange((value) => {
+								settings.blockedSites[index] = value.trim();
+								tab.applySettingsUpdate();
+							}),
+					);
+				},
+			})),
 		},
 	];
 }

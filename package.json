@@ -12,6 +12,8 @@
 		"review:install": "npm --prefix tools/review install",
 		"prepare": "husky",
 		"typecheck": "tsc -p tsconfig.json && tsc -p src/extensions/tsconfig.json",
+		"test": "npm run test:extensions && npm run test:mcp",
+		"test:mcp": "node scripts/build-mcp.mjs && node tests/mcp/run-all.mjs",
 		"test:extensions": "node scripts/build-extensions.mjs && node tests/extensions/run-all.mjs"
 	},
 	"keywords": [],
@@ -38,8 +40,6 @@
 		"vite": "^5.0.12"
 	},
 	"dependencies": {
-		"@anthropic-ai/claude-agent-sdk": "^0.2.37",
-		"@openai/codex-sdk": "^0.98.0",
 		"defuddle": "^0.6.6"
 	}
 }
