@@ -35,6 +35,8 @@
 
 ### Chrome 扩展（实验性，仅桌面端）
 
+![Surfing: Chrome extensions in Web Viewer and Surfing](assets/surfing-1.0.0-demo.gif)
+
 Surfing 可以运行 Chrome 扩展，例如篡改猴（Tampermonkey）、uBlock Origin Lite、Dark Reader、陪读蛙等。这部分功能原来是独立插件 *Chrome Extensions Bridge*。
 
 - **扩展在哪里运行**：启用 Obsidian 核心插件“网页浏览器”（Web Viewer）时，扩展在 Web Viewer 标签页中运行，Surfing 也把外部链接交给 Web Viewer 打开（Surfing 自己的视图仍可通过命令和菜单使用）；停用 Web Viewer 时，扩展在 Surfing 标签页中运行。切换核心插件后扩展会自动迁移。两种浏览器使用各自的会话，扩展数据（设置、Cookie）分别保存。

@@ -45,6 +45,8 @@ have been possible without it.
 
 ### Chrome Extensions (experimental, desktop)
 
+![Surfing: Chrome extensions in Web Viewer and Surfing](assets/surfing-1.0.0-demo.gif)
+
 Surfing can run Chrome extensions such as Tampermonkey, uBlock Origin Lite, Dark Reader or Read Frog. This used to be the separate *Chrome Extensions Bridge* plugin.
 
 - **Where extensions run:** while Obsidian's core **Web Viewer** plugin is enabled, extensions run in Web Viewer tabs, and Surfing leaves external links to Web Viewer (Surfing's own view stays available from its commands and menus). With Web Viewer disabled, extensions run in Surfing tabs. Switching the core plugin moves the extensions over automatically. Each browser has its own session, so extension data (settings, cookies) is kept separately for each.
