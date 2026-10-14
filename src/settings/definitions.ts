@@ -16,6 +16,7 @@ import { t } from "../translations/helper";
 import type { SurfingSettingTab } from "../surfingPluginSetting";
 import { DEFAULT_SETTINGS } from "../surfingPluginSetting";
 import { bridgeSettingDefinitions } from "../extensions/ui/settings-tab";
+import { TxtFileSuggester } from "../component/suggester/txtFileSuggester";
 
 /** Prefix of the keys of the Extensions page: they live in `chromeExtensions`. */
 const BRIDGE_KEY_PREFIX = "chromeExtensions.";
@@ -636,15 +637,16 @@ function adBlockItems(tab: SurfingSettingTab): SettingDefinitionItem[] {
 									await tab.plugin.saveSettings();
 								}),
 						)
-						.addText((input) =>
+						.addText((input) => {
 							input
 								.setPlaceholder("URL or vault path")
 								.setValue(filterList.url)
 								.onChange(async (value) => {
 									filterLists[index].url = value;
 									await tab.plugin.saveSettings();
-								}),
-						)
+								});
+							new TxtFileSuggester(tab.app, input.inputEl);
+						})
 						.addToggle((toggle) =>
 							toggle
 								.setValue(filterList.enabled)

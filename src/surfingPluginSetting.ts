@@ -27,6 +27,7 @@ import {
 	writeControl,
 } from "./settings/definitions";
 import { SEARCH_ENGINES, SearchEngine } from "./searchEngines";
+import { TxtFileSuggester } from "./component/suggester/txtFileSuggester";
 
 export { SEARCH_ENGINES, type SearchEngine };
 
@@ -1190,7 +1191,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 							}),
 					);
 
-					filterSetting.addText((text) =>
+					filterSetting.addText((text) => {
 						text
 							.setPlaceholder("URL or vault path")
 							.setValue(filterList.url)
@@ -1199,8 +1200,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 									index
 								].url = value;
 								await this.plugin.saveSettings();
-							}),
-					);
+							});
+						new TxtFileSuggester(this.app, text.inputEl);
+					});
 
 					filterSetting.addToggle((toggle) =>
 						toggle

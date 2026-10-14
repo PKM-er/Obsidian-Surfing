@@ -4,7 +4,7 @@ import { App, Platform, Scope } from "obsidian";
 import type { ISuggestOwner } from "obsidian";
 import { createPopper } from "@popperjs/core";
 import type { Instance as PopperInstance } from "@popperjs/core";
-import { SEARCH_ENGINES } from "../../surfingPluginSetting";
+import { SEARCH_ENGINES } from "../../searchEngines";
 import type SurfingPlugin from "../../surfingIndex";
 
 // Obsidian internal: the DOM container the app renders into.
@@ -23,11 +23,13 @@ class Suggest<T> {
 	private selectedItem = 0;
 	private containerEl: HTMLElement;
 	private app: App;
+	private showShortcuts: boolean;
 
-	constructor(owner: ISuggestOwner<T>, containerEl: HTMLElement, scope: Scope, app: App) {
+	constructor(owner: ISuggestOwner<T>, containerEl: HTMLElement, scope: Scope, app: App, showShortcuts = true) {
 		this.owner = owner;
 		this.containerEl = containerEl;
 		this.app = app;
+		this.showShortcuts = showShortcuts;
 
 		containerEl.on(
 			"click",
@@ -62,27 +64,29 @@ class Suggest<T> {
 		});
 
 
-		// Register Control+Number to select specific items.
-		const plugin = this.app.plugins.getPlugin("surfing") as SurfingPlugin | null;
-		const searchEngines = [...SEARCH_ENGINES, ...(plugin?.settings.customSearchEngine ?? [])];
-		for (let i = 0; i < searchEngines.length; i++) {
-			if (i === 9) {
-				scope.register(["Mod"], "0", (event) => {
+		if (showShortcuts) {
+			// Register Control+Number to select specific items.
+			const plugin = this.app.plugins.getPlugin("surfing") as SurfingPlugin | null;
+			const searchEngines = [...SEARCH_ENGINES, ...(plugin?.settings.customSearchEngine ?? [])];
+			for (let i = 0; i < searchEngines.length; i++) {
+				if (i === 9) {
+					scope.register(["Mod"], "0", (event) => {
+						if (!event.isComposing) {
+							this.setSelectedItem(i, false);
+							this.useSelectedItem(event);
+							return false;
+						}
+					});
+					break;
+				}
+				scope.register(["Mod"], `${ i + 1 }`, (event) => {
 					if (!event.isComposing) {
 						this.setSelectedItem(i, false);
 						this.useSelectedItem(event);
 						return false;
 					}
 				});
-				break;
 			}
-			scope.register(["Mod"], `${ i + 1 }`, (event) => {
-				if (!event.isComposing) {
-					this.setSelectedItem(i, false);
-					this.useSelectedItem(event);
-					return false;
-				}
-			});
 		}
 
 
@@ -108,7 +112,7 @@ class Suggest<T> {
 		values.forEach((value, index) => {
 			const suggestionEl = this.containerEl.createDiv("suggestion-item");
 			this.owner.renderSuggestion(value, suggestionEl);
-			if (index < 10) {
+			if (this.showShortcuts && index < 10) {
 				suggestionEl.createDiv({
 					text: `${ Platform.isMacOS ? "CMD + " : "Ctrl + " }` + `${ index != 9 ? index + 1 : 0 }`,
 					cls: "wb-search-suggestion-index"
@@ -154,14 +158,14 @@ export abstract class TextInputSuggest<T> implements ISuggestOwner<T> {
 	private suggestEl: HTMLElement;
 	private suggest: Suggest<T>;
 
-	constructor(app: App, inputEl: HTMLInputElement | HTMLTextAreaElement) {
+	constructor(app: App, inputEl: HTMLInputElement | HTMLTextAreaElement, showShortcuts = true) {
 		this.app = app;
 		this.inputEl = inputEl;
 		this.scope = new Scope();
 
 		this.suggestEl = createDiv("wb-search-suggestion-container");
 		const suggestion = this.suggestEl.createDiv("wb-search-suggestion");
-		this.suggest = new Suggest(this, suggestion, this.scope, this.app);
+		this.suggest = new Suggest(this, suggestion, this.scope, this.app, showShortcuts);
 
 		this.scope.register([], "Escape", () => this.close());
 
@@ -188,7 +192,11 @@ export abstract class TextInputSuggest<T> implements ISuggestOwner<T> {
 
 		if (suggestions.length > 0) {
 			this.suggest.setSuggestions(suggestions);
-			this.open((this.app as App & AppWithDom).dom.appContainerEl, this.inputEl);
+			// Open in the input's own window: Obsidian 1.14 shows settings in a
+			// separate window, and popout windows have their own documents.
+			const doc = this.inputEl.ownerDocument;
+			const container = doc === document ? (this.app as App & AppWithDom).dom.appContainerEl : doc.body;
+			this.open(container, this.inputEl);
 		} else {
 			this.close()
 		}
