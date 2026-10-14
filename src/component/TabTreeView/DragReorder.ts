@@ -42,15 +42,15 @@ export class DragReorder extends Component {
 		super();
 		this.container = container;
 		this.callbacks = callbacks;
-		this.boundPointerMove = this.onPointerMove.bind(this);
-		this.boundPointerUp = this.onPointerUp.bind(this);
+		this.boundPointerMove = (e: PointerEvent) => this.onPointerMove(e);
+		this.boundPointerUp = (e: PointerEvent) => this.onPointerUp(e);
 	}
 
 	/** Attach to a tree-item-self element for drag initiation. */
 	onPointerDown(e: PointerEvent, itemSelfEl: HTMLElement, nodeId: string): void {
 		// Only primary button
 		if (e.button !== 0) return;
-		this.sourceEl = itemSelfEl.closest(".tree-item") as HTMLElement;
+		this.sourceEl = itemSelfEl.closest(".tree-item");
 		if (!this.sourceEl) return;
 		this.sourceId = nodeId;
 		this.startX = e.clientX;
@@ -82,7 +82,7 @@ export class DragReorder extends Component {
 			// Hovering over a group — highlight it, hide reorder indicator
 			this.dropTargetGroupId = groupTarget.id;
 			this.highlightGroup(groupTarget.el);
-			if (this.indicator) this.indicator.style.display = "none";
+			if (this.indicator) this.indicator.removeClass("is-visible");
 			this.currentDropIndex = -1;
 		} else {
 			// Not over a group — show reorder indicator
@@ -124,10 +124,6 @@ export class DragReorder extends Component {
 		// Create ghost
 		this.ghostEl = this.sourceEl.cloneNode(true) as HTMLElement;
 		this.ghostEl.classList.add("surfing-drag-ghost");
-		this.ghostEl.style.position = "fixed";
-		this.ghostEl.style.pointerEvents = "none";
-		this.ghostEl.style.zIndex = "9999";
-		this.ghostEl.style.opacity = "0.8";
 		this.ghostEl.style.width = `${this.sourceEl.offsetWidth}px`;
 		document.body.appendChild(this.ghostEl);
 
@@ -135,9 +131,7 @@ export class DragReorder extends Component {
 		this.sourceEl.classList.add("surfing-drag-source-hidden");
 
 		// Create indicator
-		this.indicator = document.createElement("div");
-		this.indicator.classList.add("surfing-drop-indicator");
-		this.container.appendChild(this.indicator);
+		this.indicator = this.container.createDiv({ cls: "surfing-drop-indicator" });
 
 		document.body.classList.add("is-grabbing");
 	}
@@ -156,7 +150,7 @@ export class DragReorder extends Component {
 			this.sourceEl = null;
 		}
 		if (this.scrollInterval) {
-			clearInterval(this.scrollInterval);
+			window.clearInterval(this.scrollInterval);
 			this.scrollInterval = 0;
 		}
 		this.clearGroupHighlight();
@@ -192,7 +186,7 @@ export class DragReorder extends Component {
 
 		const containerRect = this.container.getBoundingClientRect();
 		this.indicator.style.top = `${indicatorTop - containerRect.top + this.container.scrollTop}px`;
-		this.indicator.style.display = "block";
+		this.indicator.addClass("is-visible");
 	}
 
 	private handleAutoScroll(cursorY: number): void {
@@ -201,7 +195,7 @@ export class DragReorder extends Component {
 		const botDist = rect.bottom - cursorY;
 
 		if (this.scrollInterval) {
-			clearInterval(this.scrollInterval);
+			window.clearInterval(this.scrollInterval);
 			this.scrollInterval = 0;
 		}
 

@@ -1,19 +1,23 @@
 {
 	"compilerOptions": {
-		"baseUrl": ".",
-		"inlineSourceMap": true,
-		"inlineSources": true,
-		"module": "ESNext",
 		"target": "ES2022",
-		"allowJs": true,
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"types": ["node"],
+		"allowJs": false,
+		"noEmit": true,
 		"noImplicitAny": true,
-		"moduleResolution": "node",
-		"importHelpers": true,
-		"isolatedModules": true,
 		"strictNullChecks": true,
-		"lib": ["DOM", "ES5", "ES6", "ES7"],
-		"jsx": "react-jsx",
-		"allowSyntheticDefaultImports": true
+		"isolatedModules": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"paths": {
+			"@/*": ["./src/*"]
+		}
 	},
-	"include": ["**/*.ts"]
+	"include": ["src/**/*.ts"],
+	"exclude": ["src/extensions/**"]
 }

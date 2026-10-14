@@ -1,3 +1,4 @@
+import type * as Electron from "electron";
 import { ElementHidingManager } from "./elementHidingManager";
 import {
 	getElementPickerScript,
@@ -11,19 +12,19 @@ export function injectElementHidingCss(
 ): void {
 	const css = manager.getCssForUrl(url);
 	if (css) {
-		webContents.insertCSS(css);
+		void webContents.insertCSS(css);
 	}
 }
 
 export function startElementPicker(webContents: Electron.WebContents): void {
-	webContents.executeJavaScript(getElementPickerScript(), true);
+	void webContents.executeJavaScript(getElementPickerScript(), true);
 }
 
 export async function startElementPickerWithPromise(
 	webContents: Electron.WebContents,
 ): Promise<string | null> {
-	return await webContents.executeJavaScript(
+	return (await webContents.executeJavaScript(
 		getElementPickerScriptWithPromise(),
 		true,
-	);
+	)) as string | null;
 }

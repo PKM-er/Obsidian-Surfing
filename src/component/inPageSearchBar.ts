@@ -9,7 +9,7 @@ export class InPageSearchBar extends Component {
 	private SearchBarInputContainerEl: HTMLElement;
 	inPageSearchBarContainerEl: HTMLDivElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>();
-	private searchEnginesSuggester: SearchEngineSuggester;
+	private searchEnginesSuggester?: SearchEngineSuggester;
 
 	private view: ItemView;
 
@@ -18,20 +18,19 @@ export class InPageSearchBar extends Component {
 		this.plugin = plugin;
 		this.view = view;
 
-		this.inPageSearchBarContainerEl = parent.createEl("div", {
+		this.inPageSearchBarContainerEl = parent.createDiv({
 			cls: "wb-page-search-bar-container",
 		});
 
-		// @ts-ignore
 		this.initScope();
 
-		this.inPageSearchBarContainerEl.createEl("div", {
+		this.inPageSearchBarContainerEl.createDiv({
 			text: "Surfing",
 			cls: "wb-page-search-bar-text",
 		});
 
 		this.SearchBarInputContainerEl =
-			this.inPageSearchBarContainerEl.createEl("div", {
+			this.inPageSearchBarContainerEl.createDiv({
 				cls: "wb-page-search-bar-input-container",
 			});
 
@@ -53,10 +52,6 @@ export class InPageSearchBar extends Component {
 			this.inPageSearchBarInputEl,
 			"keydown",
 			(event: KeyboardEvent) => {
-				if (!event) {
-					// eslint-disable-next-line @typescript-eslint/no-unused-vars
-					const event = window.event as KeyboardEvent;
-				}
 				if (event.key === "Enter") {
 					for (const listener of this.onSearchBarEnterListener) {
 						listener(this.inPageSearchBarInputEl.value);
@@ -98,13 +93,13 @@ export class InPageSearchBar extends Component {
 		if (!this.plugin.settings.focusSearchBarViaKeyboard) return;
 		if (!this.view.scope) {
 			this.view.scope = new Scope(this.plugin.app.scope);
-			(this.view.scope as Scope).register([], "i", (evt) => {
+			this.view.scope.register([], "i", (evt) => {
 				if (evt.target === this.inPageSearchBarInputEl) return;
 				evt.preventDefault();
 				this.inPageSearchBarInputEl.focus();
 			});
 		} else {
-			(this.view.scope as Scope).register([], "i", (evt) => {
+			this.view.scope.register([], "i", (evt) => {
 				if (evt.target === this.inPageSearchBarInputEl) return;
 				evt.preventDefault();
 				this.inPageSearchBarInputEl.focus();

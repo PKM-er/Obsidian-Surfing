@@ -1,21 +1,60 @@
+import type * as Electron from "electron";
+import type { App, WorkspaceLeaf } from "obsidian";
 import type {
 	AssistantAction,
 	AssistantPageContext,
 	AssistantHost,
+	InteractiveElement,
 } from "./AIAssistantSidebar";
 import { t } from "../translations/helper";
 import { WEB_BROWSER_VIEW_ID } from "../surfingViewTypes";
 
 export interface WebContentsProvider {
-	getWebContents(): any;
+	getWebContents(): Electron.WebContents | null;
 	getCurrentUrl(): string;
 	getCurrentTitle(): string;
 	navigate(url: string): void;
 	waitForPageLoad(timeout?: number): Promise<void>;
 	refresh(): void;
-	getLeaf(): any;
+	getLeaf(): WorkspaceLeaf | null;
 	getContentEl(): HTMLElement;
-	getApp(): any;
+	getApp(): App;
+}
+
+/** Obsidian internal: a leaf's navigable history. */
+interface NavigableHistory {
+	back(): void;
+	forward(): void;
+}
+
+function hasNavigableHistory(leaf: unknown): leaf is { history: NavigableHistory } {
+	if (typeof leaf !== "object" || leaf === null || !("history" in leaf)) return false;
+	const history: unknown = leaf.history;
+	return (
+		typeof history === "object" &&
+		history !== null &&
+		"back" in history &&
+		typeof history.back === "function" &&
+		"forward" in history &&
+		typeof history.forward === "function"
+	);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
+
+/** Coerce a loosely typed action field to text; non-primitive values become empty. */
+function actionString(value: unknown): string {
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+		return value ? String(value) : "";
+	}
+	return "";
+}
+
+function asString(value: unknown): string {
+	return typeof value === "string" ? value : "";
 }
 
 export class AIPageBridge implements AssistantHost {
@@ -46,7 +85,7 @@ export class AIPageBridge implements AssistantHost {
 			// Wait for dynamic content (React/Vue/SPA) to stabilize before extraction
 			await AIPageBridge.waitForDOMStability(webContents);
 
-			const context = await webContents.executeJavaScript(
+			const raw: unknown = await webContents.executeJavaScript(
 				`
 					(() => {
 						const normalizeText = (text) => (text || "").toString().trim();
@@ -250,17 +289,18 @@ export class AIPageBridge implements AssistantHost {
 				true,
 			);
 
+			const context: Record<string, unknown> = isRecord(raw) ? raw : {};
 			return {
-				url: context?.url || fallback.url,
-				title: context?.title || fallback.title,
-				selectionText: context?.selectionText || "",
-				pageText: context?.pageText || "",
-				headings: Array.isArray(context?.headings)
-					? context.headings
+				url: asString(context.url) || fallback.url,
+				title: asString(context.title) || fallback.title,
+				selectionText: asString(context.selectionText),
+				pageText: asString(context.pageText),
+				headings: Array.isArray(context.headings)
+					? (context.headings as string[])
 					: [],
-				links: Array.isArray(context?.links) ? context.links : [],
-				interactiveElements: Array.isArray(context?.interactiveElements)
-					? context.interactiveElements
+				links: Array.isArray(context.links) ? (context.links as string[]) : [],
+				interactiveElements: Array.isArray(context.interactiveElements)
+					? (context.interactiveElements as InteractiveElement[])
 					: [],
 			};
 		} catch (error) {
@@ -274,7 +314,7 @@ export class AIPageBridge implements AssistantHost {
 	 * Uses MutationObserver to detect when DOM mutations stop for a quiet period.
 	 */
 	static async waitForDOMStability(
-		webContents: any,
+		webContents: Electron.WebContents,
 		quietMs = 800,
 		timeoutMs = 5000,
 	): Promise<void> {
@@ -323,7 +363,7 @@ export class AIPageBridge implements AssistantHost {
 		const webContents = this.provider.getWebContents();
 		if (!webContents) return t("Webview is not ready.");
 		try {
-			const result = await webContents.executeJavaScript(script, true);
+			const result: unknown = await webContents.executeJavaScript(script, true);
 			if (typeof result === "string") return result;
 			if (result === undefined || result === null) return "";
 			return JSON.stringify(result);
@@ -339,17 +379,17 @@ export class AIPageBridge implements AssistantHost {
 		if (!actionType) return t("Action type is required.");
 
 		if (actionType === "navigate" || actionType === "open") {
-			const targetUrl = String(action.url || "").trim();
+			const targetUrl = actionString(action.url).trim();
 			if (!targetUrl) return t("Missing url in navigate action.");
 			this.provider.navigate(targetUrl);
 			await this.provider.waitForPageLoad();
 			return `${t("Opened")}: ${targetUrl}`;
 		}
 		if (actionType === "open_new_tab") {
-			const targetUrl = String(action.url || "").trim();
+			const targetUrl = actionString(action.url).trim();
 			if (!targetUrl) return t("Missing url in open_new_tab action.");
 			// Create leaf directly to avoid same-tab reuse and listener conflicts
-			this.provider
+			void this.provider
 				.getApp()
 				.workspace.getLeaf(true)
 				.setViewState({
@@ -360,14 +400,14 @@ export class AIPageBridge implements AssistantHost {
 			return `${t("Opened in new tab")}: ${targetUrl}`;
 		}
 		if (actionType === "back") {
-			// @ts-ignore
-			this.provider.getLeaf()?.history.back();
+			const leaf = this.provider.getLeaf();
+			if (hasNavigableHistory(leaf)) leaf.history.back();
 			await this.provider.waitForPageLoad();
 			return t("Moved back in history.");
 		}
 		if (actionType === "forward") {
-			// @ts-ignore
-			this.provider.getLeaf()?.history.forward();
+			const leaf = this.provider.getLeaf();
+			if (hasNavigableHistory(leaf)) leaf.history.forward();
 			await this.provider.waitForPageLoad();
 			return t("Moved forward in history.");
 		}
@@ -377,7 +417,7 @@ export class AIPageBridge implements AssistantHost {
 			return t("Reloaded current page.");
 		}
 		if (actionType === "click") {
-			const selector = String(action.selector || "").trim();
+			const selector = actionString(action.selector).trim();
 			if (!selector) return t("Missing selector in click action.");
 			return this.executeActionScript(`
 					(() => {
@@ -397,9 +437,9 @@ export class AIPageBridge implements AssistantHost {
 				`);
 		}
 		if (actionType === "type" || actionType === "input") {
-			const selector = String(action.selector || "").trim();
+			const selector = actionString(action.selector).trim();
 			if (!selector) return t("Missing selector in type action.");
-			const value = String(action.text || "");
+			const value = actionString(action.text);
 			const shouldEnter = Boolean(action.enter);
 			return this.executeActionScript(`
 					(() => {
@@ -441,7 +481,7 @@ export class AIPageBridge implements AssistantHost {
 				`);
 		}
 		if (actionType === "extract") {
-			const selector = String(action.selector || "").trim();
+			const selector = actionString(action.selector).trim();
 			if (!selector) {
 				return this.executeActionScript(`
 						(() => {
@@ -461,7 +501,7 @@ export class AIPageBridge implements AssistantHost {
 				`);
 		}
 		if (actionType === "script" || actionType === "evaluate") {
-			const script = String(action.script || "").trim();
+			const script = actionString(action.script).trim();
 			if (!script) return t("Missing script in evaluate action.");
 			return this.executeActionScript(script);
 		}
@@ -481,7 +521,7 @@ export class AIPageBridge implements AssistantHost {
 		if (!webContents) return;
 		try {
 			if (show) {
-				webContents.executeJavaScript(
+				void webContents.executeJavaScript(
 					`
 					(() => {
 						if (document.getElementById('__surfing_ai_reading')) return;
@@ -502,7 +542,7 @@ export class AIPageBridge implements AssistantHost {
 					true,
 				);
 			} else {
-				webContents.executeJavaScript(
+				void webContents.executeJavaScript(
 					`
 					(() => {
 						const el = document.getElementById('__surfing_ai_reading');

@@ -2,6 +2,11 @@ import SurfingPlugin from "../surfingIndex";
 import { ButtonComponent, ItemView } from "obsidian";
 import { t } from "../translations/helper";
 
+// Obsidian internal: the command registry.
+interface CommandHost {
+	commands: { executeCommandById(id: string): boolean };
+}
+
 export class InPageIconList {
 	plugin: SurfingPlugin;
 	view: ItemView;
@@ -20,20 +25,20 @@ export class InPageIconList {
 		// Remove default title from header bar.
 		// Use Obsidian API to remove the title.
 
-		this.iconListEl = parent.createEl("div", {
+		this.iconListEl = parent.createDiv({
 			cls: "wb-icon-list-container"
 		});
 
 
-		this.createBtnEl = this.iconListEl.createEl("div", {
+		this.createBtnEl = this.iconListEl.createDiv({
 			cls: "wb-create-btn"
 		});
 
-		this.searchBtnEl = this.iconListEl.createEl("div", {
+		this.searchBtnEl = this.iconListEl.createDiv({
 			cls: "wb-search-btn"
 		});
 
-		this.closeBtnEl = this.iconListEl.createEl("div", {
+		this.closeBtnEl = this.iconListEl.createDiv({
 			cls: "wb-close-btn"
 		});
 
@@ -44,10 +49,12 @@ export class InPageIconList {
 
 
 		this.createBtn.setIcon("file-plus").onClick(() => {
-			this.plugin.app.commands.executeCommandById("file-explorer:new-file");
+			const host: CommandHost = this.plugin.app;
+			host.commands.executeCommandById("file-explorer:new-file");
 		});
 		this.searchBtn.setIcon("file-search-2").onClick(() => {
-			this.plugin.app.commands.executeCommandById("switcher:open");
+			const host: CommandHost = this.plugin.app;
+			host.commands.executeCommandById("switcher:open");
 		});
 		this.closeBtn.setIcon("x-square").onClick(() => {
 			if (this.view?.leaf) this.view?.leaf.detach();

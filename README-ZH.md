@@ -33,6 +33,16 @@
 	- 切换是否在右侧同一面板中打开：命令面板
 	- 简单的夜间模式：主要是为了bilibili的夜间观感，有些瑕疵，问题不大
 
+### Chrome 扩展（实验性，仅桌面端）
+
+Surfing 可以运行 Chrome 扩展，例如篡改猴（Tampermonkey）、uBlock Origin Lite、Dark Reader、陪读蛙等。这部分功能原来是独立插件 *Chrome Extensions Bridge*。
+
+- **扩展在哪里运行**：启用 Obsidian 核心插件“网页浏览器”（Web Viewer）时，扩展在 Web Viewer 标签页中运行，Surfing 也把外部链接交给 Web Viewer 打开（Surfing 自己的视图仍可通过命令和菜单使用）；停用 Web Viewer 时，扩展在 Surfing 标签页中运行。切换核心插件后扩展会自动迁移。两种浏览器使用各自的会话，扩展数据（设置、Cookie）分别保存。
+- **安装**：从 Chrome 应用商店安装（用命令“打开 Chrome 应用商店”打开商店，在标签页标题栏点击“安装到 Obsidian”），或粘贴商店链接 / 扩展 ID，或导入本地 `.crx`、`.zip`、已解压的文件夹。在“设置 → Surfing → 扩展”中统一管理。
+- **使用**：每个浏览器标签页的标题栏都有拼图按钮，列出全部扩展；固定的扩展单独显示图标和角标。扩展的右键菜单项会出现在网页右键菜单中，扩展的快捷命令会出现在命令面板里，可以绑定快捷键。
+- **要求**：使用 1.12.4 及以上版本的 Obsidian 安装程序（Electron 39 及以上）。Electron 随安装程序固定；旧安装版本中 Surfing 照常可用，只是没有扩展功能。开启 Surfing 的“会话隔离”时无法加载扩展。
+- **从 Chrome Extensions Bridge 迁移**：先停用该插件，再在“设置 → Surfing → 扩展”中点击“导入”。从本地文件夹安装的扩展会得到新的扩展 ID，其数据会重新开始。
+
 ## 使用方法
 
 ### 利用浏览器书签在obsidain中打开网站

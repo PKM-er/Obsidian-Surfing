@@ -1,13 +1,13 @@
 import SurfingPlugin from "../../surfingIndex";
 import { BookmarkFileItem } from "../../utils/bookmarkStore";
 import { BookMarkItem } from "./BookMarkItem";
-import { ItemView, setIcon } from "obsidian";
+import { ItemView, setIcon, TAbstractFile } from "obsidian";
 
 export class BookMarkBar {
 	private view: ItemView;
 	private plugin: SurfingPlugin;
-	private BookmarkBarEl: HTMLElement;
-	private BookmarkBarContainerEl: HTMLElement;
+	private BookmarkBarEl!: HTMLElement;
+	private BookmarkBarContainerEl!: HTMLElement;
 
 	constructor(view: ItemView, plugin: SurfingPlugin) {
 		this.view = view;
@@ -19,7 +19,7 @@ export class BookMarkBar {
 		const existing = this.view.contentEl.querySelector(".wb-bookmark-bar");
 		if (existing) existing.detach();
 
-		this.BookmarkBarEl = this.view.contentEl.createEl("div", {
+		this.BookmarkBarEl = this.view.contentEl.createDiv({
 			cls: "wb-bookmark-bar",
 		});
 
@@ -30,11 +30,11 @@ export class BookMarkBar {
 	}
 
 	renderIcon() {
-		const bookmarkManagerEl = this.BookmarkBarEl.createEl("div", {
+		const bookmarkManagerEl = this.BookmarkBarEl.createDiv({
 			cls: "wb-bookmark-manager-entry",
 		});
 
-		const bookmarkManagerIconEl = bookmarkManagerEl.createEl("div", {
+		const bookmarkManagerIconEl = bookmarkManagerEl.createDiv({
 			cls: "wb-bookmark-manager-icon",
 		});
 
@@ -46,12 +46,11 @@ export class BookMarkBar {
 			const fileExplorer =
 				this.plugin.app.workspace.getLeavesOfType("file-explorer")[0];
 			if (fileExplorer) {
-				this.plugin.app.workspace.revealLeaf(fileExplorer);
+				void this.plugin.app.workspace.revealLeaf(fileExplorer);
 				const folder =
 					this.plugin.app.vault.getAbstractFileByPath(folderPath);
 				if (folder) {
-					// @ts-ignore
-					fileExplorer.view?.revealInFolder?.(folder);
+					(fileExplorer.view as { revealInFolder?(folder: TAbstractFile): void } | undefined)?.revealInFolder?.(folder);
 				}
 			}
 		};
@@ -62,7 +61,7 @@ export class BookMarkBar {
 	render(bookmarks: BookmarkFileItem[]) {
 		if (this.BookmarkBarContainerEl) this.BookmarkBarContainerEl.detach();
 
-		this.BookmarkBarContainerEl = this.BookmarkBarEl.createEl("div", {
+		this.BookmarkBarContainerEl = this.BookmarkBarEl.createDiv({
 			cls: "wb-bookmark-bar-container",
 		});
 
@@ -74,7 +73,6 @@ export class BookMarkBar {
 			if (!categoryMap.has(topCat)) {
 				categoryMap.set(topCat, []);
 			}
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			categoryMap.get(topCat)!.push(bm);
 		}
 

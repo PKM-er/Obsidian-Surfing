@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Bridge MV3 Probe",
+  "version": "1.0.0",
+  "description": "Isolated diagnostic extension to test Electron MV3 background and messaging",
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "MV3 Probe" },
+  "permissions": ["storage", "alarms"],
+  "content_scripts": [{ "matches": ["https://example.com/*"], "js": ["content.js"] }]
+}

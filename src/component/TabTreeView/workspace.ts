@@ -4,12 +4,13 @@ import SurfingPlugin from "../../surfingIndex";
 export class SaveWorkspaceModal extends Modal {
 	private plugin: SurfingPlugin;
 
-	private result: string;
+	private result = "";
 	private onSubmit: (result: string) => void;
 
 	constructor(app: App, plugin: SurfingPlugin, onSubmit: (result: string) => void) {
 		super(app);
 
+		this.plugin = plugin;
 		this.onSubmit = onSubmit;
 	}
 

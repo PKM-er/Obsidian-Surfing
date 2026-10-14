@@ -12,7 +12,7 @@ function openDB(): Promise<IDBDatabase> {
 			}
 		};
 		request.onsuccess = () => resolve(request.result);
-		request.onerror = () => reject(request.error);
+		request.onerror = () => reject(request.error ?? new Error("IndexedDB request failed"));
 	});
 }
 
@@ -30,7 +30,7 @@ export async function loadChatHistoryFromDB<
 			);
 			resolve(entries);
 		};
-		request.onerror = () => reject(request.error);
+		request.onerror = () => reject(request.error ?? new Error("IndexedDB request failed"));
 		tx.oncomplete = () => db.close();
 	});
 }
@@ -52,7 +52,7 @@ export async function saveChatHistoryToDB<T extends { id: string }>(
 		};
 		tx.onerror = () => {
 			db.close();
-			reject(tx.error);
+			reject(tx.error ?? new Error("IndexedDB transaction failed"));
 		};
 	});
 }
@@ -69,7 +69,7 @@ export async function clearChatHistoryDB(): Promise<void> {
 		};
 		tx.onerror = () => {
 			db.close();
-			reject(tx.error);
+			reject(tx.error ?? new Error("IndexedDB transaction failed"));
 		};
 	});
 }

@@ -1,19 +1,26 @@
 import { setIcon, WorkspaceLeaf } from "obsidian";
+import type * as Electron from "electron";
 import SurfingPlugin from "../surfingIndex";
 
 export default class searchBox {
 	plugin: SurfingPlugin;
 	leaf: WorkspaceLeaf;
 
-	webContents: any;
-	closeButtonEl: HTMLElement;
-	backwardButtonEl: HTMLElement;
-	forwardButtonEl: HTMLElement;
-	inputEl: HTMLInputElement;
-	searchBoxEl: HTMLElement;
-	clicked: boolean;
+	webContents: Electron.WebContents;
+	closeButtonEl!: HTMLElement;
+	backwardButtonEl!: HTMLElement;
+	forwardButtonEl!: HTMLElement;
+	inputEl!: HTMLInputElement;
+	searchBoxEl!: HTMLElement;
+	clicked!: boolean;
 
-	constructor(leaf: WorkspaceLeaf, webContents: any, plugin: SurfingPlugin, removeChild?: boolean) {
+	private readonly onUnload = () => this.unload();
+	private readonly onBackward = () => this.backward();
+	private readonly onForward = () => this.forward();
+	private readonly onSearch = (event: KeyboardEvent) => this.search(event);
+	private readonly onExist = (event: KeyboardEvent) => this.exist(event);
+
+	constructor(leaf: WorkspaceLeaf, webContents: Electron.WebContents, plugin: SurfingPlugin, removeChild?: boolean) {
 		this.leaf = leaf;
 		this.webContents = webContents;
 		this.plugin = plugin;
@@ -23,7 +30,7 @@ export default class searchBox {
 
 	onload() {
 		const containerEl = this.leaf.view.contentEl;
-		this.searchBoxEl = containerEl.createEl("div", {
+		this.searchBoxEl = containerEl.createDiv({
 			cls: "wb-search-box"
 		});
 		this.inputEl = this.searchBoxEl.createEl("input", {
@@ -31,24 +38,24 @@ export default class searchBox {
 			placeholder: "",
 			cls: "wb-search-input"
 		});
-		const searchButtonGroupEl = this.searchBoxEl.createEl("div", {
+		const searchButtonGroupEl = this.searchBoxEl.createDiv({
 			cls: "wb-search-button-group"
 		});
-		this.backwardButtonEl = searchButtonGroupEl.createEl("div", {
+		this.backwardButtonEl = searchButtonGroupEl.createDiv({
 			cls: "wb-search-button search-forward"
 		});
-		this.forwardButtonEl = searchButtonGroupEl.createEl("div", {
+		this.forwardButtonEl = searchButtonGroupEl.createDiv({
 			cls: "wb-search-button search-backward"
 		});
-		this.closeButtonEl = searchButtonGroupEl.createEl("div", {
+		this.closeButtonEl = searchButtonGroupEl.createDiv({
 			cls: "wb-search-button search-close"
 		});
 
-		this.closeButtonEl.addEventListener("click", this.unload.bind(this));
-		this.backwardButtonEl.addEventListener("click", this.backward.bind(this));
-		this.forwardButtonEl.addEventListener("click", this.forward.bind(this));
-		this.inputEl.addEventListener("keyup", this.search.bind(this));
-		this.inputEl.addEventListener("keyup", this.exist.bind(this));
+		this.closeButtonEl.addEventListener("click", this.onUnload);
+		this.backwardButtonEl.addEventListener("click", this.onBackward);
+		this.forwardButtonEl.addEventListener("click", this.onForward);
+		this.inputEl.addEventListener("keyup", this.onSearch);
+		this.inputEl.addEventListener("keyup", this.onExist);
 
 		setIcon(this.closeButtonEl, "x");
 		setIcon(this.backwardButtonEl, "arrow-up");
@@ -113,11 +120,11 @@ export default class searchBox {
 		this.webContents.stopFindInPage('clearSelection');
 		this.inputEl.value = "";
 
-		this.closeButtonEl.removeEventListener("click", this.unload);
-		this.backwardButtonEl.removeEventListener("click", this.backward);
-		this.forwardButtonEl.removeEventListener("click", this.forward);
-		this.inputEl.removeEventListener('keyup', this.search);
-		this.inputEl.removeEventListener('keyup', this.exist);
+		this.closeButtonEl.removeEventListener("click", this.onUnload);
+		this.backwardButtonEl.removeEventListener("click", this.onBackward);
+		this.forwardButtonEl.removeEventListener("click", this.onForward);
+		this.inputEl.removeEventListener('keyup', this.onSearch);
+		this.inputEl.removeEventListener('keyup', this.onExist);
 
 		this.searchBoxEl.detach();
 	}

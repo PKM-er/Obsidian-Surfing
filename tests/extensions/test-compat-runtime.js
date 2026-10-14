@@ -1,0 +1,33 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
+require('./helpers/obsidian-stub');
+const { CompatRuntime } = require('../../build/extensions/compat-runtime.js');
+const sw = new EventEmitter();
+const id = 'a'.repeat(32), unrelated = 'b'.repeat(32);
+let started = 0;
+sw.getAllRunning = () => ({ 10: { scope: `chrome-extension://${id}/`, versionId: 10 }, 11: { scope: `chrome-extension://${unrelated}/`, versionId: 11 } });
+sw.getInfoFromVersionID = versionId => ({ scope: `chrome-extension://${versionId === 10 ? id : unrelated}/` });
+sw.startWorkerForScope = async scope => { assert.equal(scope, `chrome-extension://${id}/`); started++; return { scope }; };
+const ses = { serviceWorkers: sw, extensions: { getExtension: which => which === id ? { id } : null } };
+(async () => {
+  const runtime = new CompatRuntime(ses, () => [id]);
+  sw.emit('registration-completed', null, { scope: `chrome-extension://${id}/` });
+  sw.emit('console-message', null, { message: 'unrelated', sourceUrl: `chrome-extension://${unrelated}/bg.js` });
+  sw.emit('console-message', null, { message: 'worker ready', sourceUrl: `chrome-extension://${id}/bg.js`, level: 1 });
+  sw.emit('running-status-changed', null, { versionId: 10, runningStatus: 'running' });
+  // Electron 43: the details are the event object itself.
+  sw.emit('running-status-changed', { versionId: 10, runningStatus: 'stopped' });
+  sw.emit('running-status-changed', { versionId: 11, runningStatus: 'stopped' });
+  assert.equal(runtime.events.length, 4);
+  assert.deepEqual(runtime.events.filter(e => e.kind === 'status').map(e => e.state), ['running', 'stopped']);
+  assert.equal(runtime.snapshot().workers.length, 1);
+  const result = await runtime.start(id);
+  assert.equal(result.started, true);
+  assert.equal(started, 1);
+  await assert.rejects(runtime.start(unrelated), /not managed/);
+  runtime.close();
+  assert.equal(sw.listenerCount('console-message'), 0);
+  assert.equal(sw.listenerCount('registration-completed'), 0);
+  console.log('PASS: MV3 event scoping, diagnostics, worker wakeup and cleanup');
+})().catch(e => { console.error(e); process.exitCode = 1; });

@@ -4,9 +4,18 @@ import { Component, ItemView, Scope, setIcon } from "obsidian";
 import { BookmarkSuggester } from "./suggester/bookmarkSuggester";
 import { FileSuggester } from "./suggester/fileSuggester";
 
+function isTextField(target: EventTarget | null): boolean {
+	if (!(target instanceof HTMLElement)) return false;
+	return (
+		target.instanceOf(HTMLInputElement) ||
+		target.instanceOf(HTMLTextAreaElement) ||
+		target.isContentEditable
+	);
+}
+
 export class HeaderBar extends Component {
 	plugin: SurfingPlugin;
-	private searchBar: HTMLInputElement;
+	private searchBar!: HTMLInputElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>();
 	private view: ItemView;
 	private parentEl: Element;
@@ -40,7 +49,7 @@ export class HeaderBar extends Component {
 			this.removeHeaderChild &&
 			this.view.getViewType() !== "empty"
 		) {
-			const refreshButton = this.parentEl.createEl("div", {
+			const refreshButton = this.parentEl.createDiv({
 				cls: "wb-refresh-button",
 			});
 			refreshButton.addEventListener("click", () => {
@@ -65,10 +74,6 @@ export class HeaderBar extends Component {
 			this.searchBar,
 			"keydown",
 			(event: KeyboardEvent) => {
-				if (!event) {
-					// eslint-disable-next-line @typescript-eslint/no-unused-vars
-					const event = window.event as KeyboardEvent;
-				}
 				if (event.key === "Enter") {
 					// When enter is pressed, search for the url.
 					for (const listener of this.onSearchBarEnterListener) {
@@ -118,23 +123,16 @@ export class HeaderBar extends Component {
 	}
 
 	initScope() {
-		// console.log(this.view.scope);
-		if (!this.view.scope) {
-			this.view.scope = new Scope(this.plugin.app.scope);
-			(this.view.scope as Scope).register([], "/", (evt) => {
-				if (!this.plugin.settings.focusSearchBarViaKeyboard) return;
-				if (evt.target === this.searchBar) return;
-				evt.preventDefault();
-				this.searchBar.focus();
-			});
-		} else {
-			(this.view.scope as Scope).register([], "/", (evt) => {
-				if (!this.plugin.settings.focusSearchBarViaKeyboard) return;
-				if (evt.target === this.searchBar) return;
-				evt.preventDefault();
-				this.searchBar.focus();
-			});
-		}
+		if (!this.view.scope) this.view.scope = new Scope(this.plugin.app.scope);
+		this.view.scope.register([], "/", (evt) => {
+			if (!this.plugin.settings.focusSearchBarViaKeyboard) return;
+			// Keyboard layouts can report other keys under "/"; and typing a
+			// "/" into any text field must not move the focus.
+			if (evt.key !== "/" || isTextField(evt.target)) return;
+			evt.preventDefault();
+			this.searchBar.focus();
+			return false;
+		});
 	}
 
 	addOnSearchBarEnterListener(listener: (url: string) => void) {

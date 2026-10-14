@@ -3,6 +3,10 @@ import { defineConfig } from "vite";
 import terser from "@rollup/plugin-terser";
 import replace from "@rollup/plugin-replace";
 import resolve from "@rollup/plugin-node-resolve";
+import {
+	buildExtensionAssets,
+	extensionSources,
+} from "./scripts/build-extensions.mjs";
 
 // Obsidian loads plugins via app:// protocol, which breaks
 // fileURLToPath(import.meta.url) in bundled SDKs (codex-sdk, claude-agent-sdk).
@@ -16,6 +20,24 @@ function obsidianImportMetaPlugin() {
 				return JSON.stringify(fileUrl);
 			}
 			return null;
+		},
+	};
+}
+
+// Embeds the Chrome extension scripts (built with esbuild) into main.js as
+// the virtual module `bridge-assets`; see scripts/build-extensions.mjs.
+function bridgeAssetsPlugin() {
+	const id = "bridge-assets";
+	return {
+		name: "bridge-assets",
+		resolveId(source) {
+			return source === id ? "\0" + id : null;
+		},
+		async load(resolved) {
+			if (resolved !== "\0" + id) return null;
+			for (const file of extensionSources()) this.addWatchFile(file);
+			const files = await buildExtensionAssets();
+			return `export default ${JSON.stringify(files)};`;
 		},
 	};
 }
@@ -34,6 +56,7 @@ export default defineConfig(({ mode }) => {
 			rollupOptions: {
 				plugins: [
 					obsidianImportMetaPlugin(),
+					bridgeAssetsPlugin(),
 					mode === "development"
 						? ""
 						: terser({

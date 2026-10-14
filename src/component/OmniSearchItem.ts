@@ -1,7 +1,7 @@
-import { TFile } from "obsidian";
+import { sanitizeHTMLToDom, TFile } from "obsidian";
 import type { SearchMatchApi } from "./OmniSearchContainer";
 import { SplitContent } from "../utils/splitContent";
-import SurfingPlugin from "src/surfingIndex";
+import SurfingPlugin from "../surfingIndex";
 
 export class OmniSearchItem {
 	private parent: HTMLElement;
@@ -19,14 +19,14 @@ export class OmniSearchItem {
 	}
 
 	async onload() {
-		const wbOmniSearchItemEl = this.parent.createEl("div", {
+		const wbOmniSearchItemEl = this.parent.createDiv({
 			cls: "wb-omni-item"
 		})
-		wbOmniSearchItemEl.createEl("div", {
+		wbOmniSearchItemEl.createDiv({
 			cls: "wb-omni-item-path",
 			text: this.path,
 		});
-		const itemListEl = wbOmniSearchItemEl.createEl("div", {
+		const itemListEl = wbOmniSearchItemEl.createDiv({
 			cls: "wb-omni-item-content-list",
 		});
 
@@ -40,10 +40,10 @@ export class OmniSearchItem {
 
 		if (this.matches.length > 0) {
 			this.matches.forEach((word: SearchMatchApi) => {
-				const textEl = itemListEl.createEl("div", {
+				const textEl = itemListEl.createDiv({
 					cls: "wb-content-list-text",
 				})
-				textEl.innerHTML = contentSearch.search(word.offset, true);
+				textEl.appendChild(sanitizeHTMLToDom(contentSearch.search(word.offset, true)));
 			})
 		}
 	}

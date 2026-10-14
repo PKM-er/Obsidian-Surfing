@@ -1,5 +1,32 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+# Before each commit: no generated or vault-local files, then the type check
+# and Obsidian's plugin review (the rules the community review bot runs;
+# see tools/review).
+cd "$(git rev-parse --show-toplevel)" || exit 1
 
-npm run lint:fix
-npm run type-check
+# Build outputs are release assets (main.js is generated from src/); data.json
+# and chrome-extensions/ belong to one vault.
+# (husky runs hooks with sh -e: grep finding nothing must not end the hook)
+generated=$(git diff --cached --name-only --diff-filter=ACMR |
+  grep -E '^(main\.js|app\.js|data\.json)$|^(build|chrome-extensions)/' || true)
+if [ -n "$generated" ]; then
+  echo "pre-commit: these files are generated or local and must not be committed:"
+  echo "$generated" | sed 's/^/  /'
+  echo "Unstage them with: git rm --cached <file>"
+  exit 1
+fi
+
+# Only when plugin code, its manifest, dependencies or the rules change.
+git diff --cached --name-only | grep -qE '^(src/|manifest\.json$|package\.json$|tsconfig|tools/review/)' || exit 0
+
+echo "pre-commit: type check…"
+npm run --silent typecheck || { echo "pre-commit: fix the type errors above."; exit 1; }
+
+if [ ! -f tools/review/node_modules/eslint/bin/eslint.js ]; then
+  echo "pre-commit: the Obsidian review tools are not installed. Run: npm run review:install"
+  exit 1
+fi
+echo "pre-commit: Obsidian plugin review (errors only)…"
+if ! npm run --silent review -- --quiet; then
+  echo "pre-commit: the Obsidian plugin review found errors. 'npm run review' lists all findings."
+  exit 1
+fi

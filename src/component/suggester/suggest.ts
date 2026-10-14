@@ -5,6 +5,12 @@ import type { ISuggestOwner } from "obsidian";
 import { createPopper } from "@popperjs/core";
 import type { Instance as PopperInstance } from "@popperjs/core";
 import { SEARCH_ENGINES } from "../../surfingPluginSetting";
+import type SurfingPlugin from "../../surfingIndex";
+
+// Obsidian internal: the DOM container the app renders into.
+interface AppWithDom {
+	dom: { appContainerEl: HTMLElement };
+}
 
 const wrapAround = (value: number, size: number): number => {
 	return ((value % size) + size) % size;
@@ -12,9 +18,9 @@ const wrapAround = (value: number, size: number): number => {
 
 class Suggest<T> {
 	private owner: ISuggestOwner<T>;
-	private values: T[];
-	private suggestions: HTMLDivElement[];
-	private selectedItem: number;
+	private values: T[] = [];
+	private suggestions: HTMLDivElement[] = [];
+	private selectedItem = 0;
 	private containerEl: HTMLElement;
 	private app: App;
 
@@ -26,12 +32,12 @@ class Suggest<T> {
 		containerEl.on(
 			"click",
 			".suggestion-item",
-			this.onSuggestionClick.bind(this)
+			(event, el) => this.onSuggestionClick(event, el)
 		);
 		containerEl.on(
 			"mousemove",
 			".suggestion-item",
-			this.onSuggestionMouseover.bind(this)
+			(event, el) => this.onSuggestionMouseover(event, el)
 		);
 
 		scope.register([], "ArrowUp", (event) => {
@@ -57,8 +63,8 @@ class Suggest<T> {
 
 
 		// Register Control+Number to select specific items.
-		const pluginSettings = this.app.plugins.getPlugin("surfing").settings;
-		const searchEngines = [...SEARCH_ENGINES, ...pluginSettings.customSearchEngine];
+		const plugin = this.app.plugins.getPlugin("surfing") as SurfingPlugin | null;
+		const searchEngines = [...SEARCH_ENGINES, ...(plugin?.settings.customSearchEngine ?? [])];
 		for (let i = 0; i < searchEngines.length; i++) {
 			if (i === 9) {
 				scope.register(["Mod"], "0", (event) => {
@@ -82,16 +88,16 @@ class Suggest<T> {
 
 	}
 
-	onSuggestionClick(event: MouseEvent, el: HTMLDivElement): void {
+	onSuggestionClick(event: MouseEvent, el: HTMLElement): void {
 		event.preventDefault();
 
-		const item = this.suggestions.indexOf(el);
+		const item = this.suggestions.findIndex((suggestion) => suggestion === el);
 		this.setSelectedItem(item, false);
 		this.useSelectedItem(event);
 	}
 
-	onSuggestionMouseover(_event: MouseEvent, el: HTMLDivElement): void {
-		const item = this.suggestions.indexOf(el);
+	onSuggestionMouseover(_event: MouseEvent, el: HTMLElement): void {
+		const item = this.suggestions.findIndex((suggestion) => suggestion === el);
 		this.setSelectedItem(item, false);
 	}
 
@@ -103,7 +109,7 @@ class Suggest<T> {
 			const suggestionEl = this.containerEl.createDiv("suggestion-item");
 			this.owner.renderSuggestion(value, suggestionEl);
 			if (index < 10) {
-				suggestionEl.createEl("div", {
+				suggestionEl.createDiv({
 					text: `${ Platform.isMacOS ? "CMD + " : "Ctrl + " }` + `${ index != 9 ? index + 1 : 0 }`,
 					cls: "wb-search-suggestion-index"
 				})
@@ -143,7 +149,7 @@ export abstract class TextInputSuggest<T> implements ISuggestOwner<T> {
 	protected app: App;
 	protected inputEl: HTMLInputElement | HTMLTextAreaElement;
 
-	private popper: PopperInstance;
+	private popper?: PopperInstance;
 	private scope: Scope;
 	private suggestEl: HTMLElement;
 	private suggest: Suggest<T>;
@@ -157,11 +163,11 @@ export abstract class TextInputSuggest<T> implements ISuggestOwner<T> {
 		const suggestion = this.suggestEl.createDiv("wb-search-suggestion");
 		this.suggest = new Suggest(this, suggestion, this.scope, this.app);
 
-		this.scope.register([], "Escape", this.close.bind(this));
+		this.scope.register([], "Escape", () => this.close());
 
-		this.inputEl.addEventListener("input", this.onInputChanged.bind(this));
-		this.inputEl.addEventListener("focus", this.onInputChanged.bind(this));
-		this.inputEl.addEventListener("blur", this.close.bind(this));
+		this.inputEl.addEventListener("input", () => this.onInputChanged());
+		this.inputEl.addEventListener("focus", () => this.onInputChanged());
+		this.inputEl.addEventListener("blur", () => this.close());
 		this.suggestEl.on(
 			"mousedown",
 			".wb-search-suggestion-container",
@@ -182,16 +188,14 @@ export abstract class TextInputSuggest<T> implements ISuggestOwner<T> {
 
 		if (suggestions.length > 0) {
 			this.suggest.setSuggestions(suggestions);
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			this.open((<any>this.app).dom.appContainerEl, this.inputEl);
+			this.open((this.app as App & AppWithDom).dom.appContainerEl, this.inputEl);
 		} else {
 			this.close()
 		}
 	}
 
 	open(container: HTMLElement, inputEl: HTMLElement): void {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(<any>this.app).keymap.pushScope(this.scope);
+		this.app.keymap.pushScope(this.scope);
 
 		container.appendChild(this.suggestEl);
 		this.popper = createPopper(inputEl, this.suggestEl, {
@@ -210,7 +214,7 @@ export abstract class TextInputSuggest<T> implements ISuggestOwner<T> {
 							return;
 						}
 						state.styles.popper.width = targetWidth;
-						instance.update();
+						void instance.update();
 					},
 					phase: "beforeWrite",
 					requires: ["computeStyles"],
@@ -226,8 +230,7 @@ export abstract class TextInputSuggest<T> implements ISuggestOwner<T> {
 	}
 
 	close(): void {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(<any>this.app).keymap.popScope(this.scope);
+		this.app.keymap.popScope(this.scope);
 
 		this.suggest.setSuggestions([]);
 		if (this.popper)

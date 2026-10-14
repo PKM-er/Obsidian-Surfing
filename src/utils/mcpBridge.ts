@@ -1,4 +1,5 @@
-import type * as httpTypes from "http";
+import * as http from "http";
+import * as path from "path";
 import {
 	AssistantHost,
 	AssistantPageContext,
@@ -46,13 +47,28 @@ interface MCPToolResult {
 	isError?: boolean;
 }
 
+/** Stringify a tool argument; objects are JSON-encoded rather than "[object Object]". */
+function argText(value: unknown): string {
+	if (typeof value === "string") return value;
+	if (value === null || value === undefined) return "";
+	if (typeof value === "object") return JSON.stringify(value);
+	if (
+		typeof value === "number" ||
+		typeof value === "boolean" ||
+		typeof value === "bigint"
+	) {
+		return String(value);
+	}
+	return JSON.stringify(value) ?? "";
+}
+
 /**
  * MCPBridge manages a local HTTP server that speaks MCP JSON-RPC protocol
  * directly at /mcp, so AI SDKs (Claude, Codex) can connect via HTTP transport
  * without needing a separate stdio proxy script.
  */
 export class MCPBridge {
-	private server: httpTypes.Server | null = null;
+	private server: http.Server | null = null;
 	private port = 0;
 	private pluginDir: string; // vault-relative, for adapter.write
 	private absolutePluginDir: string; // absolute, for fs/CLI usage
@@ -67,8 +83,6 @@ export class MCPBridge {
 		vaultBasePath?: string,
 	) {
 		this.pluginDir = pluginDir;
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const path = require("path") as typeof import("path");
 		this.absolutePluginDir = vaultBasePath
 			? path.resolve(vaultBasePath, pluginDir)
 			: path.resolve(pluginDir);
@@ -98,15 +112,12 @@ export class MCPBridge {
 	}
 
 	async start(): Promise<number> {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const http = require("http") as typeof import("http");
 		return new Promise((resolve, reject) => {
 			this.server = http.createServer((req, res) => {
-				this.handleRequest(req, res);
+				void this.handleRequest(req, res);
 			});
 			this.server.on("error", reject);
 			this.server.listen(0, "127.0.0.1", () => {
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 				const addr = this.server!.address();
 				this.port = typeof addr === "object" && addr ? addr.port : 0;
 				resolve(this.port);
@@ -130,8 +141,6 @@ export class MCPBridge {
 
 	/** Absolute path — for legacy CLI --mcp-config. */
 	getMCPConfigPath(): string {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const path = require("path") as typeof import("path");
 		return path.join(this.absolutePluginDir, "surfing-mcp-config.json");
 	}
 
@@ -143,8 +152,6 @@ export class MCPBridge {
 	async writeFiles(adapter: {
 		write(path: string, data: string): Promise<void>;
 	}): Promise<void> {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const path = require("path") as typeof import("path");
 		const relConfig = path.join(this.pluginDir, "surfing-mcp-config.json");
 		await adapter.write(relConfig, this.generateMCPConfig());
 	}
@@ -435,7 +442,7 @@ export class MCPBridge {
 			}
 
 			case "surfing_open_page": {
-				const url = String(args?.url || "").trim();
+				const url = argText(args?.url || "").trim();
 				if (!url) {
 					return {
 						isError: true,
@@ -476,7 +483,7 @@ export class MCPBridge {
 			}
 
 			case "surfing_fetch_page_content": {
-				const url = String(args?.url || "").trim();
+				const url = argText(args?.url || "").trim();
 				if (!url) {
 					return {
 						isError: true,
@@ -516,7 +523,7 @@ export class MCPBridge {
 			}
 
 			case "surfing_navigate": {
-				const url = String(args?.url || "").trim();
+				const url = argText(args?.url || "").trim();
 				if (!url) {
 					return {
 						isError: true,
@@ -558,8 +565,8 @@ export class MCPBridge {
 			}
 
 			case "surfing_create_note": {
-				const notePath = String(args?.path || "").trim();
-				const content = String(args?.content ?? "");
+				const notePath = argText(args?.path || "").trim();
+				const content = argText(args?.content ?? "");
 				if (!notePath) {
 					return {
 						isError: true,
@@ -575,15 +582,15 @@ export class MCPBridge {
 			}
 
 			case "surfing_edit_note": {
-				const notePath = String(args?.path || "").trim();
-				const content = String(args?.content ?? "");
+				const notePath = argText(args?.path || "").trim();
+				const content = argText(args?.content ?? "");
 				const mode = (
 					args?.mode === "prepend"
 						? "prepend"
 						: args?.mode === "replace"
 							? "replace"
 							: "append"
-				) as "append" | "prepend" | "replace";
+				);
 				if (!notePath) {
 					return {
 						isError: true,
@@ -603,7 +610,7 @@ export class MCPBridge {
 			}
 
 			case "surfing_read_note": {
-				const notePath = String(args?.path || "").trim();
+				const notePath = argText(args?.path || "").trim();
 				if (!notePath) {
 					return {
 						isError: true,
@@ -619,10 +626,10 @@ export class MCPBridge {
 			}
 
 			case "surfing_todo_manage": {
-				const action = String(args?.action || "list").toLowerCase();
+				const action = argText(args?.action || "list").toLowerCase();
 				const todoResult = this.handleTodoAction(
 					action,
-					args as Record<string, unknown>,
+					args,
 				);
 				if (todoResult.error) {
 					return {
@@ -630,7 +637,7 @@ export class MCPBridge {
 						content: [
 							{
 								type: "text",
-								text: String(todoResult.error),
+								text: argText(todoResult.error),
 							},
 						],
 					};
@@ -657,7 +664,7 @@ export class MCPBridge {
 	 * HTTP Request Handling
 	 * ================================================================ */
 
-	private readBody(req: httpTypes.IncomingMessage): Promise<string> {
+	private readBody(req: http.IncomingMessage): Promise<string> {
 		return new Promise((resolve) => {
 			let data = "";
 			req.on("data", (chunk: Buffer) => (data += chunk.toString()));
@@ -666,8 +673,8 @@ export class MCPBridge {
 	}
 
 	private async handleRequest(
-		req: httpTypes.IncomingMessage,
-		res: httpTypes.ServerResponse,
+		req: http.IncomingMessage,
+		res: http.ServerResponse,
 	) {
 		res.setHeader("Access-Control-Allow-Origin", "127.0.0.1");
 
@@ -692,7 +699,7 @@ export class MCPBridge {
 		if (req.method === "POST") {
 			try {
 				const raw = await this.readBody(req);
-				parsedBody = JSON.parse(raw);
+				parsedBody = JSON.parse(raw) as Record<string, unknown>;
 			} catch {
 				parsedBody = {};
 			}
@@ -728,8 +735,8 @@ export class MCPBridge {
 	 * ================================================================ */
 
 	private async handleMCPRequest(
-		req: httpTypes.IncomingMessage,
-		res: httpTypes.ServerResponse,
+		req: http.IncomingMessage,
+		res: http.ServerResponse,
 	) {
 		let body: string;
 		try {
@@ -750,10 +757,10 @@ export class MCPBridge {
 			jsonrpc?: string;
 			id?: unknown;
 			method?: string;
-			params?: any;
+			params?: Record<string, unknown>;
 		};
 		try {
-			request = JSON.parse(body);
+			request = JSON.parse(body) as typeof request;
 		} catch {
 			res.writeHead(400, { "Content-Type": "application/json" });
 			res.end(
@@ -797,7 +804,7 @@ export class MCPBridge {
 				}
 
 				case "tools/call": {
-					const toolName = String(params?.name || "");
+					const toolName = argText(params?.name || "");
 					const toolArgs =
 						(params?.arguments as Record<string, unknown>) || {};
 
@@ -888,7 +895,7 @@ export class MCPBridge {
 	}
 
 	private sendJsonRpc(
-		res: httpTypes.ServerResponse,
+		res: http.ServerResponse,
 		statusCode: number,
 		body: Record<string, unknown>,
 	) {
@@ -901,8 +908,8 @@ export class MCPBridge {
 	 * ================================================================ */
 
 	private async routeRequest(
-		req: httpTypes.IncomingMessage,
-		res: httpTypes.ServerResponse,
+		req: http.IncomingMessage,
+		res: http.ServerResponse,
 		parsedBody: Record<string, unknown> | null,
 	) {
 		if (req.url === "/api/page-info") {
@@ -944,7 +951,7 @@ export class MCPBridge {
 		}
 
 		if (req.url === "/api/open-page" && req.method === "POST") {
-			const url = String((parsedBody as any)?.url || "").trim();
+			const url = argText(parsedBody?.url || "").trim();
 			if (!url) {
 				res.writeHead(400, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ error: "Missing url parameter" }));
@@ -957,7 +964,7 @@ export class MCPBridge {
 		}
 
 		if (req.url === "/api/fetch-page-content" && req.method === "POST") {
-			const url = String((parsedBody as any)?.url || "").trim();
+			const url = argText(parsedBody?.url || "").trim();
 			if (!url) {
 				res.writeHead(400, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ error: "Missing url parameter" }));
@@ -983,8 +990,8 @@ export class MCPBridge {
 		}
 
 		if (req.url === "/api/create-note" && req.method === "POST") {
-			const notePath = String((parsedBody as any)?.path || "").trim();
-			const content = String((parsedBody as any)?.content ?? "");
+			const notePath = argText(parsedBody?.path || "").trim();
+			const content = argText(parsedBody?.content ?? "");
 			if (!notePath) {
 				res.writeHead(400, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ error: "Missing path parameter" }));
@@ -997,12 +1004,12 @@ export class MCPBridge {
 		}
 
 		if (req.url === "/api/edit-note" && req.method === "POST") {
-			const notePath = String((parsedBody as any)?.path || "").trim();
-			const content = String((parsedBody as any)?.content ?? "");
+			const notePath = argText(parsedBody?.path || "").trim();
+			const content = argText(parsedBody?.content ?? "");
 			const mode =
-				(parsedBody as any)?.mode === "prepend"
+				parsedBody?.mode === "prepend"
 					? "prepend"
-					: (parsedBody as any)?.mode === "replace"
+					: parsedBody?.mode === "replace"
 						? "replace"
 						: "append";
 			if (!notePath) {
@@ -1013,7 +1020,7 @@ export class MCPBridge {
 			const result = await this.host.editNote(
 				notePath,
 				content,
-				mode as "append" | "prepend" | "replace",
+				mode,
 			);
 			res.writeHead(200, { "Content-Type": "application/json" });
 			res.end(result);
@@ -1021,7 +1028,7 @@ export class MCPBridge {
 		}
 
 		if (req.url === "/api/read-note" && req.method === "POST") {
-			const notePath = String((parsedBody as any)?.path || "").trim();
+			const notePath = argText(parsedBody?.path || "").trim();
 			if (!notePath) {
 				res.writeHead(400, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ error: "Missing path parameter" }));
@@ -1034,8 +1041,8 @@ export class MCPBridge {
 		}
 
 		if (req.url === "/api/todo" && req.method === "POST") {
-			const action = String(
-				(parsedBody as any)?.action || "list",
+			const action = argText(
+				parsedBody?.action || "list",
 			).toLowerCase();
 			const result = this.handleTodoAction(
 				action,
@@ -1073,7 +1080,7 @@ export class MCPBridge {
 				};
 			}
 			case "add": {
-				const text = String(params.text || "").trim();
+				const text = argText(params.text || "").trim();
 				if (!text) return { error: "Missing text parameter" };
 				const id = `todo-${++this.todoIdCounter}`;
 				this.todoItems.push({ id, text, completed: false });
@@ -1109,7 +1116,7 @@ export class MCPBridge {
 				};
 			}
 			case "complete": {
-				const id = String(params.id || "").trim();
+				const id = argText(params.id || "").trim();
 				const item = this.todoItems.find((t) => t.id === id);
 				if (!item) return { error: `Todo not found: ${id}` };
 				item.completed = true;
@@ -1124,8 +1131,8 @@ export class MCPBridge {
 				};
 			}
 			case "update": {
-				const id = String(params.id || "").trim();
-				const text = String(params.text || "").trim();
+				const id = argText(params.id || "").trim();
+				const text = argText(params.text || "").trim();
 				const item = this.todoItems.find((t) => t.id === id);
 				if (!item) return { error: `Todo not found: ${id}` };
 				if (text) item.text = text;
@@ -1135,7 +1142,7 @@ export class MCPBridge {
 				return { success: true, item };
 			}
 			case "remove": {
-				const id = String(params.id || "").trim();
+				const id = argText(params.id || "").trim();
 				const idx = this.todoItems.findIndex((t) => t.id === id);
 				if (idx === -1) return { error: `Todo not found: ${id}` };
 				const [removed] = this.todoItems.splice(idx, 1);

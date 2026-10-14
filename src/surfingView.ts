@@ -3,15 +3,15 @@ import {
 	ItemView,
 	MarkdownRenderer,
 	MarkdownView,
-	moment,
 	Notice,
 	Platform,
 	ViewStateResult,
+	type App,
 	WorkspaceLeaf,
 } from "obsidian";
 import Defuddle from "defuddle";
 import { HeaderBar } from "./component/HeaderBar";
-// @ts-ignore
+import type * as Electron from "electron";
 import { clipboard } from "electron";
 import SurfingPlugin from "./surfingIndex";
 import { t } from "./translations/helper";
@@ -20,6 +20,8 @@ import { SEARCH_ENGINES } from "./surfingPluginSetting";
 import { OmniSearchContainer } from "./component/OmniSearchContainer";
 import { BookMarkBar } from "./component/BookMarkBar/BookMarkBar";
 import { createBookmarkFile, isUrlBookmarked } from "./utils/bookmarkStore";
+import { callMoment } from "./utils/moment";
+import { findSearchEngine, isAppLink } from "./utils/url";
 import type {
 	AssistantAction,
 	AssistantPageContext,
@@ -40,28 +42,40 @@ export { WEB_BROWSER_VIEW_ID, type WebBrowserViewState };
 
 const WEB_BROWSER_AI_VIEW_ID = "surfing-ai-assistant";
 
+/** Obsidian internal: the vault's unique id. */
+interface AppWithId {
+	appId: string;
+}
+
+/** Obsidian internal: an entry of a leaf's back/forward history. */
+interface HistoryEntry {
+	state?: { state?: { url?: string } };
+}
+
 export class SurfingView extends ItemView implements AssistantHost {
 	plugin: SurfingPlugin;
-	private searchBox: searchBox;
-	currentUrl: string;
+	private searchBox?: searchBox;
+	currentUrl = "";
 	currentTitle = "Surfing";
 
-	headerBar: HeaderBar;
-	favicon: HTMLImageElement;
-	private searchContainer: OmniSearchContainer;
+	headerBar!: HeaderBar;
+	favicon!: HTMLImageElement;
+	private searchContainer?: OmniSearchContainer;
 
-	bookmarkBar: BookMarkBar;
+	bookmarkBar?: BookMarkBar;
 
 	private omnisearchEnabled: boolean;
 
 	private contentInjector: ContentScriptInjector;
 	private aiPageBridge: AIPageBridge;
 	private contextMenuHandler: ContextMenuHandler;
-	private webviewManager: WebviewManager;
+	private webviewManager!: WebviewManager;
 	private readerModeActive = false;
+	/** A load Surfing started (navigate) has not committed yet. */
+	private loadPending = false;
 	private readerOverlayEl: HTMLElement | null = null;
 
-	get webviewEl(): HTMLWebViewElement & { getWebContentsId(): number } {
+	get webviewEl(): Electron.WebviewTag {
 		return this.webviewManager?.webviewEl;
 	}
 
@@ -75,7 +89,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 			getTitle: () => this.currentTitle,
 			leaf: this.leaf,
 			contentEl: this.contentEl,
-			webviewEl: this.webviewEl as unknown as HTMLElement,
+			webviewEl: this.webviewEl,
 			navigateFn: (url: string) => this.navigate(url),
 			copyHighLightFn: () => this.copyHighLight(),
 		});
@@ -154,8 +168,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 							"#:~:text=",
 						)[0] === state.url.split("#:~:text=")[0]
 					) {
-						// @ts-ignore
-						leaf.view.navigate(state.url, false, true);
+						(leaf.view as SurfingView).navigate(state.url, false, true);
 						leaf.rebuildView();
 						app.workspace.setActiveLeaf(leaf);
 						return;
@@ -163,7 +176,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 				}
 			}
 
-			app.workspace.getLeaf(newLeaf).setViewState({
+			void app.workspace.getLeaf(newLeaf).setViewState({
 				type: WEB_BROWSER_VIEW_ID,
 				active: state.active ?? true,
 				state,
@@ -194,12 +207,12 @@ export class SurfingView extends ItemView implements AssistantHost {
 			const leaf =
 				currentViewType === "empty"
 					? activeViewLeaf
-					: (app.workspace.createLeafBySplit(
+					: app.workspace.createLeafBySplit(
 							activeViewLeaf,
-						) as WorkspaceLeaf);
+						);
 			localStorage.setItem("web-browser-leaf-id", leaf.id);
 
-			leaf.setViewState({
+			void leaf.setViewState({
 				type: WEB_BROWSER_VIEW_ID,
 				active: true,
 				state,
@@ -216,7 +229,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 			return;
 		} else {
 			if (state.active != undefined && state.active == false) {
-				app.workspace.getLeaf(newLeaf).setViewState({
+				void app.workspace.getLeaf(newLeaf).setViewState({
 					type: WEB_BROWSER_VIEW_ID,
 					active: true,
 					state,
@@ -278,26 +291,34 @@ export class SurfingView extends ItemView implements AssistantHost {
 				this.leaf.view as SurfingView,
 				this.plugin,
 			);
-			this.bookmarkBar.onload();
+			void this.bookmarkBar.onload();
 		}
 
 		this.webviewManager = new WebviewManager({
 			plugin: this.plugin,
-			appId: this.app.appId,
+			appId: (this.app as App & AppWithId).appId,
 			leafId: this.leaf.id,
 			contentEl: this.contentEl,
 			sessionIsolation: this.plugin.settings.sessionIsolation,
 			getCurrentUrl: () => this.currentUrl,
 			recreateWebview: () => this.createWebview(),
 			callbacks: {
-				onDomReady: async (webContents: any) => {
+				onDomReady: (webContents: Electron.WebContents) => {
+					void (async () => {
 					// Open new browser tab if the web view requests it.
-					webContents.setWindowOpenHandler((event: any) => {
-						SurfingView.spawnWebBrowserView(this.plugin, true, {
-							url: event.url,
-							active: event.disposition !== "background-tab",
-						});
-						return { action: "allow" };
+					webContents.setWindowOpenHandler((event: Electron.HandlerDetails) => {
+						if (isAppLink(event.url)) {
+							window.open(event.url, "_external");
+						} else {
+							SurfingView.spawnWebBrowserView(this.plugin, true, {
+								url: event.url,
+								active: event.disposition !== "background-tab",
+							});
+						}
+						// @electron/remote never hands a renderer callback's
+						// result to the main process, which treats that as
+						// "deny": the page's window is always replaced by a tab.
+						return { action: "deny" };
 					});
 
 					await this.contextMenuHandler.register(
@@ -305,17 +326,18 @@ export class SurfingView extends ItemView implements AssistantHost {
 						this.webviewEl,
 					);
 					await this.contentInjector.inject(webContents);
+					})();
 				},
 				onKeyboardEvent: (
 					emulatedKeyboardEvent: KeyboardEvent,
-					webContents: any,
+					webContents: Electron.WebContents,
 				) => {
 					// TODO: Allow set hotkey in webview;
 					if (
 						this.plugin.settings.focusSearchBarViaKeyboard &&
 						emulatedKeyboardEvent.key === "/"
 					) {
-						console.log("focus search bar via keyboard");
+						console.debug("focus search bar via keyboard");
 						if (
 							!this.plugin.settings.ignoreList.find(
 								(item: string) =>
@@ -324,12 +346,12 @@ export class SurfingView extends ItemView implements AssistantHost {
 									),
 							)
 						) {
-							webContents
+							void webContents
 								.executeJavaScript(
-									`document.activeElement instanceof HTMLInputElement`,
+									`(e => !!e && (e instanceof HTMLInputElement || e instanceof HTMLTextAreaElement || e.isContentEditable))(document.activeElement)`,
 									true,
 								)
-								.then((result: any) => {
+								.then((result: unknown) => {
 									if (!result) this.headerBar.focus();
 								});
 							return;
@@ -349,19 +371,17 @@ export class SurfingView extends ItemView implements AssistantHost {
 						);
 					}
 				},
-				onDragStartInject: (webContents: any) => {
+				onDragStartInject: (webContents: Electron.WebContents) => {
 					const highlightFormat =
 						this.plugin.settings.highlightFormat;
 					const getCurrentTime = () => {
 						let link = "";
-						// eslint-disable-next-line no-useless-escape
 						const timeString = highlightFormat.match(
-							/\{TIME\:[^\{\}\[\]]*\}/g,
+							/\{TIME:[^{}[\]]*\}/g,
 						)?.[0];
 						if (timeString) {
-							// eslint-disable-next-line no-useless-escape
-							const momentTime = moment().format(
-								timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
+							const momentTime = callMoment().format(
+								timeString.replace(/{TIME:([^}]*)}/g, "$1"),
 							);
 							link = highlightFormat.replace(
 								timeString,
@@ -371,7 +391,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 						}
 						return link;
 					};
-					webContents
+					void webContents
 						.executeJavaScript(
 							`
 						window.addEventListener('dragstart', (e) => {
@@ -400,20 +420,19 @@ export class SurfingView extends ItemView implements AssistantHost {
 									tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
 								}
 
-								const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
+								const linkToHighlight = e.srcElement.baseURI.replace(/#:~:text=(.*)/g, "") + "#:~:text=" + tempText;
 								let link = "";
 								if ("${highlightFormat}".includes("{TIME")) {
 									link = "${getCurrentTime()}";
 								}
-								link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+								link = (link != "" ? link : "${highlightFormat}").replace(/{URL}/g, linkToHighlight).replace(/{CONTENT}/g, selectionText.replace(/\\n/g, " "));
 
 								e.dataTransfer.setData('text/plain', link);
 							}
 						});
 						`,
 							true,
-						)
-						.then((result: any) => {});
+						);
 				},
 				onFocus: () => {
 					this.app.workspace.setActiveLeaf(this.leaf);
@@ -438,14 +457,17 @@ export class SurfingView extends ItemView implements AssistantHost {
 						this,
 					);
 				},
-				onNavigate: (url: string) => {
-					if (this.readerModeActive) {
+				onNavigate: (url: string, inPage: boolean) => {
+					if (this.readerModeActive && !inPage) {
 						this.readerOverlayEl?.remove();
 						this.readerOverlayEl = null;
 						this.readerModeActive = false;
-						this.webviewEl.style.display = "";
+						this.webviewEl.setCssProps({ display: "" });
 					}
-					this.navigate(url, true, false);
+					this.pageNavigated(url, inPage);
+				},
+				onNavigationFailed: () => {
+					this.loadPending = false;
 				},
 				onMenuClose: () => {
 					this.contextMenuHandler?.close();
@@ -458,10 +480,6 @@ export class SurfingView extends ItemView implements AssistantHost {
 		this.webviewManager.create();
 
 		if (this.currentUrl) this.navigate(this.currentUrl);
-
-		this.headerBar.addOnSearchBarEnterListener((url: string) => {
-			this.navigate(url);
-		});
 	};
 
 	async onOpen() {
@@ -478,7 +496,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 		this.headerBar.onLoad();
 
 		// Create favicon image element.
-		this.favicon = document.createElement("img") as HTMLImageElement;
+		this.favicon = createEl("img");
 		this.favicon.width = 16;
 		this.favicon.height = 16;
 
@@ -491,10 +509,26 @@ export class SurfingView extends ItemView implements AssistantHost {
 				this.leaf,
 				this.plugin,
 			);
-		if (this.omnisearchEnabled) this.searchContainer.onload();
+		if (this.omnisearchEnabled) this.searchContainer?.onload();
+
+		// Once per view: createWebview runs again whenever the webview is rebuilt.
+		this.headerBar.addOnSearchBarEnterListener((url: string) => {
+			this.navigate(url);
+		});
 
 		this.createWebview();
 		this.initHeaderButtons();
+
+		// Obsidian redraws tab headers when tabs move; put the favicon back.
+		this.registerEvent(
+			this.app.workspace.on("layout-change", () => {
+				const iconEl = this.leaf.tabHeaderInnerIconEl;
+				if (this.favicon.getAttribute("src") && !iconEl.contains(this.favicon)) {
+					iconEl.empty();
+					iconEl.appendChild(this.favicon);
+				}
+			}),
+		);
 	}
 
 	onload() {
@@ -508,7 +542,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 
 	initHeaderButtons() {
 		this.addAction("book-open", t("Toggle Reader Mode"), () => {
-			this.toggleReaderMode();
+			void this.toggleReaderMode();
 		});
 
 		if (Platform.isDesktop && this.plugin.settings.aiAssistant.enabled) {
@@ -520,26 +554,24 @@ export class SurfingView extends ItemView implements AssistantHost {
 						WEB_BROWSER_AI_VIEW_ID,
 					);
 					if (leaves.length > 0) {
-						this.app.workspace.revealLeaf(leaves[0]);
+						void this.app.workspace.revealLeaf(leaves[0]);
 						(leaves[0].view as AIAssistantView).focusInput();
 					} else {
 						const rightLeaf =
 							this.app.workspace.getRightLeaf(false);
-						rightLeaf?.setViewState({
+						void rightLeaf?.setViewState({
 							type: WEB_BROWSER_AI_VIEW_ID,
 						});
 						if (rightLeaf) {
-							this.app.workspace.revealLeaf(rightLeaf);
+							void this.app.workspace.revealLeaf(rightLeaf);
 						}
 					}
 				},
 			);
 		}
 		this.addAction("settings", t("settings"), () => {
-			//@ts-expect-error, private method
-			app.setting.open();
-			//@ts-expect-error, private method
-			app.setting.openTabById("surfing");
+			this.app.setting.open();
+			this.app.setting.openTabById("surfing");
 		});
 		this.addAction("star", t("star"), async () => {
 			if (isUrlBookmarked(this.plugin, this.currentUrl)) {
@@ -550,10 +582,10 @@ export class SurfingView extends ItemView implements AssistantHost {
 			let description = "";
 			try {
 				const webContents = this.getWebContents();
-				const result = await webContents?.executeJavaScript(
+				const result: unknown = await webContents?.executeJavaScript(
 					`document.querySelector('meta[name="description"]')?.content`,
 				);
-				if (result) description = result;
+				if (typeof result === "string" && result) description = result;
 			} catch (err) {
 				console.error(err);
 			}
@@ -571,7 +603,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 			new Notice("Bookmark saved.");
 		});
 		if (this.plugin.settings.bookmarkManager.sendToReadWise)
-			this.addAction("book", t("Send to ReadWise"), async () => {
+			this.addAction("book", t("Send to ReadWise"), () => {
 				const sendToReadWise = (title: string, url: string) => {
 					open(
 						"https://readwise.io/save?title=" +
@@ -582,9 +614,9 @@ export class SurfingView extends ItemView implements AssistantHost {
 				};
 
 				try {
-					await sendToReadWise(this.currentTitle, this.currentUrl);
+					sendToReadWise(this.currentTitle, this.currentUrl);
 					new Notice("Save success!");
-				} catch (err) {
+				} catch {
 					new Notice("Save failed!");
 				}
 			});
@@ -599,7 +631,6 @@ export class SurfingView extends ItemView implements AssistantHost {
 			...SEARCH_ENGINES,
 			...this.plugin.settings.customSearchEngine,
 		];
-		// @ts-ignore
 		const regex = /^(?:https?:\/\/)?(?:[^@/\n]+@)?(?:www\.)?([^:/?\n]+)/g;
 		const currentUrl = this.currentUrl?.match(regex)?.[0];
 		if (!currentUrl) return;
@@ -611,22 +642,23 @@ export class SurfingView extends ItemView implements AssistantHost {
 		if (!webContents) return;
 
 		try {
-			webContents
+			void webContents
 				.executeJavaScript(
 					`
 											document.querySelector('input')?.value
 										`,
 					true,
 				)
-				.then((result: any) => {
-					this.searchContainer.update(result?.toLowerCase());
+				.then((result: unknown) => {
+					if (typeof result !== "string") return;
+					void this.searchContainer?.update(result.toLowerCase());
 				});
 		} catch (err) {
 			console.error("Failed to copy: ", err);
 		}
 	}
 
-	private getWebContents() {
+	private getWebContents(): Electron.WebContents | null {
 		return this.webviewManager?.getWebContents() ?? null;
 	}
 
@@ -672,43 +704,74 @@ export class SurfingView extends ItemView implements AssistantHost {
 		return this.currentTitle;
 	}
 
+	/** Record the current page in the tab's back history (once). */
+	private pushHistory() {
+		if (!this.currentUrl) return;
+		if (
+			(this.leaf.history.backHistory as HistoryEntry[]).last()?.state?.state?.url ===
+			this.currentUrl
+		)
+			return;
+		this.leaf.history.backHistory.push({
+			state: {
+				type: WEB_BROWSER_VIEW_ID,
+				state: this.getState(),
+			},
+			title: this.currentTitle,
+			icon: "search",
+		});
+		// Enable the arrow highlight on the back arrow because there's now back history.
+		this.headerEl.children[1].children[0].setAttribute(
+			"aria-disabled",
+			"false",
+		);
+	}
+
+	/**
+	 * The page committed a navigation: a link, a redirect, a script, or the
+	 * page's own history. Its URL is taken as it is (never searched for).
+	 * Loads Surfing started itself were recorded by navigate() already, and
+	 * same-document changes (pushState, #hash) are not new history entries.
+	 */
+	private pageNavigated(url: string, inPage: boolean) {
+		if (!inPage) {
+			const own = this.loadPending;
+			this.loadPending = false;
+			if (!own && url !== this.currentUrl) this.pushHistory();
+			this.searchBox?.unload();
+		}
+		if (!url || url === this.currentUrl) return;
+		this.currentUrl = url;
+		this.headerBar.setSearchBarUrl(url);
+		this.app.workspace.requestSaveLayout();
+	}
+
 	navigate(url: string, addToHistory = true, updateWebView = true) {
 		if (url === "") {
 			return;
 		}
 
-		if (addToHistory) {
-			if (
-				this.leaf.history.backHistory.last()?.state?.state?.url !==
-				this.currentUrl
-			) {
-				this.leaf.history.backHistory.push({
-					state: {
-						type: WEB_BROWSER_VIEW_ID,
-						state: this.getState(),
-					},
-					title: this.currentTitle,
-					icon: "search",
-				});
-				// Enable the arrow highlight on the back arrow because there's now back history.
-				this.headerEl.children[1].children[0].setAttribute(
-					"aria-disabled",
-					"false",
-				);
-			}
+		if (isAppLink(url)) {
+			window.open(url.trim(), "_external");
+			return;
 		}
+
+		if (addToHistory) this.pushHistory();
+
+		// Local servers ("localhost:3000", "192.168.0.1/admin") have no TLD
+		// for the address check below.
+		if (/^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?([/?#]|$)/i.test(url.trim()))
+			url = "http://" + url.trim();
 
 		// TODO: move this to utils.ts
 		// Support both http:// and https://
 		// TODO: ?Should we support Localhost?
 		// And the before one is : /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi; which will only match `blabla.blabla`
 		// Support 192.168.0.1 for some local software server, and localhost
-		// eslint-disable-next-line no-useless-escape
 		const urlRegEx =
-			/^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/g;
-		// eslint-disable-next-line no-useless-escape
+			/^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._+~#?&//=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/g;
 		const urlRegEx2 =
-			/((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+(:[0-9]+)?|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g;
+			/((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=+$,\w]+@)?[A-Za-z0-9.-]+(:[0-9]+)?|(?:www.|[-;:&=+$,\w]+@)[A-Za-z0-9.-]+)((?:\/[+~%/.\w\-_]*)?\??(?:[-+=&;%@.\w_]*)#?(?:[\w]*))?)/g;
 
 		if (urlRegEx.test(url)) {
 			const first7 = url.slice(0, 7).toLowerCase();
@@ -728,26 +791,11 @@ export class SurfingView extends ItemView implements AssistantHost {
 			!/^(https?|file):\/\//g.test(url)
 		) {
 			// If url is not a valid FILE url, search it with search engine.
-			const allSearchEngine = [
-				...SEARCH_ENGINES,
-				...this.plugin.settings.customSearchEngine,
-			];
-			const currentSearchEngine = allSearchEngine.find(
-				(engine) =>
-					engine.name.toLowerCase() ===
-					this.plugin.settings.defaultSearchEngine,
-			);
-			console.log(
-				currentSearchEngine,
-				allSearchEngine,
-				this.plugin.settings.defaultSearchEngine,
-			);
-
-			// @ts-ignore
 			url =
-				(currentSearchEngine
-					? currentSearchEngine.url
-					: SEARCH_ENGINES[0].url) + url;
+				findSearchEngine(
+					this.plugin.settings.defaultSearchEngine,
+					this.plugin.settings.customSearchEngine,
+				).url + url;
 		}
 
 		this.currentUrl = url;
@@ -755,6 +803,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 		this.headerBar.setSearchBarUrl(url);
 
 		if (updateWebView) {
+			this.loadPending = true;
 			this.webviewEl.setAttribute("src", url);
 		}
 		this.searchBox?.unload();
@@ -765,7 +814,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 	getCurrentTimestamp(editor?: Editor) {
 		const webContents = this.getWebContents();
 		if (!webContents) return;
-		webContents
+		void webContents
 			.executeJavaScript(
 				`
 					var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
@@ -781,7 +830,8 @@ export class SurfingView extends ItemView implements AssistantHost {
 				`,
 				true,
 			)
-			.then((result: any) => {
+			.then((result: unknown) => {
+				if (typeof result !== "string") return;
 				const timestamp =
 					"[" + result.split("?t=")[1] + "](" + result + ") ";
 				const originalCursor = editor?.posToOffset(editor?.getCursor());
@@ -802,7 +852,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 			this.readerOverlayEl?.remove();
 			this.readerOverlayEl = null;
 			this.readerModeActive = false;
-			this.webviewEl.style.display = "";
+			this.webviewEl.setCssProps({ display: "" });
 			return;
 		}
 
@@ -812,15 +862,16 @@ export class SurfingView extends ItemView implements AssistantHost {
 		try {
 			await AIPageBridge.waitForDOMStability(webContents);
 
-			const html: string = await webContents.executeJavaScript(
+			const rawHtml: unknown = await webContents.executeJavaScript(
 				`document.documentElement.outerHTML`,
 				true,
 			);
+			const html = typeof rawHtml === "string" ? rawHtml : "";
 
 			const parser = new DOMParser();
 			const doc = parser.parseFromString(html, "text/html");
 
-			const baseEl = doc.createElement("base");
+			const baseEl = createEl("base");
 			baseEl.href = this.currentUrl.replace(/\?(.*)/g, "");
 			doc.head.prepend(baseEl);
 
@@ -861,7 +912,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 				this,
 			);
 
-			this.webviewEl.style.display = "none";
+			this.webviewEl.setCssProps({ display: "none" });
 			this.readerModeActive = true;
 		} catch (err) {
 			console.error("Reader mode failed:", err);
@@ -873,14 +924,12 @@ export class SurfingView extends ItemView implements AssistantHost {
 
 		const getCurrentTime = () => {
 			let link = "";
-			// eslint-disable-next-line no-useless-escape
 			const timeString = highlightFormat.match(
-				/\{TIME\:[^\{\}\[\]]*\}/g,
+				/\{TIME:[^{}[\]]*\}/g,
 			)?.[0];
 			if (timeString) {
-				// eslint-disable-next-line no-useless-escape
-				const momentTime = moment().format(
-					timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
+				const momentTime = callMoment().format(
+					timeString.replace(/{TIME:([^}]*)}/g, "$1"),
 				);
 				link = highlightFormat.replace(timeString, momentTime);
 				return link;
@@ -899,7 +948,7 @@ export class SurfingView extends ItemView implements AssistantHost {
 		const webContents = this.getWebContents();
 		if (!webContents) return;
 
-		webContents
+		void webContents
 			.executeJavaScript(
 				`
 				const selectionText = document.getSelection().toString();
@@ -924,19 +973,19 @@ export class SurfingView extends ItemView implements AssistantHost {
 					tempText = encodeURIComponent(fistSentenceWords.slice(0, 3).join(' ')) + "," + encodeURIComponent(lastSentenceWords.slice(lastSentenceWords.length - 1, lastSentenceWords.length).join(' '));
 				}
 
-				let linkToHighlight = "${getCurrentUrl()}".replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + tempText;
+				let linkToHighlight = "${getCurrentUrl()}".replace(/#:~:text=(.*)/g, "") + "#:~:text=" + tempText;
 
 				let link = "";
 				if (${checkTime()}) {
 					link = "${getCurrentTime()}";
 				}
-				link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+				link = (link != "" ? link : "${highlightFormat}").replace(/{URL}/g, linkToHighlight).replace(/{CONTENT}/g, selectionText.replace(/\\n/g, " "));
 
 				`,
 				true,
 			)
-			.then((result: any) => {
-				clipboard.writeText(result);
+			.then((result: unknown) => {
+				if (typeof result === "string") clipboard.writeText(result);
 			});
 	}
 }

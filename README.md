@@ -51,6 +51,16 @@ You can enable `AI Assistant Sidebar` in `Settings > Surfing > General` to show 
 - Supports placeholders in command arguments: `{prompt}`, `{url}`, `{title}`, `{selection}`, `{page_text}`.
 - The assistant can return structured actions (`navigate`, `click`, `type`, `scroll`, `extract`, etc.) to operate the current page.
 
+### Chrome Extensions (experimental, desktop)
+
+Surfing can run Chrome extensions such as Tampermonkey, uBlock Origin Lite, Dark Reader or Read Frog. This used to be the separate *Chrome Extensions Bridge* plugin.
+
+- **Where extensions run:** while Obsidian's core **Web Viewer** plugin is enabled, extensions run in Web Viewer tabs, and Surfing leaves external links to Web Viewer (Surfing's own view stays available from its commands and menus). With Web Viewer disabled, extensions run in Surfing tabs. Switching the core plugin moves the extensions over automatically. Each browser has its own session, so extension data (settings, cookies) is kept separately for each.
+- **Install** from the Chrome Web Store (open the store with the command *Open Chrome Web Store*, then click *Install to Obsidian* in the tab header), from a store link or extension ID, or from a local `.crx`, `.zip` or unpacked folder. Manage everything in *Settings → Surfing → Extensions*.
+- **Use:** every browser tab header has a puzzle button listing your extensions; pinned extensions get their own button with icon and badge. Extension context menu items appear in the page's right-click menu, and manifest commands appear in the command palette, where you can bind hotkeys.
+- **Requirements:** Obsidian installed from a 1.12.4 or later installer (Electron 39 or later). Electron is bound to the installer; on older installs Surfing works as before, without extensions. Extensions can't load while Surfing's *session isolation* is on.
+- **Coming from Chrome Extensions Bridge?** Disable that plugin, then use *Import* in *Settings → Surfing → Extensions*. Extensions installed from local folders get a new extension ID, so their data starts fresh.
+
 ## Usage
 
 ### Use BookmarkLets Open URL

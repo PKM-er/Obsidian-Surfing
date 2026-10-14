@@ -4,6 +4,8 @@ import { App, FuzzyMatch, ItemView, prepareFuzzySearch, TFile } from "obsidian";
 import { SurfingView } from "../../surfingView";
 import { getComposedUrl } from "../../utils/url";
 
+const MAX_FILE_SUGGESTIONS = 50;
+
 interface CustomItem {
     path: string;
     type: string;
@@ -43,11 +45,15 @@ export class FileSuggester extends TextInputSuggest<CustomItem> {
 
     getSuggestions(inputStr: string): CustomItem[] {
         const names = this.files.map((file) => file.path);
+        // A query of one character or less matches every file in the vault,
+        // and rendering all of them froze Obsidian on large vaults.
+        const text = inputStr.trim();
+        const matches = text.length < 2 ? [] : this.fuzzySearchItemsOptimized(text, names);
 
-        const query = this.fuzzySearchItemsOptimized(inputStr.slice(1), names)
+        const query = matches
             .sort((a, b) => {
                 return b.match.score - a.match.score;
-            }).map((match) => {
+            }).slice(0, MAX_FILE_SUGGESTIONS).map((match) => {
                 return {
                     path: match.item,
                     type: 'file'
@@ -64,17 +70,18 @@ export class FileSuggester extends TextInputSuggest<CustomItem> {
     }
 
     renderSuggestion(item: CustomItem, el: HTMLElement): void {
-        const bookmarkSuggestContainerEl = el.createEl("div", {
+        const bookmarkSuggestContainerEl = el.createDiv({
             cls: "wb-bookmark-suggest-container"
         });
-        bookmarkSuggestContainerEl.createEl("div", {
+        bookmarkSuggestContainerEl.createDiv({
             text: item.path,
             cls: "wb-bookmark-suggestion-text"
         });
         el.classList.add("wb-bookmark-suggest-item");
     }
 
-    async selectSuggestion(item: CustomItem): Promise<void> {
+    selectSuggestion(item: CustomItem): void {
+        void (async () => {
         if (!item) return;
 
         switch (item.type) {
@@ -94,5 +101,6 @@ export class FileSuggester extends TextInputSuggest<CustomItem> {
 
         this.close();
         return;
+        })();
     }
 }

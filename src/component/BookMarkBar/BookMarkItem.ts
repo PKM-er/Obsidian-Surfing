@@ -36,13 +36,13 @@ export class BookMarkItem {
 	}
 
 	renderFolder() {
-		const folderEl = this.parentEl.createEl("div", {
+		const folderEl = this.parentEl.createDiv({
 			cls: "wb-bookmark-folder"
 		});
-		const folderIconEl = folderEl.createEl("div", {
+		const folderIconEl = folderEl.createDiv({
 			cls: "wb-bookmark-folder-icon",
 		});
-		folderEl.createEl("div", {
+		folderEl.createDiv({
 			cls: "wb-bookmark-folder-title",
 			text: this.categoryName,
 		});
@@ -66,7 +66,7 @@ export class BookMarkItem {
 				menu.addItem((item) => {
 					item.setIcon("surfing")
 						.setTitle(bookmarkItem.name)
-						.onClick((e: MouseEvent) => {
+						.onClick((e: MouseEvent | KeyboardEvent) => {
 							if (e.shiftKey) {
 								window.open(bookmarkItem.url, "_blank", "external");
 								return;
@@ -88,16 +88,16 @@ export class BookMarkItem {
 		if (this.bookmarks.length === 0) return;
 
 		for (const bookmarkItem of this.bookmarks) {
-			const bookmarkEl = this.parentEl.createEl("div", {
+			const bookmarkEl = this.parentEl.createDiv({
 				cls: "wb-bookmark-item"
 			});
-			const folderIconEl = bookmarkEl.createEl("div", {
+			const folderIconEl = bookmarkEl.createDiv({
 				cls: "wb-bookmark-item-icon",
 			});
 
 			setIcon(folderIconEl, "album");
 
-			bookmarkEl.createEl("div", {
+			bookmarkEl.createDiv({
 				cls: "wb-bookmark-item-title",
 				text: bookmarkItem.name,
 			});

@@ -1,5 +1,5 @@
+import type * as Electron from "electron";
 import { App, Modal, Notice, Setting, setIcon } from "obsidian";
-// @ts-ignore
 import { remote } from "electron";
 import SurfingPlugin from "../surfingIndex";
 import { t } from "../translations/helper";
@@ -25,10 +25,8 @@ export class CookieManagerModal extends Modal {
 		});
 
 		// Fetch cookies
-		// @ts-ignore
 		const session = remote.session.fromPartition(
-			// @ts-ignore
-			`persist:surfing-vault-${this.app.appId}`,
+			`persist:surfing-vault-${(this.app as App & { appId: string }).appId}`,
 		);
 		this.cookies = await session.cookies.get({ domain: this.domain });
 
@@ -48,7 +46,7 @@ export class CookieManagerModal extends Modal {
 					.setWarning()
 					.onClick(async () => {
 						await this.deleteAllCookies();
-						this.onOpen();
+						void this.onOpen();
 					}),
 			);
 
@@ -59,11 +57,11 @@ export class CookieManagerModal extends Modal {
 			const cookieEl = listEl.createDiv({ cls: "surfing-cookie-item" });
 
 			const infoEl = cookieEl.createDiv({ cls: "surfing-cookie-info" });
-			infoEl.createEl("span", {
+			infoEl.createSpan({
 				text: cookie.name,
 				cls: "surfing-cookie-name",
 			});
-			infoEl.createEl("span", {
+			infoEl.createSpan({
 				text: this.truncate(cookie.value, 50),
 				cls: "surfing-cookie-value",
 			});
@@ -72,10 +70,12 @@ export class CookieManagerModal extends Modal {
 				cls: "surfing-cookie-delete-btn",
 			});
 			setIcon(deleteBtn, "trash-2");
-			deleteBtn.addEventListener("click", async () => {
-				await this.deleteCookie(cookie);
-				cookieEl.remove();
-				new Notice(t("Cookie deleted: ") + cookie.name);
+			deleteBtn.addEventListener("click", () => {
+				void (async () => {
+					await this.deleteCookie(cookie);
+					cookieEl.remove();
+					new Notice(t("Cookie deleted: ") + cookie.name);
+				})();
 			});
 		}
 
@@ -86,10 +86,8 @@ export class CookieManagerModal extends Modal {
 	}
 
 	private async deleteCookie(cookie: Electron.Cookie): Promise<void> {
-		// @ts-ignore
 		const session = remote.session.fromPartition(
-			// @ts-ignore
-			`persist:surfing-vault-${this.app.appId}`,
+			`persist:surfing-vault-${(this.app as App & { appId: string }).appId}`,
 		);
 		const protocol = cookie.secure ? "https" : "http";
 		const cookieUrl = `${protocol}://${cookie.domain?.replace(/^\./, "")}${cookie.path}`;

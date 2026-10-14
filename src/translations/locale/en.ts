@@ -270,4 +270,14 @@ export default {
 		"Command name or full path to the Codex CLI executable. e.g. codex or C:\\Users\\you\\.npm\\codex",
 	"Command name or full path to the Claude Code executable. e.g. claude or /usr/local/bin/claude":
 		"Command name or full path to the Claude Code executable. e.g. claude or /usr/local/bin/claude",
+	"Open Link In New Tab": "Open Link In New Tab",
+	"Open Link In External Browser": "Open Link In External Browser",
+	"Copy Link Address": "Copy Link Address",
+	"Copy Image": "Copy Image",
+	"Copy Image Address": "Copy Image Address",
+	"Cut": "Cut",
+	"Copy": "Copy",
+	"Paste": "Paste",
+	"Select All": "Select All",
+	"Extensions": "Extensions",
 };

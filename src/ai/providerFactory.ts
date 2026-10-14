@@ -1,3 +1,6 @@
+import { execFile } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
 import { Platform } from "obsidian";
 import type { AIProvider } from "./types";
 import type {
@@ -53,10 +56,6 @@ async function isCodexAvailable(
 	// Check vendored binary from @openai/codex-sdk
 	if (pluginDir) {
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
-			const fs = require("fs") as typeof import("fs");
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
-			const path = require("path") as typeof import("path");
 			const arch = process.arch;
 			let triple: string;
 			if (Platform.isWin) {
@@ -96,10 +95,6 @@ async function isCodexAvailable(
 
 async function isCommandAvailable(command: string): Promise<boolean> {
 	try {
-		/* eslint-disable @typescript-eslint/no-var-requires */
-		const { execFile } =
-			require("child_process") as typeof import("child_process");
-		/* eslint-enable @typescript-eslint/no-var-requires */
 		const whichCmd = Platform.isWin ? "where" : "which";
 		return new Promise<boolean>((resolve) => {
 			execFile(whichCmd, [command], { windowsHide: true }, (err) => {
@@ -137,5 +132,9 @@ export function createProvider(
 			return new CodexSdkProvider(settings.codexCommand || undefined);
 		case "claude":
 			return new ClaudeSdkProvider(settings.claudeCommand || undefined);
+		default:
+			throw new Error(
+				`Unsupported AI provider: ${settings.defaultProvider}`,
+			);
 	}
 }

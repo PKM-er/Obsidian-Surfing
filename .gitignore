@@ -30,3 +30,8 @@ pnpm-lock.yaml
 *.7z
 app.js
 sdk/
+
+# Chrome extensions: test bundles (npm run test:extensions) and, in a vault,
+# the managed extension copies and files the plugin writes at runtime.
+build/
+chrome-extensions/

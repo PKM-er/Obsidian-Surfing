@@ -1,19 +1,19 @@
-// @ts-ignore
 import { remote } from "electron";
+import type * as Electron from "electron";
 import { SurfingView } from "../surfingView";
-import { moment } from "obsidian";
-import SurfingPlugin from "src/surfingIndex";
+import { callMoment } from "../utils/moment";
+import SurfingPlugin from "../surfingIndex";
 
 export class PopoverWebView {
 	private contentEl: HTMLElement;
-	private webviewEl: HTMLElement;
+	private webviewEl!: Electron.WebviewTag;
 	private node: HTMLElement;
 
 	private currentUrl: string;
 	private plugin: SurfingPlugin;
 
 	constructor(node: HTMLElement, targetUrl: string, plugin: SurfingPlugin) {
-		this.contentEl = node.createEl("div", { cls: "wb-view-content" });
+		this.contentEl = node.createDiv({ cls: "wb-view-content" });
 		this.node = node;
 		this.currentUrl = targetUrl;
 		this.plugin = plugin;
@@ -34,28 +34,29 @@ export class PopoverWebView {
 			"nodeIntegration=false, contextIsolation=true, sandbox=true",
 		);
 		this.webviewEl.addClass("wb-frame");
-		const self = this;
+		
 
 		if (this.currentUrl)
 			this.webviewEl.setAttribute("src", this.currentUrl);
 		// this.node.placeholderEl.innerText = this.node.url;
 
-		this.webviewEl.addEventListener("dom-ready", (event: any) => {
-			// @ts-ignore
+		this.webviewEl.addEventListener("dom-ready", () => {
 			const webContents = remote.webContents.fromId(
 				this.webviewEl.getWebContentsId(),
 			);
+			if (!webContents) return;
 
 			// Open new browser tab if the web view requests it.
-			webContents.setWindowOpenHandler((event: any) => {
-				if (event.disposition !== "foreground-tab") {
-					SurfingView.spawnWebBrowserView(self.plugin, true, {
-						url: event.url,
+			webContents.setWindowOpenHandler((details): Electron.WindowOpenHandlerResponse => {
+				if (details.disposition !== "foreground-tab") {
+					SurfingView.spawnWebBrowserView(this.plugin, true, {
+						url: details.url,
 					});
 					return {
 						action: "allow",
 					};
 				}
+				return { action: "deny" };
 			});
 
 			try {
@@ -63,33 +64,31 @@ export class PopoverWebView {
 				const highlightFormat = pluginSettings.highlightFormat;
 				const getCurrentTime = () => {
 					let link = "";
-					// eslint-disable-next-line no-useless-escape
 					const timeString = highlightFormat.match(
-						/\{TIME\:[^\{\}\[\]]*\}/g,
+						/\{TIME:[^{}[\]]*\}/g,
 					)?.[0];
 					if (timeString) {
-						// eslint-disable-next-line no-useless-escape
-						const momentTime = moment().format(
-							timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
+						const momentTime = callMoment().format(
+							timeString.replace(/{TIME:([^}]*)}/g, "$1"),
 						);
 						link = highlightFormat.replace(timeString, momentTime);
 						return link;
 					}
 					return link;
 				};
-				webContents
+				void webContents
 					.executeJavaScript(
 						`
 					window.addEventListener('dragstart', (e) => {
 						if(e.ctrlKey || e.metaKey) {
 							e.dataTransfer.clearData();
 							const selectionText = document.getSelection().toString();
-							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
+							const linkToHighlight = e.srcElement.baseURI.replace(/#:~:text=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
 							let link = "";
 							if ("${highlightFormat}".includes("{TIME")) {
 								link = "${getCurrentTime()}";
 							}
-							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+							link = (link != "" ? link : "${highlightFormat}").replace(/{URL}/g, linkToHighlight).replace(/{CONTENT}/g, selectionText.replace(/\\n/g, " "));
 
 							e.dataTransfer.setData('text/plain', link);
 							console.log(e);
@@ -98,7 +97,7 @@ export class PopoverWebView {
 					`,
 						true,
 					)
-					.then((result: any) => {});
+					.then(() => undefined);
 			} catch (err) {
 				console.error("Failed to add event: ", err);
 			}
@@ -106,13 +105,12 @@ export class PopoverWebView {
 
 		this.webviewEl.addEventListener(
 			"did-navigate-in-page",
-			(event: any) => {
+			(event) => {
 				if (event.url.contains("contacts.google.com/widget")) {
-					// @ts-ignore
 					const webContents = remote.webContents.fromId(
 						this.webviewEl.getWebContentsId(),
 					);
-					webContents.stop();
+					webContents?.stop();
 					return;
 				}
 				this.currentUrl = event.url;

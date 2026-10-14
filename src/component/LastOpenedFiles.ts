@@ -5,7 +5,7 @@ export class LastOpenedFiles extends Component {
 	private plugin: SurfingPlugin;
 	private parent: HTMLElement;
 
-	private listEl: HTMLElement;
+	private listEl!: HTMLElement;
 
 	constructor(plugin: SurfingPlugin, parent: HTMLElement) {
 		super();
@@ -15,7 +15,7 @@ export class LastOpenedFiles extends Component {
 	}
 
 	onload() {
-		this.listEl = this.parent.createEl('div', {
+		this.listEl = this.parent.createDiv({
 			cls: 'wb-last-opened-files'
 		});
 
@@ -24,12 +24,12 @@ export class LastOpenedFiles extends Component {
 			const fileEl = this.listEl.createEl('button', {
 				cls: 'wb-last-opened-file'
 			});
-			const iconEl = fileEl.createEl('span', {
+			const iconEl = fileEl.createSpan({
 				cls: 'wb-last-opened-file-icon',
 			});
 			setIcon(iconEl, 'file-text');
 
-			fileEl.createEl('span', {
+			fileEl.createSpan({
 				cls: 'wb-last-opened-file-name',
 				text: file
 			});

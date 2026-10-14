@@ -1,3 +1,4 @@
+import type * as Electron from "electron";
 import SurfingPlugin from "../surfingIndex";
 
 export class ContentScriptInjector {
@@ -7,12 +8,12 @@ export class ContentScriptInjector {
 		this.plugin = plugin;
 	}
 
-	async inject(webContents: any): Promise<void> {
+	async inject(webContents: Electron.WebContents): Promise<void> {
 		await this.injectDarkMode(webContents);
 		this.injectHoverLinkDetection(webContents);
 	}
 
-	private async injectDarkMode(webContents: any): Promise<void> {
+	private async injectDarkMode(webContents: Electron.WebContents): Promise<void> {
 		try {
 			if (this.plugin.settings.darkMode) {
 				try {
@@ -54,9 +55,9 @@ export class ContentScriptInjector {
 		}
 	}
 
-	private injectHoverLinkDetection(webContents: any): void {
+	private injectHoverLinkDetection(webContents: Electron.WebContents): void {
 		// https://cdn.jsdelivr.net/npm/darkreader/darkreader.min.js
-		webContents.executeJavaScript(`
+		void webContents.executeJavaScript(`
 				window.addEventListener('mouseover', (e) => {
 					if(!e.target) return;
 					if(!e.ctrlKey && !e.metaKey) return;

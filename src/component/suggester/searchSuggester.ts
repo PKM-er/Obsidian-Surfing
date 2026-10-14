@@ -7,7 +7,7 @@ import SurfingPlugin from "../../surfingIndex";
 import { getComposedUrl } from "../../utils/url";
 
 export class SearchEngineSuggester extends TextInputSuggest<string> {
-	private searchEngines: SearchEngine[];
+	private searchEngines: SearchEngine[] = [];
 	private searchEnginesString: string[] = [];
 	private plugin: SurfingPlugin;
 
@@ -75,14 +75,14 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 	renderSuggestion(item: string, el: HTMLElement): void {
 		switch (this.mode) {
 			case 'web':
-				el.createEl("div", {
+				el.createDiv({
 					text: t("Search with") + item,
 					cls: "wb-search-suggestion-text"
 				});
 				el.classList.add("wb-search-suggest-item");
 				break;
 			case 'file':
-				el.createEl("div", {
+				el.createDiv({
 					text: 'Open ' + item,
 					cls: "wb-search-suggestion-text"
 				});
@@ -91,7 +91,8 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 		}
 	}
 
-	async selectSuggestion(item: string) {
+	selectSuggestion(item: string): void {
+			void (async () => {
 		const currentInputValue: string = this.inputEl.value;
 
 		if (currentInputValue.trim() === '') return;
@@ -112,6 +113,7 @@ export class SearchEngineSuggester extends TextInputSuggest<string> {
 				}
 				break;
 			}
-		}
+			}
+		})();
 	}
 }

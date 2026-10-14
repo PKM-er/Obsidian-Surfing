@@ -4,10 +4,12 @@ import {
 	Editor,
 	editorInfoField,
 	EventRef,
+	FileSystemAdapter,
 	HoverParent,
 	HoverPopover,
 	ItemView,
 	Keymap,
+	MarkdownFileInfo,
 	MarkdownPostProcessorContext,
 	MarkdownPreviewRenderer,
 	MarkdownPreviewRendererStatic,
@@ -41,6 +43,7 @@ import {
 import { InPageSearchBar } from "./component/inPageSearchBar";
 import { tokenType } from "./types/obsidian";
 import {
+	safeDecodeURI,
 	checkIfWebBrowserAvailable,
 	isEmailLink,
 	isNormalLink,
@@ -68,6 +71,7 @@ import {
 	WEB_BROWSER_AI_VIEW_ID,
 } from "./component/AIAssistantView";
 import "./App.css";
+import "./extensions/styles.css";
 import { EditorView } from "@codemirror/view";
 import { PopoverWebView } from "./component/PopoverWebView";
 import { LastOpenedFiles } from "./component/LastOpenedFiles";
@@ -76,25 +80,49 @@ import { ElementHidingManager } from "./adblock/elementHidingManager";
 import { CookieManagerModal } from "./component/CookieManagerModal";
 import { MCPBridge, MCPBridgeHost } from "./utils/mcpBridge";
 import { checkProviderAvailability } from "./ai/providerFactory";
+import ChromeExtensionsBridge from "./extensions/bridge";
+import { webViewerEnabled } from "./extensions/host/targets";
+import { remote } from "electron";
+import * as nodePath from "node:path";
+import type {
+	CanvasLike,
+	CanvasNodeLike,
+	CanvasUrlNode,
+	EmptyViewPrototype,
+	MarkdownEditMode,
+	MetadataPropertyWidget,
+	PagePreviewInstance,
+} from "obsidian";
+
+/** The prototype of an instance of one of Obsidian's internal classes, which the patches below wrap. */
+function prototypeOf<Prototype extends object>(instance: object): Prototype {
+	return Object.getPrototypeOf(instance) as Prototype;
+}
+
+function isCanvasUrlNode(node: CanvasNodeLike): node is CanvasUrlNode {
+	return node.url !== undefined;
+}
 
 export default class SurfingPlugin extends Plugin {
-	settings: SurfingSettings;
-	settingsTab: SurfingSettingTab;
-	adBlockManager: AdBlockManager;
-	elementHidingManager: ElementHidingManager;
+	declare settings: SurfingSettings;
+	settingsTab!: SurfingSettingTab;
+	adBlockManager!: AdBlockManager;
+	elementHidingManager!: ElementHidingManager;
 	mcpBridge: MCPBridge | null = null;
 	bookmarkCache: BookmarkFileItem[] = [];
-	// biome-ignore lint: history entries managed by AIAssistantSidebar
 	aiChatHistory: unknown[] = [];
-	private onLayoutChangeEventRef: EventRef;
+	private onLayoutChangeEventRef!: EventRef;
 	private applyURLDebounceTimer = 0;
 	private urlOpened = false;
+	/** Chrome extensions (desktop only). */
+	chromeExtensions: ChromeExtensionsBridge | null = null;
 
 	// private patchInlineUrl = false;
 
 	async onload() {
 		await this.loadSettings();
 		this.checkWebBrowser();
+		if (Platform.isDesktopApp) this.startChromeExtensions();
 
 		// Initialize ad block and element hiding managers
 		this.adBlockManager = new AdBlockManager(this);
@@ -131,9 +159,9 @@ export default class SurfingPlugin extends Plugin {
 					HTML_FILE_EXTENSIONS,
 					WEB_BROWSER_FILE_VIEW_ID,
 				);
-		} catch (error) {
+		} catch {
 			new Notice(
-				`File extensions ${HTML_FILE_EXTENSIONS} had been registered by other plugin!`,
+				`File extensions ${String(HTML_FILE_EXTENSIONS)} had been registered by other plugin!`,
 			);
 		}
 
@@ -150,11 +178,11 @@ export default class SurfingPlugin extends Plugin {
 		if (Platform.isDesktop) {
 			this.openAIAssistantView();
 			this.registerActiveLeafChangeForAI();
-			this.startMCPBridge();
+			void this.startMCPBridge();
 
 			// Check AI provider availability in background (non-blocking)
 			if (this.settings.aiAssistant.enabled) {
-				checkProviderAvailability(
+				void checkProviderAvailability(
 					this.settings.aiAssistant,
 					this.getAbsolutePluginDir(),
 				);
@@ -203,12 +231,6 @@ export default class SurfingPlugin extends Plugin {
 			this.mcpBridge?.stop();
 			this.mcpBridge = null;
 		}
-		this.app.workspace.detachLeavesOfType(WEB_BROWSER_VIEW_ID);
-		this.settings.enableTreeView &&
-			this.app.workspace.detachLeavesOfType(WEB_BROWSER_TAB_TREE_ID);
-		Platform.isDesktop &&
-			this.settings.aiAssistant.enabled &&
-			this.app.workspace.detachLeavesOfType(WEB_BROWSER_AI_VIEW_ID);
 		this.app.workspace.offref(this.onLayoutChangeEventRef);
 
 		// Clean up header bar added to "New tab" views when plugin is disabled.
@@ -221,8 +243,38 @@ export default class SurfingPlugin extends Plugin {
 		}
 	}
 
+	/**
+	 * While Obsidian's core Web Viewer is enabled, Surfing leaves external
+	 * links to it (Chrome extensions run there too); Surfing's own view stays
+	 * available through its commands and menus.
+	 */
+	handsLinksToWebViewer(): boolean {
+		return webViewerEnabled(this.app);
+	}
+
+	private startChromeExtensions(plugin: SurfingPlugin = this) {
+		this.chromeExtensions = this.addChild(
+			new ChromeExtensionsBridge({
+				plugin,
+				get settings() {
+					return plugin.settings.chromeExtensions;
+				},
+				save: () => plugin.saveSettings(),
+				sessionIsolation: () => plugin.settings.sessionIsolation,
+				openSettings: () => plugin.openSettings("Extensions"),
+			}),
+		);
+	}
+
+	/** Open Surfing's settings, optionally on one of its pages. */
+	openSettings(tab?: string) {
+		if (tab) this.settingsTab.selectTab(tab);
+		this.app.setting.open();
+		this.app.setting.openTabById(this.manifest.id);
+	}
+
 	private openTabTreeView() {
-		this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
+		this.app.workspace.onLayoutReady(() => this.onLayoutReady());
 	}
 
 	onLayoutReady(): void {
@@ -232,7 +284,7 @@ export default class SurfingPlugin extends Plugin {
 		) {
 			return;
 		}
-		this.app.workspace.getLeftLeaf(false)?.setViewState({
+		void this.app.workspace.getLeftLeaf(false)?.setViewState({
 			type: WEB_BROWSER_TAB_TREE_ID,
 		});
 	}
@@ -246,7 +298,7 @@ export default class SurfingPlugin extends Plugin {
 			) {
 				return;
 			}
-			this.app.workspace.getRightLeaf(false)?.setViewState({
+			void this.app.workspace.getRightLeaf(false)?.setViewState({
 				type: WEB_BROWSER_AI_VIEW_ID,
 			});
 		});
@@ -278,7 +330,7 @@ export default class SurfingPlugin extends Plugin {
 							WEB_BROWSER_AI_VIEW_ID,
 						)[0];
 						if (aiLeaf) {
-							this.app.workspace.revealLeaf(aiLeaf);
+							void this.app.workspace.revealLeaf(aiLeaf);
 						}
 					}
 				}
@@ -298,7 +350,7 @@ export default class SurfingPlugin extends Plugin {
 				const surfingLeaves =
 					this.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
 				const hostStillExists = surfingLeaves.some(
-					(l) => l.view === currentHost,
+					(l) => l.view instanceof SurfingView && l.view === currentHost,
 				);
 				if (!hostStillExists) {
 					// Host leaf was closed — fall back to the most recent SurfingView
@@ -313,14 +365,17 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	getAbsolutePluginDir(): string {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const path = require("path") as typeof import("path");
-		// @ts-ignore - basePath is not in the public API
-		const vaultBase: string = this.app.vault.adapter.basePath;
+		const vaultBase = this.getVaultBasePath();
 		const relDir =
 			this.manifest.dir ||
 			`${this.app.vault.configDir}/plugins/${this.manifest.id}`;
-		return path.resolve(vaultBase, relDir);
+		return nodePath.resolve(vaultBase, relDir);
+	}
+
+	/** The vault's folder on disk (desktop only). */
+	private getVaultBasePath(): string {
+		const adapter = this.app.vault.adapter;
+		return adapter instanceof FileSystemAdapter ? adapter.getBasePath() : "";
 	}
 
 	private async startMCPBridge() {
@@ -364,18 +419,18 @@ export default class SurfingPlugin extends Plugin {
 			const existingIds = new Set(
 				this.app.workspace
 					.getLeavesOfType(WEB_BROWSER_VIEW_ID)
-					.map((l) => (l as any).id),
+					.map((l) => l.id),
 			);
 			SurfingView.spawnWebBrowserView(this, true, { url: targetUrl });
 			for (let i = 0; i < 30; i++) {
-				await new Promise((r) => setTimeout(r, 300));
+				await new Promise((r) => window.setTimeout(r, 300));
 				const allLeaves =
 					this.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
 				const fresh = allLeaves.find(
-					(l) => !existingIds.has((l as any).id),
+					(l) => !existingIds.has(l.id),
 				);
 				if (fresh && fresh.view instanceof SurfingView) {
-					const view = fresh.view as SurfingView;
+					const view = fresh.view;
 					await view.waitForPageLoad(15000);
 					return view;
 				}
@@ -395,20 +450,20 @@ export default class SurfingPlugin extends Plugin {
 				const existingIds = new Set(
 					this.app.workspace
 						.getLeavesOfType(WEB_BROWSER_VIEW_ID)
-						.map((l) => (l as any).id),
+						.map((l) => l.id),
 				);
 				SurfingView.spawnWebBrowserView(this, true, { url });
 				// Poll for the new leaf
 				let newView: SurfingView | null = null;
 				for (let i = 0; i < 30; i++) {
-					await new Promise((r) => setTimeout(r, 300));
+					await new Promise((r) => window.setTimeout(r, 300));
 					const allLeaves =
 						this.app.workspace.getLeavesOfType(WEB_BROWSER_VIEW_ID);
 					const fresh = allLeaves.find(
-						(l) => !existingIds.has((l as any).id),
+						(l) => !existingIds.has(l.id),
 					);
 					if (fresh && fresh.view instanceof SurfingView) {
-						newView = fresh.view as SurfingView;
+						newView = fresh.view;
 						break;
 					}
 				}
@@ -428,7 +483,14 @@ export default class SurfingPlugin extends Plugin {
 					url: ctx.url,
 					title: ctx.title,
 					pageText: ctx.pageText,
-					interactiveElements: ctx.interactiveElements,
+					interactiveElements: ctx.interactiveElements?.map((element) =>
+						Object.fromEntries(
+							Object.entries(element).filter(
+								(entry): entry is [string, string] =>
+									typeof entry[1] === "string",
+							),
+						),
+					),
 				};
 			},
 
@@ -436,9 +498,14 @@ export default class SurfingPlugin extends Plugin {
 				let view = getAnySurfingView();
 				if (!view) {
 					// For navigate/open actions, auto-create a new tab
-					const actionType = String(action.type || "").toLowerCase();
+					const actionType = (
+						typeof action.type === "string" ? action.type : ""
+					).toLowerCase();
 					if (actionType === "navigate" || actionType === "open") {
-						const url = String(action.url || "about:blank");
+						const url =
+							typeof action.url === "string" && action.url
+								? action.url
+								: "about:blank";
 						view = await ensureSurfingTab(url);
 						if (view)
 							return `Opened new tab and navigated to ${url}`;
@@ -446,7 +513,10 @@ export default class SurfingPlugin extends Plugin {
 					}
 					return "No active Surfing tab. Use surfing_open_page or surfing_navigate to open one first.";
 				}
-				return view.executeAIAssistantAction(action as any);
+				return view.executeAIAssistantAction({
+					...action,
+					type: typeof action.type === "string" ? action.type : "",
+				});
 			},
 
 			// --- Consent gate ---
@@ -535,8 +605,7 @@ export default class SurfingPlugin extends Plugin {
 			},
 		};
 
-		// @ts-ignore - basePath is not in the public API
-		const vaultBasePath: string = this.app.vault.adapter.basePath;
+		const vaultBasePath = this.getVaultBasePath();
 		this.mcpBridge = new MCPBridge(pluginDir, bridgeHost, vaultBasePath);
 
 		try {
@@ -549,16 +618,14 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	private registerRibbon() {
-		this.addRibbonIcon("bookmark", "Open Bookmarks Folder", async () => {
+		this.addRibbonIcon("bookmark", "Open bookmarks folder", async () => {
 			const folderPath =
 				this.settings.bookmarkManager.bookmarkFolder ||
 				"surfing-bookmarks";
-			// @ts-ignore - reveal folder in file explorer
 			const fileExplorer =
 				this.app.workspace.getLeavesOfType("file-explorer")[0];
 			if (fileExplorer) {
-				this.app.workspace.revealLeaf(fileExplorer);
-				// @ts-ignore
+				void this.app.workspace.revealLeaf(fileExplorer);
 				fileExplorer.view?.revealInFolder?.(
 					this.app.vault.getAbstractFileByPath(folderPath),
 				);
@@ -575,9 +642,11 @@ export default class SurfingPlugin extends Plugin {
 					file.path.endsWith(".md")
 				) {
 					// Small delay to let metadataCache populate
-					setTimeout(async () => {
+					window.setTimeout(() => {
+						void (async () => {
 						await refreshBookmarkCache(this);
 						updateBookmarkBar(this);
+						})();
 					}, 200);
 				}
 			}),
@@ -590,9 +659,11 @@ export default class SurfingPlugin extends Plugin {
 					isInBookmarkFolder(this, file.path) &&
 					file.path.endsWith(".md")
 				) {
-					setTimeout(async () => {
+					window.setTimeout(() => {
+						void (async () => {
 						await refreshBookmarkCache(this);
 						updateBookmarkBar(this);
+						})();
 					}, 200);
 				}
 			}),
@@ -621,9 +692,11 @@ export default class SurfingPlugin extends Plugin {
 						isInBookmarkFolder(this, oldPath) &&
 						oldPath.endsWith(".md"))
 				) {
-					setTimeout(async () => {
+					window.setTimeout(() => {
+						void (async () => {
 						await refreshBookmarkCache(this);
 						updateBookmarkBar(this);
+						})();
 					}, 200);
 				}
 			}),
@@ -640,9 +713,9 @@ export default class SurfingPlugin extends Plugin {
 		)
 			return;
 		// Check if the "New tab" view has already been processed and has a header bar already.
-		if (
-			!currentView.headerEl.children[2].hasClass("web-browser-header-bar")
-		) {
+		// (HeaderBar marks its parent; without this every layout change added
+		// another search bar, "/" handler and focus grab.)
+		if (!currentView.titleContainerEl.hasClass("wb-header-bar")) {
 			const headerBar = new HeaderBar(
 				currentView.titleContainerEl,
 				this,
@@ -670,7 +743,7 @@ export default class SurfingPlugin extends Plugin {
 			!emptyStateEl.hasClass("wb-page-search-bar") &&
 			this.settings.showSearchBarInPage
 		) {
-			const inPageContainerEl = emptyStateEl.createEl("div", {
+			const inPageContainerEl = emptyStateEl.createDiv({
 				cls: "wb-search-bar-container",
 			});
 			emptyStateEl?.addClass("wb-page-search-bar");
@@ -763,8 +836,8 @@ export default class SurfingPlugin extends Plugin {
 		this.registerObsidianProtocolHandler("web-open", async (e) => {
 			let url = e.url;
 			if (!url) return;
-			if (decodeURI(url) !== url)
-				url = decodeURI(url).toString().replace(/\s/g, "%20");
+			if (safeDecodeURI(url) !== url)
+				url = safeDecodeURI(url).toString().replace(/\s/g, "%20");
 			if (this.settings.bookmarkManager.saveBookMark)
 				new SaveBookmarkModal(this.app, url, this).open();
 			else SurfingView.spawnWebBrowserView(this, true, { url: url });
@@ -776,7 +849,7 @@ export default class SurfingPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on(
 				"editor-menu",
-				(menu: Menu, editor: Editor, view: MarkdownView) => {
+				(menu: Menu, editor: Editor, view: MarkdownView | MarkdownFileInfo) => {
 					if (!editor) {
 						return;
 					}
@@ -789,7 +862,6 @@ export default class SurfingPlugin extends Plugin {
 								item.setIcon("surfing")
 									.setTitle(t("Open With Surfing"))
 									.onClick(() => {
-										// @ts-ignore
 										SurfingView.spawnWebBrowserView(
 											this,
 											true,
@@ -802,7 +874,6 @@ export default class SurfingPlugin extends Plugin {
 								item.setIcon("surfing")
 									.setTitle(t("Open With External Browser"))
 									.onClick(() => {
-										// @ts-ignore
 										window.open(
 											token.text,
 											"_blank",
@@ -818,7 +889,7 @@ export default class SurfingPlugin extends Plugin {
 							) {
 								menu.addItem((item) => {
 									item.setIcon("surfing")
-										.setTitle("Open With Hover Editor")
+										.setTitle("Open with hover editor")
 										.onClick(async () => {
 											const hoverEditorPlugin =
 												this.app.plugins.getPlugin(
@@ -832,15 +903,15 @@ export default class SurfingPlugin extends Plugin {
 												return;
 											}
 
-											const leaf = await this.app.plugins
-												.getPlugin(
-													"obsidian-hover-editor",
-												)
-												?.spawnPopover(view.contentEl);
+											const leaf = await hoverEditorPlugin.spawnPopover(
+												view instanceof MarkdownView
+													? view.contentEl
+													: undefined,
+											);
 
 											if (!leaf) return;
 
-											leaf.setViewState({
+											void leaf.setViewState({
 												type: "surfing-view",
 												active: true,
 												state: {
@@ -871,7 +942,6 @@ export default class SurfingPlugin extends Plugin {
 								item.setIcon("search")
 									.setTitle(engine.name)
 									.onClick(() => {
-										// @ts-ignore
 										SurfingView.spawnWebBrowserView(
 											this,
 											true,
@@ -890,35 +960,20 @@ export default class SurfingPlugin extends Plugin {
 
 	private registerCommands() {
 		this.addCommand({
-			id: "open-surfing-view-next",
-			name: "open surfing view next",
-			callback: () => {
-				this.app.workspace.getLeaf(true).setViewState({
-					type: "surfing-view-next",
-					active: true,
-				});
-			},
-		});
-
-		this.addCommand({
 			id: "clear-browsing-data",
 			name: "Clear browsing data",
 			callback: () => {
-				// @ts-ignore
 				const session = remote.session.fromPartition(
-					// @ts-ignore
 					`persist:surfing-vault-${this.app.appId}`,
 				);
-				session
+				void session
 					.clearStorageData({
 						storages: [
-							"appcache",
 							"cookies",
 							"filesystem",
 							"indexdb",
 							"localstorage",
 							"shadercache",
-							"websql",
 							"serviceworkers",
 							"cachestorage",
 						],
@@ -945,7 +1000,7 @@ export default class SurfingPlugin extends Plugin {
 								this,
 								hostname,
 							).open();
-						} catch (e) {
+						} catch {
 							// Invalid URL
 						}
 					}
@@ -1000,7 +1055,7 @@ export default class SurfingPlugin extends Plugin {
 
 		this.addCommand({
 			id: "open-inspecter",
-			name: "Open Inspecter",
+			name: "Open inspecter",
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
 				const surfingView =
@@ -1052,7 +1107,7 @@ export default class SurfingPlugin extends Plugin {
 		this.addCommand({
 			id: "get-current-timestamp",
 			name: t("Get Current Timestamp from Web Browser"),
-			editorCallback: (editor: Editor, view: MarkdownView) => {
+			editorCallback: (editor: Editor) => {
 				const lastActiveLeaves =
 					this.app.workspace.getLeavesOfType("surfing-view");
 				if (lastActiveLeaves.length === 0) return;
@@ -1100,12 +1155,11 @@ export default class SurfingPlugin extends Plugin {
 			this.addCommand({
 				id: "using" + engine.name.replace(/\s/g, "-") + "-to-search",
 				name: t("Using ") + engine.name + t(" to search"),
-				editorCallback: (editor: Editor, view: MarkdownView) => {
+				editorCallback: (editor: Editor) => {
 					if (editor.getSelection().length === 0) return;
 					const selection = editor.getSelection();
 
-					// @ts-ignore
-					SurfingView.spawnWebBrowserView(true, {
+					SurfingView.spawnWebBrowserView(this, true, {
 						url: engine.url + selection,
 					});
 				},
@@ -1165,9 +1219,9 @@ export default class SurfingPlugin extends Plugin {
 						WEB_BROWSER_AI_VIEW_ID,
 					);
 					if (leaves.length > 0) {
-						this.app.workspace.revealLeaf(leaves[0]);
+						void this.app.workspace.revealLeaf(leaves[0]);
 					} else {
-						this.app.workspace.getRightLeaf(false)?.setViewState({
+						void this.app.workspace.getRightLeaf(false)?.setViewState({
 							type: WEB_BROWSER_AI_VIEW_ID,
 						});
 					}
@@ -1183,7 +1237,7 @@ export default class SurfingPlugin extends Plugin {
 						WEB_BROWSER_AI_VIEW_ID,
 					);
 					if (leaves.length > 0) {
-						this.app.workspace.revealLeaf(leaves[0]);
+						void this.app.workspace.revealLeaf(leaves[0]);
 						(leaves[0].view as AIAssistantView).focusInput();
 					}
 				},
@@ -1211,7 +1265,7 @@ export default class SurfingPlugin extends Plugin {
 
 		this.addCommand({
 			id: "copy-surfing-tabs-as-markdown",
-			name: "Copy Surfing Tabs as Markdown",
+			name: "Copy tabs as Markdown",
 			callback: () => {
 				const surfingLeaves =
 					this.app.workspace.getLeavesOfType("surfing-view");
@@ -1233,8 +1287,8 @@ export default class SurfingPlugin extends Plugin {
 				});
 
 				try {
-					navigator.clipboard.writeText(markdown);
-				} catch (e) {
+					void navigator.clipboard.writeText(markdown);
+				} catch {
 					new Notice(
 						t(
 							"Copy failed, you may focus on surfing view, click the title bar, and try again.",
@@ -1260,13 +1314,14 @@ export default class SurfingPlugin extends Plugin {
 				el: HTMLElement,
 				ctx: MarkdownPostProcessorContext,
 			) => {
-				const yaml = parseYaml(source);
-				if (!yaml || !yaml.url) return;
+				const yaml: unknown = parseYaml(source);
+				if (!yaml || typeof yaml !== "object" || !("url" in yaml)) return;
+				if (typeof yaml.url !== "string" || !yaml.url) return;
 
 				const url = yaml.url;
 				el.toggleClass("surfing-embed-website", true);
 
-				const parentEl = el.createEl("div", {
+				const parentEl = el.createDiv({
 					cls: "surfing-embed-website-container",
 				});
 				const webView = new PopoverWebView(parentEl, url, this);
@@ -1275,7 +1330,7 @@ export default class SurfingPlugin extends Plugin {
 		);
 	}
 
-	private registerHoverPopover() {
+	private registerHoverPopover(plugin: SurfingPlugin = this) {
 		if (!this.settings.hoverPopover) return;
 		this.registerEditorExtension(
 			EditorView.domEventHandlers({
@@ -1287,7 +1342,8 @@ export default class SurfingPlugin extends Plugin {
 						return;
 
 					const editorInfo = editorView.state.field(editorInfoField);
-					const editor: Editor = (editorInfo as any).editMode?.editor;
+					const editor = editorInfo.editMode?.editor;
+					if (!editor) return;
 
 					const pos = editorView.posAtDOM(<Node>e.target);
 					const editorPos = editor.offsetToPos(pos);
@@ -1334,32 +1390,31 @@ export default class SurfingPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(() => {
 			const pagePreview =
 				this.app.internalPlugins.plugins["page-preview"];
-			const self = this;
 			this.register(
 				around(pagePreview.instance, {
-					onLinkHover(old: any) {
+					onLinkHover(old: PagePreviewInstance["onLinkHover"]) {
 						return function (
+							this: unknown,
 							hoverParent: HoverParent,
 							targetEl: HTMLElement | null,
 							linktext: string,
 							sourcePath: string,
-							state: any,
-							...args: any[]
+							state?: unknown,
+							...args: unknown[]
 						) {
 							if (
 								linktext.startsWith("http://") ||
 								linktext.startsWith("https://")
 							) {
-								let { hoverPopover } = hoverParent;
+								const { hoverPopover: shownPopover } = hoverParent;
 								if (
-									hoverPopover &&
-									hoverPopover.state !==
-										(PopoverState as any).Hidden &&
-									hoverPopover.targetEl === targetEl
+									shownPopover &&
+									shownPopover.state !== PopoverState.Hidden &&
+									shownPopover.targetEl === targetEl
 								) {
 									return;
 								}
-								hoverPopover = new HoverPopover(
+								const hoverPopover = new HoverPopover(
 									hoverParent,
 									targetEl,
 								);
@@ -1367,21 +1422,19 @@ export default class SurfingPlugin extends Plugin {
 									"surfing-hover-popover",
 								);
 
-								setTimeout(() => {
+								window.setTimeout(() => {
 									if (
-										// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-										hoverPopover!.state !==
-										(PopoverState as any).Hidden
+										hoverPopover.state !==
+										PopoverState.Hidden
 									) {
 										const parentEl =
-											// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-											hoverPopover!.hoverEl.createDiv(
+											hoverPopover.hoverEl.createDiv(
 												"surfing-hover-popover-container",
 											);
 										const webView = new PopoverWebView(
 											parentEl,
 											linktext,
-											self,
+											plugin,
 										);
 										webView.onload();
 									}
@@ -1389,7 +1442,7 @@ export default class SurfingPlugin extends Plugin {
 								return;
 							}
 
-							return old.call(
+							old.call(
 								this,
 								hoverParent,
 								targetEl,
@@ -1436,27 +1489,30 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	// TODO: Licat said that this method will be changed in the future.
-	private patchMarkdownView() {
-		const self = this;
+	private patchMarkdownView(plugin: SurfingPlugin = this) {
 		this.register(
 			around(MarkdownView.prototype, {
-				triggerClickableToken: (next) =>
+				triggerClickableToken: (next: MarkdownView["triggerClickableToken"]) =>
 					function (
+						this: unknown,
 						token: tokenType,
 						newLeaf: boolean | string,
-						...args: any
+						...args: unknown[]
 					) {
-						if (token.type === "external-link") {
+						if (
+							token.type === "external-link" &&
+							!plugin.handsLinksToWebViewer()
+						) {
 							if (newLeaf === "tab" || newLeaf === "window") {
 								window.open(token.text, "_blank", "external");
 								return;
 							}
 							const url =
-								token.text !== decodeURI(token.text)
-									? decodeURI(token.text)
+								token.text !== safeDecodeURI(token.text)
+									? safeDecodeURI(token.text)
 									: token.text;
 							if (checkIfWebBrowserAvailable(url)) {
-								SurfingView.spawnWebBrowserView(self, true, {
+								SurfingView.spawnWebBrowserView(plugin, true, {
 									url: url,
 								});
 							} else {
@@ -1464,7 +1520,7 @@ export default class SurfingPlugin extends Plugin {
 							}
 							return;
 						}
-						return next.call(this, token, newLeaf, ...args);
+						next.call(this, token, newLeaf, ...args);
 					},
 			}),
 		);
@@ -1490,16 +1546,19 @@ export default class SurfingPlugin extends Plugin {
 				return false;
 			}
 
-			const MarkdownEditView = editMode.constructor;
 			this.register(
-				around(MarkdownEditView.prototype, {
-					triggerClickableToken: (next) =>
+				around(prototypeOf<MarkdownEditMode>(editMode), {
+					triggerClickableToken: (next: MarkdownEditMode["triggerClickableToken"]) =>
 						function (
+							this: unknown,
 							token: tokenType,
 							newLeaf: boolean | string,
-							...args: any
+							...args: unknown[]
 						) {
-							if (token.type === "external-link") {
+							if (
+								token.type === "external-link" &&
+								!plugin.handsLinksToWebViewer()
+							) {
 								if (newLeaf === "tab" || newLeaf === "window") {
 									window.open(
 										token.text,
@@ -1509,8 +1568,8 @@ export default class SurfingPlugin extends Plugin {
 									return;
 								}
 								const url =
-									token.text !== decodeURI(token.text)
-										? decodeURI(token.text)
+									token.text !== safeDecodeURI(token.text)
+										? safeDecodeURI(token.text)
 										: token.text;
 								if (checkIfWebBrowserAvailable(url)) {
 									SurfingView.spawnWebBrowserView(
@@ -1525,11 +1584,11 @@ export default class SurfingPlugin extends Plugin {
 								}
 								return;
 							}
-							return next.call(this, token, newLeaf, ...args);
+							next.call(this, token, newLeaf, ...args);
 						},
 				}),
 			);
-			console.log("Obsidian-Surfing: editmode external link patched");
+			console.debug("Obsidian-Surfing: editmode external link patched");
 			return true;
 		};
 		this.app.workspace.onLayoutReady(async () => {
@@ -1543,11 +1602,9 @@ export default class SurfingPlugin extends Plugin {
 		});
 	}
 
-	private patchWindowOpen() {
-		const self = this;
-
+	private patchWindowOpen(plugin: SurfingPlugin = this) {
 		const preventSameUrl = () => {
-			clearTimeout(this.applyURLDebounceTimer);
+			window.clearTimeout(this.applyURLDebounceTimer);
 			this.urlOpened = true;
 			this.applyURLDebounceTimer = window.setTimeout(() => {
 				this.urlOpened = false;
@@ -1559,14 +1616,15 @@ export default class SurfingPlugin extends Plugin {
 		};
 
 		// Use monkey-around to match current need.
-		// @ts-ignore
-		const uninstaller = around(window, {
+		const uninstaller = around(window as Pick<Window, "open">, {
 			open: (next) =>
 				function (
-					url?: string | URL | undefined,
-					target?: string | undefined,
-					features?: string | undefined,
+					url?: string | URL,
+					target?: string,
+					features?: string,
 				) {
+					if (plugin.handsLinksToWebViewer())
+						return next(url, target, features);
 					let urlString = "";
 					if (typeof url === "string") {
 						urlString = url;
@@ -1574,8 +1632,8 @@ export default class SurfingPlugin extends Plugin {
 						urlString = url.toString();
 					}
 
-					if (decodeURI(urlString) !== urlString)
-						urlString = decodeURI(urlString)
+					if (safeDecodeURI(urlString) !== urlString)
+						urlString = safeDecodeURI(urlString)
 							.toString()
 							.replace(/\s/g, "%20");
 
@@ -1586,6 +1644,8 @@ export default class SurfingPlugin extends Plugin {
 						!checkIfWebBrowserAvailable(urlString) ||
 						(urlString !== "about:blank" &&
 							(target === "_blank" || target === "_self")) ||
+						// Obsidian's "Open link in default browser"
+						target === "_external" ||
 						features === "external"
 					) {
 						return next(url, target, features);
@@ -1597,10 +1657,10 @@ export default class SurfingPlugin extends Plugin {
 						!features &&
 						!currentUrlOpened()
 					) {
-						console.log(
+						console.debug(
 							"Obsidian-Surfing: open url in web browser view",
 						);
-						SurfingView.spawnWebBrowserView(self, true, {
+						SurfingView.spawnWebBrowserView(plugin, true, {
 							url: urlString,
 						});
 
@@ -1617,10 +1677,9 @@ export default class SurfingPlugin extends Plugin {
 		this.register(uninstaller);
 	}
 
-	private patchMarkdownPreviewRenderer() {
-		const self = this;
+	private patchMarkdownPreviewRenderer(plugin: SurfingPlugin = this) {
 		const preventSameUrl = () => {
-			clearTimeout(this.applyURLDebounceTimer);
+			window.clearTimeout(this.applyURLDebounceTimer);
 			this.urlOpened = true;
 			this.applyURLDebounceTimer = window.setTimeout(() => {
 				this.urlOpened = false;
@@ -1632,20 +1691,25 @@ export default class SurfingPlugin extends Plugin {
 		};
 
 		const uninstaller = around(
-			MarkdownPreviewRenderer as MarkdownPreviewRendererStatic,
+			MarkdownPreviewRenderer as typeof MarkdownPreviewRendererStatic,
 			{
-				// @ts-ignore
-				registerDomEvents: (next) =>
+				registerDomEvents: (next: typeof MarkdownPreviewRendererStatic.registerDomEvents) =>
 					function (
+						this: unknown,
 						el: HTMLElement,
-						instance: { getFile?(): TFile },
-						...args: unknown[]
+						instance: unknown,
+						cb: (el: HTMLElement) => unknown
 					) {
 						el?.on(
 							"click",
 							".external-link",
 							(event: MouseEvent, targetEl: HTMLElement) => {
+								if (plugin.handsLinksToWebViewer()) return;
 								event.preventDefault();
+								// Embeds nest preview renderers, so one click
+								// reaches this handler once per level: only the
+								// first may open the link.
+								if (currentUrlOpened()) return;
 
 								if (targetEl) {
 									const url = targetEl.getAttribute("href");
@@ -1666,7 +1730,7 @@ export default class SurfingPlugin extends Plugin {
 											!currentUrlOpened()
 										) {
 											SurfingView.spawnWebBrowserView(
-												self,
+												plugin,
 												true,
 												{ url: url },
 											);
@@ -1685,7 +1749,7 @@ export default class SurfingPlugin extends Plugin {
 							},
 						);
 
-						return next.call(this, el, instance, ...args);
+						next.call(this, el, instance, cb);
 					},
 			},
 		);
@@ -1696,9 +1760,8 @@ export default class SurfingPlugin extends Plugin {
 		if (!requireApiVersion("1.4.0")) return;
 		const patchTextPropertyInList = (plugin: SurfingPlugin) => {
 			const editor = plugin.app.workspace.activeEditor;
-			// @ts-ignore
 			const propertyList = editor?.metadataEditor?.rendered.filter(
-				(property: any) => property.entry.type === "text",
+				(property) => property.entry.type === "text",
 			);
 
 			if (!propertyList?.length) return false;
@@ -1708,16 +1771,17 @@ export default class SurfingPlugin extends Plugin {
 
 			const renderer = property.rendered;
 
-			if (!renderer?.constructor) return false;
+			if (!renderer) return false;
 
 			this.register(
-				around(renderer.constructor.prototype, {
-					render: (next: any) =>
-						async function (this: any, ...args: any) {
-							next.apply(this, ...args);
+				around(prototypeOf<MetadataPropertyWidget>(renderer), {
+					render: (next) =>
+						async function (this: MetadataPropertyWidget, ...args: unknown[]) {
+							next.apply(this, args);
+							if (plugin.handsLinksToWebViewer()) return;
 
 							const linkEl = this.linkTextEl;
-							const clonedLinkEl = linkEl.cloneNode(true);
+							const clonedLinkEl = linkEl.cloneNode(true) as HTMLElement;
 							linkEl.parentNode?.replaceChild(
 								clonedLinkEl,
 								linkEl,
@@ -1728,7 +1792,7 @@ export default class SurfingPlugin extends Plugin {
 								e.preventDefault();
 
 								if (this.isWikilink()) {
-									this.ctx.app.workspace.openLinkText(
+									void this.ctx.app.workspace.openLinkText(
 										this.getLinkText(),
 										this.ctx.sourcePath,
 										Keymap.isModEvent(e),
@@ -1807,9 +1871,8 @@ export default class SurfingPlugin extends Plugin {
 						},
 				}),
 			);
-			// @ts-ignore
 			editor?.leaf?.rebuildView();
-			console.log("Surfing: metadata editor get patched");
+			console.debug("Surfing: metadata editor get patched");
 			return true;
 		};
 		this.app.workspace.onLayoutReady(() => {
@@ -1823,22 +1886,19 @@ export default class SurfingPlugin extends Plugin {
 		});
 	}
 
-	private patchEmptyView() {
+	private patchEmptyView(plugin: SurfingPlugin = this) {
 		const patchEmptyView = () => {
 			const leaf = this.app.workspace.getLeavesOfType("empty").first();
 			const view = leaf?.view;
-			// eslint-disable-next-line @typescript-eslint/no-this-alias
-			const self = this;
 
-			if (!view) return false;
+			if (!(view instanceof ItemView)) return false;
 
-			const EmptyView = view.constructor;
 			this.register(
-				around(EmptyView.prototype, {
-					onOpen: (next) =>
-						function (...args: any) {
+				around(prototypeOf<EmptyViewPrototype>(view), {
+					onOpen: (next: EmptyViewPrototype["onOpen"]) =>
+						function (this: ItemView, ...args: unknown[]) {
 							const pluginSetting =
-								self.app.plugins.getPlugin("surfing").settings;
+								plugin.app.plugins.getPlugin("surfing").settings;
 							if (
 								!this.contentEl.querySelector(
 									".wb-bookmark-bar",
@@ -1848,7 +1908,7 @@ export default class SurfingPlugin extends Plugin {
 								this.contentEl.classList.add(
 									"mod-wb-bookmark-bar",
 								);
-								new BookMarkBar(this, this.plugin).onload();
+								void new BookMarkBar(this, plugin).onload();
 							}
 							if (
 								!this.contentEl.querySelector(
@@ -1859,20 +1919,18 @@ export default class SurfingPlugin extends Plugin {
 									cls: "surfing-settings-icon",
 								});
 								iconEl.addEventListener("click", () => {
-									//@ts-expect-error, private method
-									self.app.setting.open();
-									//@ts-expect-error, private method
-									self.app.setting.openTabById("surfing");
+									plugin.app.setting.open();
+									plugin.app.setting.openTabById("surfing");
 								});
 								setIcon(iconEl, "settings");
 							}
-							return next.call(this, ...args);
+							return next.call(this, ...args) as unknown;
 						},
 				}),
 			);
 			// Rebuild view after patch successfully;
 			leaf?.rebuildView();
-			console.log("Obsidian-Surfing: empty view patched");
+			console.debug("Obsidian-Surfing: empty view patched");
 			return true;
 		};
 		this.app.workspace.onLayoutReady(() => {
@@ -1893,13 +1951,13 @@ export default class SurfingPlugin extends Plugin {
 			const canvasView = plugin.app.workspace
 				.getLeavesOfType("canvas")
 				.first()?.view;
-			// eslint-disable-next-line @typescript-eslint/no-this-alias
-			const self = this;
 
-			if (!canvasView) return false;
-			const findNode = (map: any) => {
+			if (!canvasView?.canvas) return false;
+			const findNode = (
+				map: Map<string, CanvasNodeLike>,
+			): CanvasUrlNode | false => {
 				for (const [, value] of map) {
-					if (value.url !== undefined) {
+					if (isCanvasUrlNode(value)) {
 						return value;
 					}
 				}
@@ -1909,9 +1967,9 @@ export default class SurfingPlugin extends Plugin {
 			const tempNode = findNode(canvasView.canvas.nodes);
 			if (!tempNode) return false;
 
-			const uninstaller = around(tempNode?.constructor.prototype, {
+			const uninstaller = around(prototypeOf<CanvasUrlNode>(tempNode), {
 				render(next) {
-					return function () {
+					return function (this: CanvasUrlNode) {
 						next.call(this);
 
 						// TODO: Move this with surfing view's constructor to prevent multiple htmlelement
@@ -1919,9 +1977,9 @@ export default class SurfingPlugin extends Plugin {
 
 						new InNodeWebView(
 							this,
-							self,
+							plugin,
 							"canvas",
-							this?.canvas,
+							this.canvas,
 						).onload();
 					};
 				},
@@ -1929,7 +1987,7 @@ export default class SurfingPlugin extends Plugin {
 			this.register(uninstaller);
 
 			tempNode.render();
-			console.log("Obsidian-Surfing: canvas view url node patched");
+			console.debug("Obsidian-Surfing: canvas view url node patched");
 			return true;
 		};
 
@@ -1951,17 +2009,18 @@ export default class SurfingPlugin extends Plugin {
 				.first()?.view;
 			if (!canvasView) return false;
 
-			const patchCanvasView = canvasView.canvas.constructor;
-			const uninstaller = around(patchCanvasView.prototype, {
+			if (!canvasView.canvas) return false;
+
+			const uninstaller = around(prototypeOf<CanvasLike>(canvasView.canvas), {
 				selectOnly: (next) =>
-					function (e: any) {
+					function (this: CanvasLike, e: CanvasNodeLike) {
 						next.call(this, e);
 						if (!e.contentEl) return;
 						if (
 							e.url !== undefined &&
 							!e.contentEl.classList.contains("wb-view-content")
 						) {
-							setTimeout(() => {
+							window.setTimeout(() => {
 								e.render();
 							}, 0);
 						}
@@ -1969,7 +2028,7 @@ export default class SurfingPlugin extends Plugin {
 			});
 			this.register(uninstaller);
 
-			console.log("Obsidian-Surfing: canvas view patched");
+			console.debug("Obsidian-Surfing: canvas view patched");
 			return true;
 		};
 
@@ -1990,26 +2049,21 @@ export default class SurfingPlugin extends Plugin {
 	}
 
 	private registerEmbededHTML() {
-		const self = this;
-		// @ts-expect-error
 		this.app.embedRegistry.registerExtension("html", (e, t, n) => {
-			return new EmbededWebView(e, t, self.app, self);
+			return new EmbededWebView(e, t, this.app, this);
 		});
-		// @ts-expect-error
 		this.app.embedRegistry.registerExtension("htm", (e, t, n) => {
-			return new EmbededWebView(e, t, self.app, self);
+			return new EmbededWebView(e, t, this.app, this);
 		});
 	}
 
 	unRegisterEmbededHTML() {
-		// @ts-expect-error
 		this.app.embedRegistry.unregisterExtension("html");
-		// @ts-expect-error
 		this.app.embedRegistry.unregisterExtension("htm");
 	}
 
 	async loadSettings() {
-		const saved = (await this.loadData()) || {};
+		const saved = ((await this.loadData()) as Partial<SurfingSettings> | null) || {};
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
 		// Deep-merge nested objects so new default keys aren't lost
 		this.settings.aiAssistant = Object.assign(
@@ -2031,6 +2085,11 @@ export default class SurfingPlugin extends Plugin {
 			{},
 			DEFAULT_SETTINGS.elementHiding,
 			saved.elementHiding,
+		);
+		this.settings.chromeExtensions = Object.assign(
+			{},
+			DEFAULT_SETTINGS.chromeExtensions,
+			saved.chromeExtensions,
 		);
 	}
 
@@ -2055,7 +2114,7 @@ class SaveBookmarkModal extends Modal {
 		const { contentEl } = this;
 		contentEl.parentElement?.classList.add("wb-bookmark-modal");
 
-		contentEl.createEl("h2", { text: "Save Bookmark" });
+		contentEl.createEl("h2", { text: "Save bookmark" });
 
 		const btnContainerEl = contentEl.createDiv({
 			cls: "wb-bookmark-modal-btn-container",

@@ -1,3 +1,5 @@
+import * as fs from "fs";
+import * as path from "path";
 import { Notice, Platform } from "obsidian";
 import type { AIProvider, AIProviderContext, AIProviderEvent } from "../types";
 import { Codex, type ThreadEvent, type ThreadItem } from "@openai/codex-sdk";
@@ -17,11 +19,6 @@ export class CodexSdkProvider implements AIProvider {
 	 * ourselves and fall back to the user-configured command.
 	 */
 	private resolveCodexBinary(pluginDir: string): string {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const fs = require("fs") as typeof import("fs");
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const path = require("path") as typeof import("path");
-
 		// 1) If user gave an explicit .exe path that exists, use it directly
 		if (this.codexCommand.endsWith(".exe")) {
 			if (fs.existsSync(this.codexCommand)) return this.codexCommand;
@@ -96,7 +93,7 @@ export class CodexSdkProvider implements AIProvider {
 									url: context.mcpServerUrl,
 								},
 							},
-						} as any)
+						})
 					: undefined,
 		});
 
@@ -261,7 +258,8 @@ export class CodexSdkProvider implements AIProvider {
 					if (item.error) {
 						content = `Error: ${item.error.message}`;
 					} else if (item.result?.content) {
-						content = item.result.content
+						const blocks = item.result.content as { text?: string }[];
+						content = blocks
 							.map((block) => block.text || JSON.stringify(block))
 							.join("\n");
 					}

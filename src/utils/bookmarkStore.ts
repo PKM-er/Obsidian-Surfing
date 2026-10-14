@@ -1,4 +1,5 @@
-import { TFile, TFolder, normalizePath, moment } from "obsidian";
+import { TFile, TFolder, normalizePath } from "obsidian";
+import { callMoment } from "./moment";
 import SurfingPlugin from "../surfingIndex";
 
 export interface BookmarkFileItem {
@@ -10,6 +11,17 @@ export interface BookmarkFileItem {
 	category: string[];
 	created: number;
 	modified: number;
+}
+
+function toStringArray(value: unknown): string[] | null {
+	if (Array.isArray(value)) return value as string[];
+	if (typeof value === "string") return [value];
+	return null;
+}
+
+function toTimestamp(value: unknown, fallback: number): number {
+	if (!value) return fallback;
+	return new Date(value as string | number | Date).getTime();
 }
 
 function sanitizeFileName(name: string): string {
@@ -49,18 +61,18 @@ export async function scanBookmarkFolder(plugin: SurfingPlugin): Promise<Bookmar
 
 async function parseBookmarkFile(plugin: SurfingPlugin, file: TFile): Promise<BookmarkFileItem | null> {
 	const cache = plugin.app.metadataCache.getFileCache(file);
-	const fm = cache?.frontmatter;
+	const fm: Record<string, unknown> | undefined = cache?.frontmatter;
 	if (!fm || !fm.url) return null;
 
 	return {
 		file,
 		name: file.basename,
-		url: fm.url || "",
-		description: fm.description || "",
-		tags: Array.isArray(fm.tags) ? fm.tags : (typeof fm.tags === "string" ? [fm.tags] : []),
-		category: Array.isArray(fm.category) ? fm.category : (typeof fm.category === "string" ? [fm.category] : ["ROOT"]),
-		created: fm.created ? new Date(fm.created).getTime() : file.stat.ctime,
-		modified: fm.modified ? new Date(fm.modified).getTime() : file.stat.mtime,
+		url: typeof fm.url === "string" ? fm.url : "",
+		description: typeof fm.description === "string" ? fm.description : "",
+		tags: toStringArray(fm.tags) ?? [],
+		category: toStringArray(fm.category) ?? ["ROOT"],
+		created: toTimestamp(fm.created, file.stat.ctime),
+		modified: toTimestamp(fm.modified, file.stat.mtime),
 	};
 }
 
@@ -83,7 +95,7 @@ export async function createBookmarkFile(
 		counter++;
 	}
 
-	const now = moment().format("YYYY-MM-DDTHH:mm:ss");
+	const now = callMoment().format("YYYY-MM-DDTHH:mm:ss");
 	const tags = data.tags || [];
 	const category = data.category || ["ROOT"];
 
@@ -136,8 +148,7 @@ export function updateBookmarkBar(plugin: SurfingPlugin): void {
 	const surfingLeaves = plugin.app.workspace.getLeavesOfType("surfing-view");
 	if (surfingLeaves.length > 0) {
 		surfingLeaves.forEach((leaf) => {
-			// @ts-ignore
-			leaf.view?.bookmarkBar?.onload();
+			(leaf.view as { bookmarkBar?: { onload(): void } } | undefined)?.bookmarkBar?.onload();
 		});
 	}
 }

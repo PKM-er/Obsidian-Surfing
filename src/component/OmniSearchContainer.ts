@@ -15,12 +15,20 @@ export type SearchMatchApi = {
 	offset: number
 }
 
+interface OmnisearchApi {
+	search(query: string): Promise<ResultNoteApi[] | undefined>;
+}
+
+function getOmnisearch(): OmnisearchApi | undefined {
+	return (window as Window & { omnisearch?: OmnisearchApi }).omnisearch;
+}
+
 export class OmniSearchContainer {
 	private leaf: WorkspaceLeaf;
 	private plugin: SurfingPlugin;
-	private wbOmniSearchCtnEl: HTMLElement;
-	private query: string;
-	private result: ResultNoteApi[];
+	private wbOmniSearchCtnEl!: HTMLElement;
+	private query: string | undefined;
+	private result: ResultNoteApi[] | undefined;
 
 	constructor(leaf: WorkspaceLeaf, plugin: SurfingPlugin) {
 		this.plugin = plugin;
@@ -28,7 +36,7 @@ export class OmniSearchContainer {
 	}
 
 	onload() {
-		this.wbOmniSearchCtnEl = this.leaf.view.contentEl.createEl("div", {
+		this.wbOmniSearchCtnEl = this.leaf.view.contentEl.createDiv({
 			cls: "wb-omni-box"
 		})
 		this.hide();
@@ -44,17 +52,14 @@ export class OmniSearchContainer {
 
 	notFound() {
 		this.wbOmniSearchCtnEl.empty();
-		this.wbOmniSearchCtnEl.createEl("div", {
+		this.wbOmniSearchCtnEl.createDiv({
 			text: "No results found",
 			cls: "wb-omni-item-notfound"
 		})
 	}
 
 	// Tick current search box so that make it run again when Obsidian Reload
-	tick(result: ResultNoteApi[]) {
-		if (this.result !== result) this.result = result;
-
-		// @ts-ignore
+	tick(result: ResultNoteApi[] | undefined) {
 		if (this.result !== result) this.result = result;
 
 		if (!this.result || this.result?.length === 0) {
@@ -70,7 +75,7 @@ export class OmniSearchContainer {
 			}
 			this.show();
 			this.result.forEach((item: ResultNoteApi) => {
-				(new OmniSearchItem(this.wbOmniSearchCtnEl, item.path, item.foundWords, item.matches, this.plugin)).onload();
+				void (new OmniSearchItem(this.wbOmniSearchCtnEl, item.path, item.foundWords, item.matches, this.plugin)).onload();
 			})
 		}
 	}
@@ -81,16 +86,16 @@ export class OmniSearchContainer {
 		this.wbOmniSearchCtnEl.empty();
 		this.query = query;
 
-		// @ts-ignore
-		const result = await omnisearch?.search(this.query);
+		const result = await getOmnisearch()?.search(this.query);
 
 		this.tick(result);
 
 		if (!result || result?.length === 0) {
-			setTimeout(async () => {
-				// @ts-ignore
-				const result = await omnisearch.search(this.query);
+			window.setTimeout(() => {
+				void (async () => {
+				const result = await getOmnisearch()?.search(this.query ?? query);
 				this.tick(result);
+							})();
 			}, 3000);
 		}
 	}

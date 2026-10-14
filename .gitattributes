@@ -1,0 +1,2 @@
+# Hook scripts run under sh: keep LF line endings on every platform.
+.husky/* text eol=lf

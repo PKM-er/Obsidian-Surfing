@@ -1,44 +1,80 @@
 import { InPageHeaderBar } from "./InPageHeaderBar";
-// @ts-ignore
 import { clipboard, remote } from "electron";
+import type * as Electron from "electron";
 import { SurfingView } from "../surfingView";
 import { t } from "../translations/helper";
-import { ExtraButtonComponent, moment } from "obsidian";
+import { ExtraButtonComponent } from "obsidian";
+import { callMoment } from "../utils/moment";
 import { getUrl } from "../utils/url";
 import SurfingPlugin from "../surfingIndex";
 
+interface CanvasNodeData {
+	url?: string;
+	alwaysKeepLoaded?: boolean;
+	[key: string]: unknown;
+}
+
+interface CanvasLike {
+	isDragging?: boolean;
+	createLinkNode(
+		url: string,
+		position: { x: number; y: number },
+		size: { height: number; width: number },
+	): unknown;
+	deselectAll(): void;
+	addNode(node: unknown): void;
+	select(node: unknown): void;
+	zoomToSelection(): void;
+	requestSave(): void;
+}
+
+interface WebViewNode {
+	contentEl: HTMLElement;
+	url: string;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	canvas?: CanvasLike;
+	editor?: unknown;
+	widget?: unknown;
+	getData(): CanvasNodeData;
+	setData(data: CanvasNodeData): void;
+	render(): void;
+}
+
 export class InNodeWebView {
 	private contentEl: HTMLElement;
-	private webviewEl: HTMLElement;
-	private canvas: any;
-	private node: any;
-	private searchBarEl: InPageHeaderBar;
+	private webviewEl!: Electron.WebviewTag;
+	private canvas: CanvasLike | undefined;
+	private node: WebViewNode;
+	private searchBarEl!: InPageHeaderBar;
 
-	private currentUrl: string;
+	private currentUrl!: string;
 	private plugin: SurfingPlugin;
 
 	private type: "canvas" | "inline";
 
-	private editor: any;
-	private widget: any;
+	private editor: unknown;
+	private widget: unknown;
 
 	constructor(
-		node: any,
+		node: WebViewNode,
 		plugin: SurfingPlugin,
 		type: "canvas" | "inline",
-		canvas?: any,
+		canvas?: CanvasLike,
 	) {
 		this.contentEl = node.contentEl;
 		this.node = node;
 		this.canvas = canvas;
 
+		this.plugin = plugin;
+		this.type = type;
+
 		if (this.type === "inline") {
 			this.editor = this.node?.editor;
 			this.widget = this.node?.widget;
 		}
-
-		this.plugin = plugin;
-		this.type = type;
 	}
 
 	onload() {
@@ -54,7 +90,7 @@ export class InNodeWebView {
 	}
 
 	appendShowOriginalCode() {
-		const btnEl = this.contentEl.createEl("div");
+		const btnEl = this.contentEl.createDiv();
 		btnEl.addClass("wb-show-original-code");
 		new ExtraButtonComponent(btnEl)
 			.setIcon("code-2")
@@ -109,23 +145,22 @@ export class InNodeWebView {
 			"nodeIntegration=false, contextIsolation=true, sandbox=true",
 		);
 		this.webviewEl.addClass("wb-frame");
-		const self = this;
 
 		if (this.currentUrl)
 			this.webviewEl.setAttribute("src", this.currentUrl);
 		else this.webviewEl.setAttribute("src", this.node.url);
 		// this.node.placeholderEl.innerText = this.node.url;
 
-		this.webviewEl.addEventListener("dom-ready", (event: any) => {
-			// @ts-ignore
+		this.webviewEl.addEventListener("dom-ready", () => {
 			const webContents = remote.webContents.fromId(
 				this.webviewEl.getWebContentsId(),
 			);
+			if (!webContents) return;
 
 			// Open new browser tab if the web view requests it.
-			webContents.setWindowOpenHandler((event: any) => {
+			webContents.setWindowOpenHandler((event) => {
 				if (event.disposition !== "foreground-tab") {
-					SurfingView.spawnWebBrowserView(self.plugin, true, {
+					SurfingView.spawnWebBrowserView(this.plugin, true, {
 						url: event.url,
 					});
 					return {
@@ -156,6 +191,8 @@ export class InNodeWebView {
 						action: "allow",
 					};
 				}
+
+				return { action: "deny" };
 			});
 
 			try {
@@ -163,56 +200,52 @@ export class InNodeWebView {
 				const highlightFormat = pluginSettings.highlightFormat;
 				const getCurrentTime = () => {
 					let link = "";
-					// eslint-disable-next-line no-useless-escape
 					const timeString = highlightFormat.match(
-						/\{TIME\:[^\{\}\[\]]*\}/g,
+						/\{TIME:[^{}[\]]*\}/g,
 					)?.[0];
 					if (timeString) {
-						// eslint-disable-next-line no-useless-escape
-						const momentTime = moment().format(
-							timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
+						const momentTime = callMoment().format(
+							timeString.replace(/{TIME:([^}]*)}/g, "$1"),
 						);
 						link = highlightFormat.replace(timeString, momentTime);
 						return link;
 					}
 					return link;
 				};
-				webContents
-					.executeJavaScript(
-						`
-					window.addEventListener('dragstart', (e) => {
-						if(e.ctrlKey || e.metaKey) {
-							e.dataTransfer.clearData();
-							const selectionText = document.getSelection().toString();
-							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
-							let link = "";
-							if ("${highlightFormat}".includes("{TIME")) {
-								link = "${getCurrentTime()}";
-								// // eslint-disable-next-line no-useless-escape
-								// const timeString = "${highlightFormat}".match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
-								// if (timeString) {
-								// 	// eslint-disable-next-line no-useless-escape
-								// 	const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
-								// 	link = "${highlightFormat}".replace(timeString, momentTime);
-								// }
-							}
-							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+				void webContents.executeJavaScript(
+					`
+						window.addEventListener('dragstart', (e) => {
+							if(e.ctrlKey || e.metaKey) {
+								e.dataTransfer.clearData();
+								const selectionText = document.getSelection().toString();
+								const linkToHighlight = e.srcElement.baseURI.replace(/#:~:text=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
+								let link = "";
+								if ("${highlightFormat}".includes("{TIME")) {
+									link = "${getCurrentTime()}";
+									// // eslint-disable-next-line no-useless-escape
+									// const timeString = "${highlightFormat}".match(/{TIME:[^{}[]]*}/g)?.[0];
+									// if (timeString) {
+									// 	// eslint-disable-next-line no-useless-escape
+									// 	const momentTime = moment().format(timeString.replace(/{TIME:([^}]*)}/g, "$1"));
+									// 	link = "${highlightFormat}".replace(timeString, momentTime);
+									// }
+								}
+								link = (link != "" ? link : "${highlightFormat}").replace(/{URL}/g, linkToHighlight).replace(/{CONTENT}/g, selectionText.replace(/\\n/g, " "));
 
-							e.dataTransfer.setData('text/plain', link);
-							console.log(e);
-						}
-					});
-					`,
-						true,
-					)
-					.then((result: any) => {});
+								e.dataTransfer.setData('text/plain', link);
+								console.log(e);
+							}
+						});
+						`,
+					true,
+				);
 			} catch (err) {
 				console.error("Failed to add event: ", err);
 			}
 
 			webContents.on(
 				"context-menu",
-				(event: any, params: any) => {
+				(event: Electron.Event, params: Electron.ContextMenuParams) => {
 					event.preventDefault();
 
 					const { Menu, MenuItem } = remote;
@@ -223,7 +256,7 @@ export class InNodeWebView {
 					menu.append(
 						new MenuItem({
 							label: t("Open Current URL In External Browser"),
-							click: function () {
+							click: () => {
 								window.open(params.pageURL, "_blank");
 							},
 						}),
@@ -232,7 +265,7 @@ export class InNodeWebView {
 					menu.append(
 						new MenuItem({
 							label: "Open Current URL In Surfing",
-							click: function () {
+							click: () => {
 								window.open(params.pageURL);
 							},
 						}),
@@ -245,14 +278,14 @@ export class InNodeWebView {
 						menu.append(
 							new MenuItem({
 								label: t("Search Text"),
-								click: function () {
+								click: () => {
 									try {
 										SurfingView.spawnWebBrowserView(
-											self.plugin,
+											this.plugin,
 											true,
 											{ url: params.selectionText },
 										);
-										console.log(
+										console.debug(
 											"Page URL copied to clipboard",
 										);
 									} catch (err) {
@@ -265,10 +298,10 @@ export class InNodeWebView {
 						menu.append(
 							new MenuItem({
 								label: t("Copy Plain Text"),
-								click: function () {
+								click: () => {
 									try {
 										webContents.copy();
-										console.log(
+										console.debug(
 											"Page URL copied to clipboard",
 										);
 									} catch (err) {
@@ -281,12 +314,11 @@ export class InNodeWebView {
 						menu.append(
 							new MenuItem({
 								label: t("Copy Link to Highlight"),
-								click: function () {
+								click: () => {
 									try {
-										// eslint-disable-next-line no-useless-escape
 										const linkToHighlight =
 											params.pageURL.replace(
-												/\#\:\~\:text\=(.*)/g,
+												/#:~:text=(.*)/g,
 												"",
 											) +
 											"#:~:text=" +
@@ -296,18 +328,16 @@ export class InNodeWebView {
 										const selectionText =
 											params.selectionText;
 										let link = "";
-										if (highlightFormat.contains("{TIME")) {
-											// eslint-disable-next-line no-useless-escape
+										if (highlightFormat.includes("{TIME")) {
 											const timeString =
 												highlightFormat.match(
-													/\{TIME\:[^\{\}\[\]]*\}/g,
+													/\{TIME:[^{}[\]]*\}/g,
 												)?.[0];
 											if (timeString) {
-												// eslint-disable-next-line no-useless-escape
 												const momentTime =
-													moment().format(
+													callMoment().format(
 														timeString.replace(
-															/{TIME:([^\}]*)}/g,
+															/{TIME:([^}]*)}/g,
 															"$1",
 														),
 													);
@@ -329,7 +359,7 @@ export class InNodeWebView {
 												selectionText,
 											);
 										clipboard.writeText(link);
-										console.log(
+										console.debug(
 											"Link URL copied to clipboard",
 										);
 									} catch (err) {
@@ -339,16 +369,16 @@ export class InNodeWebView {
 							}),
 						);
 
-						menu.popup(webContents);
+						menu.popup();
 					}
 
-					if (params.pageURL?.contains("bilibili.com/")) {
+					if (params.pageURL?.includes("bilibili.com/")) {
 						menu.append(
 							new MenuItem({
 								label: t("Copy Video Timestamp"),
-								click: function () {
+								click: () => {
 									try {
-										webContents
+										void webContents
 											.executeJavaScript(
 												`
 											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
@@ -371,7 +401,9 @@ export class InNodeWebView {
 										`,
 												true,
 											)
-											.then((result: any) => {
+											.then((result: unknown) => {
+												if (typeof result !== "string")
+													return;
 												clipboard.writeText(
 													"[" +
 														result
@@ -385,7 +417,7 @@ export class InNodeWebView {
 														")",
 												); // Will be the JSON object from the fetch call
 											});
-										console.log(
+										console.debug(
 											"Page URL copied to clipboard",
 										);
 									} catch (err) {
@@ -396,22 +428,21 @@ export class InNodeWebView {
 						);
 					}
 
-					setTimeout(() => {
-						menu.popup(webContents);
+					window.setTimeout(() => {
+						menu.popup();
 						// Dirty workaround for showing the menu, when currentUrl is not the same as the url of the webview
 						if (
 							this.node.url !== params.pageURL &&
 							!params.selectionText
 						) {
-							menu.popup(webContents);
+							menu.popup();
 						}
 					}, 0);
 				},
-				false,
 			);
 		});
 
-		this.webviewEl.addEventListener("will-navigate", (event: any) => {
+		this.webviewEl.addEventListener("will-navigate", (event) => {
 			if (this.type === "canvas") {
 				const oldData = this.node.getData();
 				oldData.url = event.url;
@@ -422,34 +453,29 @@ export class InNodeWebView {
 			}
 		});
 
-		this.webviewEl.addEventListener(
-			"did-navigate-in-page",
-			(event: any) => {
-				if (this.type === "canvas") {
-					const oldData = this.node.getData();
+		this.webviewEl.addEventListener("did-navigate-in-page", (event) => {
+			if (this.type === "canvas") {
+				const oldData = this.node.getData();
 
-					if (
-						event.url.contains("contacts.google.com/widget") ||
-						(this.node.canvas?.isDragging &&
-							oldData.url === event.url)
-					) {
-						// @ts-ignore
-						const webContents = remote.webContents.fromId(
-							this.webviewEl.getWebContentsId(),
-						);
-						webContents.stop();
-						return;
-					}
-					if (oldData.url === event.url) return;
-					oldData.url = event.url;
-					oldData.alwaysKeepLoaded = true;
-					this.node.setData(oldData);
-					this.node.canvas?.requestSave();
-				} else {
-					this.node.url = event.url;
+				if (
+					event.url.includes("contacts.google.com/widget") ||
+					(this.node.canvas?.isDragging && oldData.url === event.url)
+				) {
+					const webContents = remote.webContents.fromId(
+						this.webviewEl.getWebContentsId(),
+					);
+					webContents?.stop();
+					return;
 				}
-			},
-		);
+				if (oldData.url === event.url) return;
+				oldData.url = event.url;
+				oldData.alwaysKeepLoaded = true;
+				this.node.setData(oldData);
+				this.node.canvas?.requestSave();
+			} else {
+				this.node.url = event.url;
+			}
+		});
 
 		this.webviewEl.addEventListener("destroyed", () => {
 			if (doc !== this.contentEl.doc) {

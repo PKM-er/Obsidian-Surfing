@@ -1,23 +1,36 @@
-// @ts-ignore
 import { clipboard, remote } from "electron";
+import type * as Electron from "electron";
 import { SurfingView } from "../surfingView";
 import { t } from "../translations/helper";
-import { FileSystemAdapter, moment, App } from "obsidian";
-import SurfingPlugin from "src/surfingIndex";
+import { FileSystemAdapter, App } from "obsidian";
+import { callMoment } from "../utils/moment";
+import SurfingPlugin from "../surfingIndex";
+
+interface EmbededNode {
+	containerEl: HTMLElement;
+	url?: string;
+}
+
+interface EmbededFile {
+	path: string;
+}
 
 export class EmbededWebView {
 	private contentEl: HTMLElement;
-	private webviewEl: HTMLElement & {
-		getWebContentsId: () => number;
-	};
-	private node: any;
-	private file: any;
-	private menu: any;
+	private webviewEl!: Electron.WebviewTag;
+	private node: EmbededNode;
+	private file: EmbededFile;
+	private menu: Electron.Menu | undefined;
 	private app: App;
 	private plugin: SurfingPlugin;
-	private currentUrl: string;
+	private currentUrl!: string;
 
-	constructor(node: any, file: any, app: App, plugin: SurfingPlugin) {
+	constructor(
+		node: EmbededNode,
+		file: EmbededFile,
+		app: App,
+		plugin: SurfingPlugin,
+	) {
 		this.contentEl = node.containerEl;
 		this.node = node;
 		this.file = file;
@@ -37,7 +50,7 @@ export class EmbededWebView {
 		// this.contentEl.empty();
 	}
 
-	loadFile(file: any) {
+	loadFile(file: EmbededFile) {
 		// this.file = file;
 		this.load();
 	}
@@ -51,7 +64,6 @@ export class EmbededWebView {
 			"nodeIntegration=false, contextIsolation=true, sandbox=true",
 		);
 		this.webviewEl.addClass("wb-frame");
-		const self = this;
 
 		const adapter = this.app.vault.adapter as FileSystemAdapter;
 		this.currentUrl =
@@ -65,16 +77,16 @@ export class EmbededWebView {
 		else this.webviewEl.setAttribute("src", this.file.path);
 		// this.node.placeholderEl.innerText = this.node.url;
 
-		this.webviewEl.addEventListener("dom-ready", (event: any) => {
-			// @ts-ignore
+		this.webviewEl.addEventListener("dom-ready", () => {
 			const webContents = remote.webContents.fromId(
 				this.webviewEl.getWebContentsId(),
 			);
+			if (!webContents) return;
 
 			// Open new browser tab if the web view requests it.
-			webContents.setWindowOpenHandler((event: any) => {
+			webContents.setWindowOpenHandler((event) => {
 				if (event.disposition !== "foreground-tab") {
-					SurfingView.spawnWebBrowserView(self.plugin, true, {
+					SurfingView.spawnWebBrowserView(this.plugin, true, {
 						url: event.url,
 					});
 					return {
@@ -101,107 +113,104 @@ export class EmbededWebView {
 				// 		action: "allow",
 				// 	}
 				// }
+
+				return { action: "deny" };
 			});
 
 			try {
-				const pluginSettings =
-					this.app.plugins.getPlugin("surfing").settings;
+				const pluginSettings = this.plugin.settings;
 				const highlightFormat = pluginSettings.highlightFormat;
 				const getCurrentTime = () => {
 					let link = "";
-					// eslint-disable-next-line no-useless-escape
 					const timeString = highlightFormat.match(
-						/\{TIME\:[^\{\}\[\]]*\}/g,
+						/\{TIME:[^{}[\]]*\}/g,
 					)?.[0];
 					if (timeString) {
-						// eslint-disable-next-line no-useless-escape
-						const momentTime = moment().format(
-							timeString.replace(/{TIME:([^\}]*)}/g, "$1"),
+						const momentTime = callMoment().format(
+							timeString.replace(/{TIME:([^}]*)}/g, "$1"),
 						);
 						link = highlightFormat.replace(timeString, momentTime);
 						return link;
 					}
 					return link;
 				};
-				webContents
-					.executeJavaScript(
-						`
-					window.addEventListener('dragstart', (e) => {
-						if(e.ctrlKey || e.metaKey) {
-							e.dataTransfer.clearData();
-							const selectionText = document.getSelection().toString();
-							const linkToHighlight = e.srcElement.baseURI.replace(/\#\:\~\:text\=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
-							let link = "";
-							if ("${highlightFormat}".includes("{TIME")) {
-								link = "${getCurrentTime()}";
-								// // eslint-disable-next-line no-useless-escape
-								// const timeString = "${highlightFormat}".match(/\{TIME\:[^\{\}\[\]]*\}/g)?.[0];
-								// if (timeString) {
-								// 	// eslint-disable-next-line no-useless-escape
-								// 	const momentTime = moment().format(timeString.replace(/{TIME:([^\}]*)}/g, "$1"));
-								// 	link = "${highlightFormat}".replace(timeString, momentTime);
-								// }
-							}
-							link = (link != "" ? link : "${highlightFormat}").replace(/\{URL\}/g, linkToHighlight).replace(/\{CONTENT\}/g, selectionText.replace(/\\n/g, " "));
+				void webContents.executeJavaScript(
+					`
+						window.addEventListener('dragstart', (e) => {
+							if(e.ctrlKey || e.metaKey) {
+								e.dataTransfer.clearData();
+								const selectionText = document.getSelection().toString();
+								const linkToHighlight = e.srcElement.baseURI.replace(/#:~:text=(.*)/g, "") + "#:~:text=" + encodeURIComponent(selectionText);
+								let link = "";
+								if ("${highlightFormat}".includes("{TIME")) {
+									link = "${getCurrentTime()}";
+									// // eslint-disable-next-line no-useless-escape
+									// const timeString = "${highlightFormat}".match(/{TIME:[^{}[]]*}/g)?.[0];
+									// if (timeString) {
+									// 	// eslint-disable-next-line no-useless-escape
+									// 	const momentTime = moment().format(timeString.replace(/{TIME:([^}]*)}/g, "$1"));
+									// 	link = "${highlightFormat}".replace(timeString, momentTime);
+									// }
+								}
+								link = (link != "" ? link : "${highlightFormat}").replace(/{URL}/g, linkToHighlight).replace(/{CONTENT}/g, selectionText.replace(/\\n/g, " "));
 
-							e.dataTransfer.setData('text/plain', link);
-							console.log(e);
-						}
-					});
-					`,
-						true,
-					)
-					.then((result: any) => {});
+								e.dataTransfer.setData('text/plain', link);
+								console.log(e);
+							}
+						});
+						`,
+					true,
+				);
 			} catch (err) {
 				console.error("Failed to add event: ", err);
 			}
 
 			webContents.on(
 				"context-menu",
-				(event: any, params: any) => {
+				(event: Electron.Event, params: Electron.ContextMenuParams) => {
 					event.preventDefault();
 
 					const { Menu, MenuItem } = remote;
-					this.menu = new Menu();
+					const menu = new Menu();
+					this.menu = menu;
 					// Basic Menu For Webview
 					// TODO: Support adding different commands to the menu.
 					// Possible to use Obsidian Default API?
-					this.menu.append(
+					menu.append(
 						new MenuItem({
 							label: t("Open Current URL In External Browser"),
-							click: function () {
+							click: () => {
 								window.open(params.pageURL, "_blank");
 							},
 						}),
 					);
 
-					this.menu.append(
+					menu.append(
 						new MenuItem({
 							label: "Open Current URL In Surfing",
-							click: function () {
+							click: () => {
 								window.open(params.pageURL);
 							},
 						}),
 					);
 
 					if (params.selectionText) {
-						const pluginSettings =
-							this.app.plugins.getPlugin("surfing").settings;
+						const pluginSettings = this.plugin.settings;
 
-						this.menu.append(new MenuItem({ type: "separator" }));
-						this.menu.append(
+						menu.append(new MenuItem({ type: "separator" }));
+						menu.append(
 							new MenuItem({
 								label: t("Search Text"),
-								click: function () {
+								click: () => {
 									try {
 										SurfingView.spawnWebBrowserView(
-											self.plugin,
+											this.plugin,
 											true,
 											{
 												url: params.selectionText,
 											},
 										);
-										console.log(
+										console.debug(
 											"Page URL copied to clipboard",
 										);
 									} catch (err) {
@@ -210,14 +219,14 @@ export class EmbededWebView {
 								},
 							}),
 						);
-						this.menu.append(new MenuItem({ type: "separator" }));
-						this.menu.append(
+						menu.append(new MenuItem({ type: "separator" }));
+						menu.append(
 							new MenuItem({
 								label: t("Copy Plain Text"),
-								click: function () {
+								click: () => {
 									try {
 										webContents.copy();
-										console.log(
+										console.debug(
 											"Page URL copied to clipboard",
 										);
 									} catch (err) {
@@ -227,15 +236,14 @@ export class EmbededWebView {
 							}),
 						);
 						const highlightFormat = pluginSettings.highlightFormat;
-						this.menu.append(
+						menu.append(
 							new MenuItem({
 								label: t("Copy Link to Highlight"),
-								click: function () {
+								click: () => {
 									try {
-										// eslint-disable-next-line no-useless-escape
 										const linkToHighlight =
 											params.pageURL.replace(
-												/\#\:\~\:text\=(.*)/g,
+												/#:~:text=(.*)/g,
 												"",
 											) +
 											"#:~:text=" +
@@ -245,18 +253,16 @@ export class EmbededWebView {
 										const selectionText =
 											params.selectionText;
 										let link = "";
-										if (highlightFormat.contains("{TIME")) {
-											// eslint-disable-next-line no-useless-escape
+										if (highlightFormat.includes("{TIME")) {
 											const timeString =
 												highlightFormat.match(
-													/\{TIME\:[^\{\}\[\]]*\}/g,
+													/\{TIME:[^{}[\]]*\}/g,
 												)?.[0];
 											if (timeString) {
-												// eslint-disable-next-line no-useless-escape
 												const momentTime =
-													moment().format(
+													callMoment().format(
 														timeString.replace(
-															/{TIME:([^\}]*)}/g,
+															/{TIME:([^}]*)}/g,
 															"$1",
 														),
 													);
@@ -278,7 +284,7 @@ export class EmbededWebView {
 												selectionText,
 											);
 										clipboard.writeText(link);
-										console.log(
+										console.debug(
 											"Link URL copied to clipboard",
 										);
 									} catch (err) {
@@ -288,16 +294,16 @@ export class EmbededWebView {
 							}),
 						);
 
-						this.menu.popup(webContents);
+						menu.popup();
 					}
 
-					if (params.pageURL?.contains("bilibili.com/")) {
-						this.menu.append(
+					if (params.pageURL?.includes("bilibili.com/")) {
+						menu.append(
 							new MenuItem({
 								label: t("Copy Video Timestamp"),
-								click: function () {
+								click: () => {
 									try {
-										webContents
+										void webContents
 											.executeJavaScript(
 												`
 											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
@@ -320,7 +326,9 @@ export class EmbededWebView {
 										`,
 												true,
 											)
-											.then((result: any) => {
+											.then((result: unknown) => {
+												if (typeof result !== "string")
+													return;
 												clipboard.writeText(
 													"[" +
 														result
@@ -334,7 +342,7 @@ export class EmbededWebView {
 														")",
 												); // Will be the JSON object from the fetch call
 											});
-										console.log(
+										console.debug(
 											"Page URL copied to clipboard",
 										);
 									} catch (err) {
@@ -345,33 +353,29 @@ export class EmbededWebView {
 						);
 					}
 
-					setTimeout(() => {
-						this.menu.popup(webContents);
+					window.setTimeout(() => {
+						menu.popup();
 						// Dirty workaround for showing the menu, when currentUrl is not the same as the url of the webview
 						if (
 							this.node.url !== params.pageURL &&
 							!params.selectionText
 						) {
-							this.menu.popup(webContents);
+							menu.popup();
 						}
 					}, 0);
 				},
-				false,
 			);
 		});
 
-		this.webviewEl.addEventListener("will-navigate", (event: any) => {
+		this.webviewEl.addEventListener("will-navigate", (event) => {
 			this.currentUrl = event.url;
 			// this.webviewEl.setAttribute("src", event.url);
 		});
 
-		this.webviewEl.addEventListener(
-			"did-navigate-in-page",
-			(event: any) => {
-				this.currentUrl = event.url;
-				this.webviewEl.setAttribute("src", event.url);
-			},
-		);
+		this.webviewEl.addEventListener("did-navigate-in-page", (event) => {
+			this.currentUrl = event.url;
+			this.webviewEl.setAttribute("src", event.url);
+		});
 
 		this.webviewEl.addEventListener("destroyed", () => {
 			if (doc !== this.contentEl.doc) {

@@ -1,16 +1,17 @@
 import { t } from "../translations/helper";
 import { App, Component } from "obsidian";
+import type SurfingPlugin from "../surfingIndex";
 
 
 export class InPageHeaderBar extends Component {
-	private node: any;
+	private node: { contentEl: HTMLElement };
 	private url: string;
-	private searchBar: HTMLInputElement;
+	private searchBar!: HTMLInputElement;
 	private onSearchBarEnterListener = new Array<(url: string) => void>;
 
 	private app: App;
 
-	constructor(app: App, node: any, url: string) {
+	constructor(app: App, node: { contentEl: HTMLElement }, url: string) {
 		super();
 		this.node = node;
 		this.url = url;
@@ -18,9 +19,11 @@ export class InPageHeaderBar extends Component {
 	}
 
 	onload() {
-		const pluginSettings = this.app.plugins.getPlugin("surfing").settings;
+		const plugin = this.app.plugins.getPlugin("surfing") as SurfingPlugin | null;
+		if (!plugin) return;
+		const pluginSettings = plugin.settings;
 
-		this.searchBar = this.node?.contentEl.createEl("input", {
+		this.searchBar = this.node.contentEl.createEl("input", {
 			type: "text",
 			placeholder: t("Search with") + pluginSettings.defaultSearchEngine + t("or enter address"),
 			cls: "wb-search-bar"
@@ -28,9 +31,7 @@ export class InPageHeaderBar extends Component {
 
 		// TODO: Would this be ok to use Obsidian add domlistener instead?
 		// this.searchBar.addEventListener("keydown", (event: KeyboardEvent) => {
-		// 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		// 	if (!event) {
-		// 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		// 		const event = window.event as KeyboardEvent;
 		// 	}
 		// 	if (event.key === "Enter") {
@@ -42,10 +43,6 @@ export class InPageHeaderBar extends Component {
 		// }, false);
 
 		this.registerDomEvent(this.searchBar, "keydown", (event: KeyboardEvent) => {
-			if (!event) {
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				const event = window.event as KeyboardEvent;
-			}
 			if (event.key === "Enter") {
 				// When enter is pressed, search for the url.
 				for (const listener of this.onSearchBarEnterListener) {

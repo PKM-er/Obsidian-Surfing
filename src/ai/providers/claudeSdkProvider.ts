@@ -4,11 +4,21 @@ import {
 	query,
 	type Options,
 	type SDKMessage,
-	type SDKAssistantMessage,
-	type SDKResultMessage,
 	type SDKSystemMessage,
-	type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+
+/** Minimal shape of the assistant content blocks we consume (the SDK's own
+ * block types come from @anthropic-ai/sdk, which is not a direct dependency). */
+interface ContentBlockLike {
+	type?: string;
+	thinking?: string;
+	text?: string;
+	name?: string;
+	input?: Record<string, unknown>;
+	id?: string;
+	tool_use_id?: string;
+	content?: unknown;
+}
 
 /**
  * Claude SDK provider. Uses @anthropic-ai/claude-agent-sdk to run Claude Code
@@ -110,26 +120,28 @@ export class ClaudeSdkProvider implements AIProvider {
 			}
 
 			case "assistant": {
-				const assistMsg = message as SDKAssistantMessage;
-				const blocks = assistMsg.message?.content;
+				const inner = message.message as
+					| { content?: unknown }
+					| undefined;
+				const blocks = inner?.content as ContentBlockLike[] | undefined;
 				if (Array.isArray(blocks)) {
 					for (const block of blocks) {
 						if (block.type === "thinking") {
 							events.push({
 								eventType: "thinking",
-								content: String((block as any).thinking || ""),
+								content: String(block.thinking || ""),
 							});
 						} else if (block.type === "text") {
 							events.push({
 								eventType: "text",
-								content: String((block as any).text || ""),
+								content: String(block.text || ""),
 							});
 						} else if (block.type === "tool_use") {
 							events.push({
 								eventType: "tool_use",
-								toolName: String((block as any).name || ""),
-								toolInput: (block as any).input || {},
-								toolId: String((block as any).id || ""),
+								toolName: String(block.name || ""),
+								toolInput: block.input || {},
+								toolId: String(block.id || ""),
 							});
 						}
 					}
@@ -138,16 +150,20 @@ export class ClaudeSdkProvider implements AIProvider {
 			}
 
 			case "user": {
-				const userMsg = message as SDKUserMessage;
-				const content = userMsg.message?.content;
+				const inner = message.message as
+					| { content?: unknown }
+					| undefined;
+				const content = inner?.content as
+					| (ContentBlockLike | string)[]
+					| undefined;
 				if (Array.isArray(content)) {
 					for (const block of content) {
 						if (
 							typeof block === "object" &&
 							block !== null &&
-							(block as any).type === "tool_result"
+							block.type === "tool_result"
 						) {
-							const resultBlock = block as any;
+							const resultBlock = block;
 							events.push({
 								eventType: "tool_result",
 								toolId: String(resultBlock.tool_use_id || ""),
@@ -163,7 +179,7 @@ export class ClaudeSdkProvider implements AIProvider {
 			}
 
 			case "result": {
-				const resultMsg = message as SDKResultMessage;
+				const resultMsg = message;
 				if (
 					resultMsg.subtype === "success" &&
 					"result" in resultMsg &&

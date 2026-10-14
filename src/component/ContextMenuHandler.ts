@@ -1,7 +1,9 @@
-import { HoverPopover, Menu, MenuItem, moment, WorkspaceLeaf } from "obsidian";
+import { HoverParent, HoverPopover, Menu, MenuItem, WorkspaceLeaf } from "obsidian";
+import { callMoment } from "../utils/moment";
 import Defuddle from "defuddle";
 import { AIPageBridge } from "./AIPageBridge";
 import { clipboard } from "electron";
+import type * as Electron from "electron";
 import SurfingPlugin from "../surfingIndex";
 import { SurfingView } from "../surfingView";
 import { t } from "../translations/helper";
@@ -13,31 +15,69 @@ export interface ContextMenuContext {
 	getTitle: () => string;
 	leaf: WorkspaceLeaf;
 	contentEl: HTMLElement;
-	webviewEl: HTMLElement;
+	webviewEl: Electron.WebviewTag;
 	navigateFn: (url: string) => void;
 	copyHighLightFn: () => void;
 }
+
+/** The context-menu params with the page-relative and guest coordinates this handler adds. */
+interface MenuParams extends Partial<Electron.ContextMenuParams> {
+	pageURL: string;
+	x: number;
+	y: number;
+	guestX: number;
+	guestY: number;
+}
+
+/** Back/forward navigation on a leaf's history, which Obsidian does not type. */
+interface NavigableHistory {
+	back(): void;
+	forward(): void;
+}
+
+type NavigableLeaf = WorkspaceLeaf & { history: NavigableHistory };
+
+/** A <webview> tag that exposes its guest window. */
+type WebviewWithWindow = Electron.WebviewTag & { contentWindow: Window };
 
 export class ContextMenuHandler {
 	private ctx: ContextMenuContext;
 	menu: Menu | null = null;
 	hoverPopover: HoverPopover | null = null;
+	private webContents: Electron.WebContents | null = null;
+	private webviewEl: Electron.WebviewTag | null = null;
+	private menuTargets = new WeakSet<HTMLElement>();
 
-	private doc: Document;
 
 	constructor(ctx: ContextMenuContext) {
 		this.ctx = ctx;
 	}
 
-	async register(webContents: any, webviewEl: any): Promise<void> {
-		webContents.executeJavaScript(`
-			window.addEventListener('contextmenu', (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				e.stopImmediatePropagation();
-				window.myPostPort?.postMessage('contextmenu ' + e.clientX + ' ' + e.clientY);
-			 })
-		 `);
+	async register(webContents: Electron.WebContents, webviewEl: Electron.WebviewTag): Promise<void> {
+		this.webContents = webContents;
+		this.webviewEl = webviewEl;
+		// Electron reports right-clicks the page did not handle itself, with
+		// what was under the pointer (link, image, text field, selection).
+		// The <webview> outlives navigations, so listen once per element.
+		if (!this.menuTargets.has(webviewEl)) {
+			this.menuTargets.add(webviewEl);
+			webviewEl.addEventListener("context-menu", (event) => {
+				const p: Partial<Electron.ContextMenuParams> = event.params ?? {};
+				const rect = webviewEl.getBoundingClientRect();
+				this.hoverPopover?.hide();
+				if (!this.webContents) return;
+				const guestX = p.x ?? NaN;
+				const guestY = p.y ?? NaN;
+				this.createMenu(this.webContents, {
+					...p,
+					pageURL: p.pageURL || this.ctx.getUrl(),
+					guestX,
+					guestY,
+					x: guestX + rect.x,
+					y: guestY + rect.y,
+				});
+			});
+		}
 
 		await webContents.executeJavaScript(`
 			window.addEventListener("message", (e) => {
@@ -53,61 +93,17 @@ export class ContextMenuHandler {
 		`);
 
 		const ch = new MessageChannel();
-		ch.port1.onmessage = (e: any) => {
-			if (e.data === "contextmenu" || e.data?.startsWith("contextmenu")) {
-				this.menu?.close();
-				const { x, y } =
-					e.data.split(" ").length > 1
-						? {
-								x: e.data.split(" ")[1],
-								y: e.data.split(" ")[2],
-							}
-						: { x: e.x, y: e.y };
-				const realRect = webviewEl.getClientRects();
-				const rect: {
-					x: number;
-					y: number;
-				} = {
-					x: parseInt(x, 10) + realRect[0].x,
-					y: parseInt(y, 10) + realRect[0].y,
-				};
-
-				const pageUrl = this.ctx.getUrl();
-				let selectionText = "";
-				try {
-					webContents
-						.executeJavaScript(
-							`window.getSelection().toString()`,
-							true,
-						)
-						.then((result: any) => {
-							selectionText = result;
-
-							console.log(rect, pageUrl, selectionText);
-
-							this.createMenu(webContents, {
-								...rect,
-								pageURL: pageUrl,
-								selectionText: selectionText,
-							});
-						});
-				} catch (err) {
-					console.error("Failed to copy: ", err);
-				}
-				return;
-			}
-
-			if (e.data && e.data.startsWith("link ")) {
-				console.log(e.data);
+		ch.port1.onmessage = (e: MessageEvent<unknown>) => {
+			const data = e.data;
+			if (typeof data === "string" && data.startsWith("link ")) {
 				if (this.hoverPopover) this.hoverPopover.hide();
-				const x = e.data.split(" ")[1];
-				const y = e.data.split(" ")[2];
-				const url = e.data.split(" ")[3];
-				console.log(url);
+				const x = data.split(" ")[1];
+				const y = data.split(" ")[2];
+				const url = data.split(" ")[3];
 				if (!url) return;
 				if (!url.startsWith("http")) return;
 				this.hoverPopover = new HoverPopover(
-					<any>this.ctx.contentEl,
+					this.ctx.contentEl as HTMLElement & HoverParent,
 					null,
 					100,
 				);
@@ -117,15 +113,15 @@ export class ContextMenuHandler {
 					x: number;
 					y: number;
 				} = {
-					x: parseInt(x, 10) + realRect[0].x,
-					y: parseInt(y, 10) + realRect[0].y,
+					x: parseInt(x ?? "", 10) + realRect[0].x,
+					y: parseInt(y ?? "", 10) + realRect[0].y,
 				};
 
-				setTimeout(() => {
+				window.setTimeout(() => {
 					this.hoverPopover?.position({
 						x: rect.x,
 						y: rect.y,
-						doc: this.doc,
+						doc: this.ctx.contentEl.doc,
 					});
 				}, 100);
 
@@ -134,7 +130,7 @@ export class ContextMenuHandler {
 					true,
 				);
 
-				const parentEl = this.hoverPopover.hoverEl.createEl("div", {
+				const parentEl = this.hoverPopover.hoverEl.createDiv({
 					cls: "surfing-hover-popover-container",
 				});
 				const webView = new PopoverWebView(
@@ -146,31 +142,33 @@ export class ContextMenuHandler {
 				return;
 			}
 
-			if (e.data !== "darkreader-failed") {
+			if (data !== "darkreader-failed") {
 				this.menu?.close();
 				this.hoverPopover?.hide();
-			} else if (e.data === "darkreader-failed") {
-				webContents
-					.executeJavaScript(
-						`
+			} else {
+				void webContents
+						.executeJavaScript(
+							`
 										window.getComputedStyle( document.body ,null).getPropertyValue('background-color');
 							`,
 						true,
 					)
-					.then((result: any) => {
+					.then((result: unknown) => {
+						if (typeof result !== "string") return;
 						const colorArr = result
 							.slice(result.indexOf("(") + 1, result.indexOf(")"))
-							.split(", ");
+							.split(", ")
+							.map(Number);
 
 						const brightness = Math.sqrt(
-							colorArr[0] ** 2 * 0.241 +
-								colorArr[1] ** 2 * 0.691 +
-								colorArr[2] ** 2 * 0.068,
+							(colorArr[0] ?? NaN) ** 2 * 0.241 +
+								(colorArr[1] ?? NaN) ** 2 * 0.691 +
+								(colorArr[2] ?? NaN) ** 2 * 0.068,
 						);
 
 						// If the background color is dark, set the theme to dark.
 						if (brightness > 120) {
-							webContents.insertCSS(`
+							void webContents.insertCSS(`
 							html {
 								filter: invert(90%) hue-rotate(180deg);
 							}
@@ -190,7 +188,7 @@ export class ContextMenuHandler {
 			}
 		};
 
-		await (webviewEl as any).contentWindow.postMessage(`test`, "*", [
+		(webviewEl as WebviewWithWindow).contentWindow.postMessage(`test`, "*", [
 			ch.port2,
 		]);
 	}
@@ -200,25 +198,25 @@ export class ContextMenuHandler {
 		this.hoverPopover?.hide();
 	}
 
-	private createMenu = (webContents: any, params: any) => {
+	private createMenu = (webContents: Electron.WebContents, params: MenuParams) => {
 		if (this.menu) {
 			this.menu?.close();
 		}
 
 		const plugin = this.ctx.plugin;
-		this.menu = new Menu() as Menu;
+		this.menu = new Menu();
 
 		const navigateBack = () => {
-			// @ts-ignore
-			this.ctx.leaf?.history.back();
+			(this.ctx.leaf as NavigableLeaf | undefined)?.history.back();
 		};
 
 		const navigateForward = () => {
-			// @ts-ignore
-			this.ctx.leaf?.history.forward();
+			(this.ctx.leaf as NavigableLeaf | undefined)?.history.forward();
 		};
 
-		if (!params.selectionText) {
+		const onTarget = this.addTargetItems(webContents, params);
+
+		if (!params.selectionText && !onTarget) {
 			this.menu
 				.addItem((item: MenuItem) => {
 					item.setTitle(t("Refresh Current Page"));
@@ -259,11 +257,12 @@ export class ContextMenuHandler {
 					try {
 						await AIPageBridge.waitForDOMStability(webContents);
 
-						const html: string =
-							await webContents.executeJavaScript(
-								`document.documentElement.outerHTML`,
-								true,
-							);
+						const html: unknown =
+								await webContents.executeJavaScript(
+									`document.documentElement.outerHTML`,
+									true,
+								);
+							if (typeof html !== "string") return;
 						const currentTitle: string = webContents
 							.getTitle()
 							.replace(/[/\\?%*:|"<>]/g, "-");
@@ -322,7 +321,7 @@ export class ContextMenuHandler {
 				item.onClick(async () => {
 					try {
 						// Copy Image to Clipboard
-						webContents.capturePage().then(async (image: any) => {
+						void webContents.capturePage().then((image) => {
 							clipboard.writeImage(image);
 						});
 					} catch (err) {
@@ -331,7 +330,8 @@ export class ContextMenuHandler {
 				});
 			});
 
-		if (params.selectionText) {
+		const selected = params.selectionText;
+		if (selected) {
 			this.menu.addSeparator();
 			this.menu.addItem((item: MenuItem) => {
 				item.setTitle(t("Search Text"));
@@ -339,7 +339,7 @@ export class ContextMenuHandler {
 				item.onClick(() => {
 					try {
 						SurfingView.spawnWebBrowserView(plugin, true, {
-							url: params.selectionText,
+							url: selected,
 						});
 					} catch (err) {
 						console.error("Failed to copy: ", err);
@@ -352,7 +352,7 @@ export class ContextMenuHandler {
 				item.setIcon("copy");
 				item.onClick(() => {
 					try {
-						navigator.clipboard.writeText(params.selectionText);
+						void navigator.clipboard.writeText(selected);
 					} catch (err) {
 						console.error("Failed to copy: ", err);
 					}
@@ -362,8 +362,7 @@ export class ContextMenuHandler {
 				item.setTitle("Save selection as markdown")
 					.setIcon("download")
 					.onClick(async () => {
-						const content = params.selectionText;
-						// @ts-ignore
+						const content = selected;
 						const currentTitle = webContents
 							.getTitle()
 							.replace(/[/\\?%*:|"<>]/g, "-");
@@ -388,15 +387,14 @@ export class ContextMenuHandler {
 				item.setIcon("link");
 				item.onClick(() => {
 					try {
-						// eslint-disable-next-line no-useless-escape
-						let tempText = encodeURIComponent(params.selectionText);
+						let tempText = encodeURIComponent(selected);
 						const chineseRegex =
 							/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/gi;
 						const englishSentence =
-							params.selectionText.split("\n");
+							selected.split("\n");
 
 						if (
-							params.selectionText.match(chineseRegex)?.length >
+							(selected.match(chineseRegex)?.length ?? 0) >
 							50
 						) {
 							if (englishSentence.length > 1) {
@@ -418,13 +416,13 @@ export class ContextMenuHandler {
 							} else {
 								tempText =
 									encodeURIComponent(
-										params.selectionText.substring(0, 8),
+										selected.substring(0, 8),
 									) +
 									"," +
 									encodeURIComponent(
-										params.selectionText.substring(
-											params.selectionText.length - 8,
-											params.selectionText.length,
+										selected.substring(
+											selected.length - 8,
+											selected.length,
 										),
 									);
 							}
@@ -453,24 +451,22 @@ export class ContextMenuHandler {
 						}
 
 						const linkToHighlight =
-							params.pageURL.replace(/\#\:\~\:text\=(.*)/g, "") +
+							params.pageURL.replace(/#:~:text=(.*)/g, "") +
 							"#:~:text=" +
 							tempText;
-						const selectionText = params.selectionText.replace(
+						const selectionText = selected.replace(
 							/\n/g,
 							" ",
 						);
 						let link = "";
 						if (highlightFormat.contains("{TIME")) {
-							// eslint-disable-next-line no-useless-escape
 							const timeString = highlightFormat.match(
-								/\{TIME\:[^\{\}\[\]]*\}/g,
+								/\{TIME:[^{}[\]]*\}/g,
 							)?.[0];
 							if (timeString) {
-								// eslint-disable-next-line no-useless-escape
-								const momentTime = moment().format(
+								const momentTime = callMoment().format(
 									timeString.replace(
-										/{TIME:([^\}]*)}/g,
+										/{TIME:([^}]*)}/g,
 										"$1",
 									),
 								);
@@ -498,7 +494,7 @@ export class ContextMenuHandler {
 				item.setIcon("link");
 				item.onClick(() => {
 					try {
-						webContents
+						void webContents
 							.executeJavaScript(
 								`
 											var time = document.querySelectorAll('.bpx-player-ctrl-time-current')[0].innerHTML;
@@ -521,18 +517,18 @@ export class ContextMenuHandler {
 										`,
 								true,
 							)
-							.then((result: any) => {
+							.then((result: unknown) => {
+								if (typeof result !== "string") return;
 								clipboard.writeText(
 									"[" +
-										result
-											.split("?t=")[1]
+										(result.split("?t=")[1] ?? "")
 											.replace(/&p=[1-9]{1,}/g, "") +
 										"](" +
 										result +
 										")",
 								); // Will be the JSON object from the fetch call
 							});
-						console.log("Page URL copied to clipboard");
+						console.debug("Page URL copied to clipboard");
 					} catch (err) {
 						console.error("Failed to copy: ", err);
 					}
@@ -540,9 +536,81 @@ export class ContextMenuHandler {
 			});
 		}
 
+		plugin.chromeExtensions?.addPageMenuItems(
+			this.menu,
+			params,
+			this.webviewEl,
+		);
+
 		this.menu.showAtPosition({
 			x: params.x,
 			y: params.y,
 		});
 	};
+
+	/** Link, image and text-field items, from Electron's context-menu params. */
+	private addTargetItems(webContents: Electron.WebContents, params: MenuParams): boolean {
+		const menu = this.menu;
+		if (!menu) return false;
+		let added = false;
+		const linkURL = params.linkURL;
+		if (linkURL && /^(https?|file):/i.test(linkURL)) {
+			menu.addItem((item: MenuItem) =>
+				item
+					.setTitle(t("Open Link In New Tab"))
+					.setIcon("external-link")
+					.onClick(() =>
+						SurfingView.spawnWebBrowserView(this.ctx.plugin, true, {
+							url: linkURL,
+						}),
+					),
+			)
+				.addItem((item: MenuItem) =>
+					item
+						.setTitle(t("Open Link In External Browser"))
+						.setIcon("globe")
+						.onClick(() =>
+							window.open(linkURL, "_blank", "external"),
+						),
+				)
+				.addItem((item: MenuItem) =>
+					item
+						.setTitle(t("Copy Link Address"))
+						.setIcon("link")
+						.onClick(() => clipboard.writeText(linkURL)),
+				);
+			added = true;
+		}
+		const srcURL = params.srcURL;
+		if (params.mediaType === "image" && srcURL) {
+			menu.addItem((item: MenuItem) =>
+				item
+					.setTitle(t("Copy Image"))
+					.setIcon("image")
+					.onClick(() =>
+						webContents.copyImageAt(params.guestX, params.guestY),
+					),
+			).addItem((item: MenuItem) =>
+				item
+					.setTitle(t("Copy Image Address"))
+					.setIcon("link")
+					.onClick(() => clipboard.writeText(srcURL)),
+			);
+			added = true;
+		}
+		if (params.isEditable) {
+			const flags: Partial<Electron.EditFlags> = params.editFlags ?? {};
+			const edit = (title: string, icon: string, enabled: boolean, run: () => void) =>
+				menu.addItem((item: MenuItem) =>
+					item.setTitle(title).setIcon(icon).setDisabled(!enabled).onClick(run),
+				);
+			edit(t("Cut"), "scissors", flags.canCut !== false, () => webContents.cut());
+			edit(t("Copy"), "copy", flags.canCopy !== false, () => webContents.copy());
+			edit(t("Paste"), "clipboard-paste", flags.canPaste !== false, () => webContents.paste());
+			edit(t("Select All"), "text-select", flags.canSelectAll !== false, () => webContents.selectAll());
+			added = true;
+		}
+		if (added) menu.addSeparator();
+		return added;
+	}
 }

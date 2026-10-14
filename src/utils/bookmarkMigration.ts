@@ -15,7 +15,7 @@ interface OldBookmark {
 
 interface OldJsonOutput {
 	bookmarks: OldBookmark[];
-	categories: any[];
+	categories: unknown[];
 }
 
 export async function migrateBookmarks(plugin: SurfingPlugin): Promise<void> {
@@ -30,7 +30,7 @@ export async function migrateBookmarks(plugin: SurfingPlugin): Promise<void> {
 
 	try {
 		const raw = await plugin.app.vault.adapter.read(jsonPath);
-		const data: OldJsonOutput = JSON.parse(raw);
+		const data = JSON.parse(raw) as OldJsonOutput;
 
 		if (!data.bookmarks || data.bookmarks.length === 0) {
 			plugin.settings.bookmarkManager.bookmarksMigrated = true;

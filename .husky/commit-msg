@@ -1,0 +1,8 @@
+# Husky's core.hooksPath replaces the global one, so run the global
+# commit-msg hook (if any) from here.
+global=$(git config --global --get core.hooksPath)
+case "$global" in "~/"*) global="$HOME/${global#\~/}" ;; esac
+if [ -n "$global" ] && [ -f "$global/commit-msg" ]; then
+  exec sh "$global/commit-msg" "$@"
+fi
+exit 0

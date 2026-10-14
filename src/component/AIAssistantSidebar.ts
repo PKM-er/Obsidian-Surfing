@@ -7,6 +7,7 @@ import {
 	FuzzySuggestModal,
 	App,
 	TFile,
+	FileSystemAdapter,
 } from "obsidian";
 import SurfingPlugin from "../surfingIndex";
 import { SurfingView } from "../surfingView";
@@ -78,11 +79,11 @@ export class AIAssistantSidebar extends Component {
 	private readonly plugin: SurfingPlugin;
 	private host: AssistantHost | null;
 
-	private rootEl: HTMLElement;
-	private listEl: HTMLElement;
-	private inputEl: HTMLTextAreaElement;
-	private sendButtonEl: HTMLButtonElement;
-	private statusEl: HTMLElement;
+	private rootEl!: HTMLElement;
+	private listEl!: HTMLElement;
+	private inputEl!: HTMLTextAreaElement;
+	private sendButtonEl!: HTMLButtonElement;
+	private statusEl!: HTMLElement;
 	private isRunning = false;
 	private selectedItems: Set<string> = new Set();
 	private historyLoaded = false;
@@ -90,12 +91,12 @@ export class AIAssistantSidebar extends Component {
 	private currentAbortController: AbortController | null = null;
 	private sessionApprovedTools: Set<string> = new Set();
 	// Cursor-like composer fields
-	private providerPillEl: HTMLElement;
-	private approvalPillEl: HTMLElement;
+	private providerPillEl!: HTMLElement;
+	private approvalPillEl!: HTMLElement;
 	private approvalMode: ApprovalMode = "ask";
 	private attachedFiles: TFile[] = [];
 	// Context strip fields
-	private contextStripEl: HTMLElement;
+	private contextStripEl!: HTMLElement;
 	private contextPages: { url: string; title: string }[] = [];
 	private todoUnsubscribe: (() => void) | null = null;
 
@@ -134,7 +135,7 @@ export class AIAssistantSidebar extends Component {
 		this.renderHeader();
 		this.listEl = this.rootEl.createDiv({ cls: "wb-ai-chat-list" });
 		this.renderComposer();
-		this.loadAndReplayHistory();
+		void this.loadAndReplayHistory();
 
 		// Subscribe to todo changes from MCP bridge
 		if (this.plugin.mcpBridge) {
@@ -391,7 +392,7 @@ export class AIAssistantSidebar extends Component {
 			// Collapsed: show count
 			header.createSpan({
 				cls: "wb-ai-context-section-label",
-				text: `${pages.length} ${t("pages")}`,
+				text: `${pages.length} pages`,
 			});
 			const toggle = header.createSpan({
 				cls: "wb-ai-context-section-toggle",
@@ -611,7 +612,7 @@ export class AIAssistantSidebar extends Component {
 			(event: KeyboardEvent) => {
 				if (event.key === "Enter" && !event.shiftKey) {
 					event.preventDefault();
-					this.handleSubmit();
+					void this.handleSubmit();
 				}
 				// Trigger file picker with @ at start or after space
 				if (event.key === "@") {
@@ -632,7 +633,7 @@ export class AIAssistantSidebar extends Component {
 			if (this.isRunning) {
 				this.stopCurrentProcess();
 			} else {
-				this.handleSubmit();
+				void this.handleSubmit();
 			}
 		});
 	}
@@ -698,7 +699,7 @@ export class AIAssistantSidebar extends Component {
 						if (!available) return;
 						this.plugin.settings.aiAssistant.defaultProvider =
 							p.value;
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 						this.updateProviderPill();
 					});
 			});
@@ -855,7 +856,7 @@ export class AIAssistantSidebar extends Component {
 					cls: "wb-ai-event-content wb-ai-event-collapsed",
 				});
 				const textEl = content.createDiv();
-				MarkdownRenderer.render(
+				void MarkdownRenderer.render(
 					this.plugin.app,
 					event.content || "",
 					textEl,
@@ -927,7 +928,7 @@ export class AIAssistantSidebar extends Component {
 						typeof event.toolInput === "string"
 							? event.toolInput
 							: JSON.stringify(event.toolInput, null, 2);
-					MarkdownRenderer.render(
+					void MarkdownRenderer.render(
 						this.plugin.app,
 						"```json\n" + inputStr + "\n```",
 						content,
@@ -961,7 +962,7 @@ export class AIAssistantSidebar extends Component {
 				const content = block.createDiv({
 					cls: "wb-ai-event-content wb-ai-event-collapsed",
 				});
-				MarkdownRenderer.render(
+				void MarkdownRenderer.render(
 					this.plugin.app,
 					"```\n" + (event.content || "") + "\n```",
 					content,
@@ -983,7 +984,7 @@ export class AIAssistantSidebar extends Component {
 					cls: "wb-ai-chat-content",
 				});
 				contentEl.dataset.aiText = "true";
-				MarkdownRenderer.render(
+				void MarkdownRenderer.render(
 					this.plugin.app,
 					event.content || "",
 					contentEl,
@@ -1283,8 +1284,7 @@ export class AIAssistantSidebar extends Component {
 				),
 			);
 			const pageContext = canRead
-				? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					await this.host!.getAIAssistantPageContext(
+				? await this.host!.getAIAssistantPageContext(
 						this.plugin.settings.aiAssistant.includePageText,
 						maxPageTextLength,
 					)
@@ -1410,7 +1410,7 @@ export class AIAssistantSidebar extends Component {
 							collectedEvents.push({
 								eventType: "tool_use",
 								toolName: `page_action:${action.type}`,
-								toolInput: action as Record<string, unknown>,
+								toolInput: action,
 							});
 						}
 						if (actionResults.length > 0) {
@@ -1546,26 +1546,28 @@ export class AIAssistantSidebar extends Component {
 				"/extract [css-selector]",
 			].join("\n");
 		}
+		const host = this.host;
+		if (!host) return "";
 		if (command === "open")
-			return this.host.executeAIAssistantAction({
+			return host.executeAIAssistantAction({
 				type: "navigate",
 				url: payload,
 			});
 		if (command === "newtab")
-			return this.host.executeAIAssistantAction({
+			return host.executeAIAssistantAction({
 				type: "open_new_tab",
 				url: payload,
 			});
 		if (command === "back" || command === "forward" || command === "reload")
-			return this.host.executeAIAssistantAction({ type: command });
+			return host.executeAIAssistantAction({ type: command });
 		if (command === "click")
-			return this.host.executeAIAssistantAction({
+			return host.executeAIAssistantAction({
 				type: "click",
 				selector: payload,
 			});
 		if (command === "type") {
 			const [selector, text] = payload.split("|").map((s) => s.trim());
-			return this.host.executeAIAssistantAction({
+			return host.executeAIAssistantAction({
 				type: "type",
 				selector,
 				text: text ?? "",
@@ -1573,13 +1575,13 @@ export class AIAssistantSidebar extends Component {
 		}
 		if (command === "scroll") {
 			const value = Number.parseInt(payload, 10);
-			return this.host.executeAIAssistantAction({
+			return host.executeAIAssistantAction({
 				type: "scroll",
 				y: Number.isNaN(value) ? 400 : value,
 			});
 		}
 		if (command === "extract")
-			return this.host.executeAIAssistantAction({
+			return host.executeAIAssistantAction({
 				type: "extract",
 				selector: payload,
 			});
@@ -1679,8 +1681,8 @@ export class AIAssistantSidebar extends Component {
 		const abortController = new AbortController();
 		this.currentAbortController = abortController;
 
-		// @ts-ignore - access vault base path for cwd
-		const vaultPath: string = this.plugin.app.vault.adapter.basePath;
+		const adapter = this.plugin.app.vault.adapter;
+		const vaultPath = adapter instanceof FileSystemAdapter ? adapter.getBasePath() : "";
 		const pluginDir = this.plugin.getAbsolutePluginDir();
 		const mcpConfigPath = this.plugin.mcpBridge?.getMCPConfigPath() || "";
 		const mcpServerUrl = this.plugin.mcpBridge?.getMCPServerUrl();
@@ -1814,7 +1816,7 @@ export class AIAssistantSidebar extends Component {
 		// Keep the first text element for the clean reply, remove the rest
 		const firstEl = textEls[0] as HTMLElement;
 		firstEl.empty();
-		MarkdownRenderer.render(this.plugin.app, reply, firstEl, "", this);
+		void MarkdownRenderer.render(this.plugin.app, reply, firstEl, "", this);
 		for (let i = 1; i < textEls.length; i++) {
 			textEls[i].remove();
 		}
@@ -1888,17 +1890,17 @@ export class AIAssistantSidebar extends Component {
 	private getActionLabel(action: AssistantAction): string {
 		switch (action.type) {
 			case "click":
-				return `${t("Click")}: ${action.selector}`;
+				return `${t("Click")}: ${String(action.selector)}`;
 			case "type":
-				return `${t("Type")}: "${action.text}" → ${action.selector}`;
+				return `${t("Type")}: "${String(action.text)}" → ${String(action.selector)}`;
 			case "navigate":
-				return `${t("Navigate")}: ${action.url}`;
+				return `${t("Navigate")}: ${String(action.url)}`;
 			case "open_new_tab":
-				return `${t("Open New Tab")}: ${action.url}`;
+				return `${t("Open New Tab")}: ${String(action.url)}`;
 			case "scroll":
-				return `${t("Scroll")}: ${action.y}px`;
+				return `${t("Scroll")}: ${String(action.y)}px`;
 			case "extract":
-				return `${t("Extract")}: ${action.selector || "page"}`;
+				return `${t("Extract")}: ${typeof action.selector === "string" && action.selector ? action.selector : "page"}`;
 			case "back":
 				return t("Go Back");
 			case "forward":
@@ -2109,7 +2111,7 @@ export class AIAssistantSidebar extends Component {
 		return { ...a, type: type.toLowerCase() };
 	}
 
-	private tryParseObject(text: string): unknown | null {
+	private tryParseObject(text: string): unknown {
 		if (!text) return null;
 		try {
 			return JSON.parse(text);
@@ -2118,13 +2120,13 @@ export class AIAssistantSidebar extends Component {
 		}
 	}
 
-	private tryParseObjectFromCodeBlock(text: string): unknown | null {
+	private tryParseObjectFromCodeBlock(text: string): unknown {
 		const m = text.match(/```json\s*([\s\S]*?)```/i);
 		return m?.[1] ? this.tryParseObject(m[1].trim()) : null;
 	}
 
 	/** Try to extract a JSON object containing "actions" from within a larger text */
-	private tryExtractJsonObject(text: string): unknown | null {
+	private tryExtractJsonObject(text: string): unknown {
 		if (!text || !text.includes('"actions"')) return null;
 		// Find the first '{' that could start the JSON object
 		const start = text.indexOf("{");

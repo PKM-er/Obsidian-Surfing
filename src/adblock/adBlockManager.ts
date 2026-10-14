@@ -1,5 +1,5 @@
-import { Notice } from "obsidian";
-// @ts-ignore
+import type * as Electron from "electron";
+import { App, Notice } from "obsidian";
 import { remote } from "electron";
 import SurfingPlugin from "../surfingIndex";
 import { t } from "../translations/helper";
@@ -14,10 +14,8 @@ export class AdBlockManager {
 	}
 
 	async initialize(): Promise<void> {
-		// @ts-ignore
 		this.session = remote.session.fromPartition(
-			// @ts-ignore
-			`persist:surfing-vault-${this.plugin.app.appId}`
+			`persist:surfing-vault-${(this.plugin.app as App & { appId: string }).appId}`
 		);
 		await this.loadAllFilterLists();
 		this.registerRequestInterceptor();
@@ -36,9 +34,6 @@ export class AdBlockManager {
 				new Notice(t("Filter list load failed: ") + list.name);
 			}
 		}
-		console.log(
-			`Surfing AdBlock: loaded ${this.blockedDomains.size} blocked domains`
-		);
 	}
 
 	private async fetchListContent(url: string): Promise<string> {
@@ -113,7 +108,7 @@ export class AdBlockManager {
 						callback({ cancel: true });
 						return;
 					}
-				} catch (e) {
+				} catch {
 					// Invalid URL, let it through
 				}
 
@@ -140,7 +135,6 @@ export class AdBlockManager {
 
 	destroy(): void {
 		if (this.session) {
-			// @ts-ignore - Remove the interceptor by passing null
 			this.session.webRequest.onBeforeRequest(null);
 		}
 	}

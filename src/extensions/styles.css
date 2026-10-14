@@ -1,0 +1,314 @@
+/* Chrome Extensions Bridge. Uses Obsidian theme variables throughout so it
+ * follows light/dark themes and community themes. */
+
+/* ---- Header actions (registered with view.addAction) ---------------------- */
+.view-action.chrome-bridge-action .chrome-bridge-ext-icon,
+.view-action.chrome-bridge-action .chrome-bridge-ext-monogram {
+  width: var(--icon-size, 18px);
+  height: var(--icon-size, 18px);
+}
+.chrome-bridge-ext-icon {
+  display: block;
+  object-fit: contain;
+  border-radius: 3px;
+}
+.chrome-bridge-ext-monogram {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+.view-action.chrome-bridge-store-action {
+  width: auto;
+  gap: 4px;
+  padding-inline: 8px;
+  color: var(--text-on-accent);
+  background-color: var(--interactive-accent);
+}
+.view-action.chrome-bridge-store-action:hover { background-color: var(--interactive-accent-hover); color: var(--text-on-accent); }
+.view-action.chrome-bridge-store-action .chrome-bridge-store-label { font-size: var(--font-ui-smaller); white-space: nowrap; }
+.view-action.chrome-bridge-store-action.is-busy { opacity: .6; pointer-events: none; }
+
+/* ---- Floating surfaces (popup, extensions panel) -------------------------- */
+.chrome-bridge-surface {
+  position: fixed;
+  z-index: var(--layer-popover, 30);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l, 10px);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  box-shadow: var(--shadow-l);
+}
+
+.chrome-bridge-popover-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 4px 0 10px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+.chrome-bridge-popover-icon { display: inline-flex; flex-shrink: 0; }
+.chrome-bridge-popover-icon .chrome-bridge-ext-icon,
+.chrome-bridge-popover-icon .chrome-bridge-ext-monogram { width: 16px; height: 16px; }
+.chrome-bridge-popover-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+}
+.chrome-bridge-popover-button { flex-shrink: 0; }
+.chrome-bridge-popover-status {
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+.chrome-bridge-popover-webview {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  /* Extension pages assume a white canvas unless they style themselves. */
+  background: white;
+}
+
+.chrome-bridge-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 0 6px 0 14px;
+}
+.chrome-bridge-panel-title { font-weight: var(--font-semibold, 600); }
+.chrome-bridge-panel-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 6px;
+}
+.chrome-bridge-panel-empty {
+  padding: 12px 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+.chrome-bridge-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  border-radius: var(--radius-s, 4px);
+}
+.chrome-bridge-panel-row:hover { background: var(--background-modifier-hover); }
+/* Obsidian styles every non-icon button; these rows are list items. */
+.chrome-bridge-surface button.chrome-bridge-panel-open {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  text-align: start;
+  cursor: var(--cursor);
+}
+.chrome-bridge-surface button.chrome-bridge-panel-open:hover { background: transparent; box-shadow: none; }
+.chrome-bridge-surface button.chrome-bridge-panel-open:disabled { cursor: default; opacity: 1; }
+.chrome-bridge-panel-icon { display: inline-flex; flex-shrink: 0; }
+.chrome-bridge-panel-icon .chrome-bridge-ext-icon,
+.chrome-bridge-panel-icon .chrome-bridge-ext-monogram { width: 16px; height: 16px; }
+.chrome-bridge-panel-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chrome-bridge-panel-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: var(--radius-s, 4px);
+  background: var(--background-modifier-hover);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+.chrome-bridge-panel-row.is-disabled .chrome-bridge-panel-name,
+.chrome-bridge-panel-row.is-disabled .chrome-bridge-panel-icon { opacity: .5; }
+.chrome-bridge-panel-pin.is-active { color: var(--interactive-accent); background: transparent; }
+.chrome-bridge-panel-foot {
+  flex-shrink: 0;
+  margin-top: 4px;
+  padding: 6px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.chrome-bridge-surface button.chrome-bridge-panel-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: var(--cursor);
+}
+.chrome-bridge-surface button.chrome-bridge-panel-link:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.chrome-bridge-panel-link-icon { display: inline-flex; }
+
+/* ---- Hidden extension channels ------------------------------------------- */
+.chrome-bridge-channels {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.chrome-bridge-channels webview { width: 1px; height: 1px; }
+
+/* ---- Extension page tab -------------------------------------------------- */
+.chrome-bridge-extension-page { padding: 0 !important; overflow: hidden; display: flex; flex-direction: column; }
+.chrome-bridge-page-webview { flex: 1; min-height: 0; width: 100%; border: 0; background: white; }
+.chrome-bridge-page-status { padding: 24px; color: var(--text-muted); }
+
+/* ---- Manager dialog and settings ----------------------------------------- */
+.modal.chrome-bridge-manager { width: min(680px, 92vw); }
+.chrome-bridge-ext-list { margin-bottom: 8px; }
+.chrome-bridge-ext-row .setting-item-name { display: flex; align-items: center; gap: 10px; }
+.chrome-bridge-ext-row-icon { display: inline-flex; flex-shrink: 0; }
+.chrome-bridge-ext-row-icon .chrome-bridge-ext-icon,
+.chrome-bridge-ext-row-icon .chrome-bridge-ext-monogram { width: 24px; height: 24px; }
+.chrome-bridge-ext-row .setting-item-description { padding-left: 34px; }
+.chrome-bridge-ext-row.is-disabled .setting-item-info { opacity: .55; }
+.chrome-bridge-empty { padding: 16px 0; color: var(--text-muted); }
+.chrome-bridge-install-row .setting-item-control { flex-wrap: wrap; }
+.chrome-bridge-manager-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: var(--font-ui-small);
+}
+.chrome-bridge-muted { color: var(--text-muted); font-size: var(--font-ui-small); }
+.chrome-bridge-warning { color: var(--text-error); font-size: var(--font-ui-small); line-height: 1.6; }
+.chrome-bridge-permissions { margin: 8px 0 12px; padding-inline-start: 20px; line-height: 1.7; }
+.chrome-bridge-input-row .setting-item-control { width: 100%; }
+.chrome-bridge-input { width: 100%; }
+.chrome-bridge-diagnostics { margin-top: 16px; }
+.chrome-bridge-diagnostics summary { cursor: var(--cursor); color: var(--text-muted); padding: 6px 0; }
+.chrome-bridge-diagnostic-output {
+  max-height: 320px;
+  overflow: auto;
+  font-size: var(--font-smallest);
+  user-select: text;
+}
+.chrome-bridge-diagnostic-output:empty { display: none; }
+.chrome-bridge-notice-button { margin-top: 8px; display: block; }
+
+/* ---- Fallback store tab --------------------------------------------------- */
+.chrome-bridge-store { display: flex; flex-direction: column; height: 100%; padding: 0 !important; overflow: hidden; }
+.chrome-bridge-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.chrome-bridge-toolbar input { flex: 1; min-width: 120px; font-size: var(--font-ui-small); }
+.chrome-bridge-stage { flex: 1; min-height: 0; overflow: hidden; }
+.chrome-bridge-store-webview { width: 100%; height: 100%; display: flex; background: white; }
+
+/* ---- chrome.action badges and state -------------------------------------- */
+.view-action.chrome-bridge-pinned,
+.chrome-bridge-panel-icon {
+  position: relative;
+}
+.chrome-bridge-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -2px;
+  min-width: 12px;
+  max-width: 28px;
+  height: 12px;
+  padding: 0 2px;
+  overflow: hidden;
+  border-radius: 3px;
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 12px;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px var(--background-primary);
+}
+.chrome-bridge-panel-icon .chrome-bridge-badge {
+  right: -5px;
+  bottom: -4px;
+}
+.is-action-disabled .chrome-bridge-ext-icon,
+.is-action-disabled .chrome-bridge-ext-monogram {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+/* ---- chrome.notifications as notices -------------------------------------- */
+.chrome-bridge-notification {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  max-width: 340px;
+  cursor: pointer;
+}
+.chrome-bridge-notification-icon {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  object-fit: contain;
+  border-radius: 4px;
+}
+.chrome-bridge-notification-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.chrome-bridge-notification-title {
+  font-weight: 600;
+}
+.chrome-bridge-notification-message,
+.chrome-bridge-notification-item {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chrome-bridge-notification-context {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+.chrome-bridge-notification progress {
+  width: 100%;
+}
+.chrome-bridge-notification-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}

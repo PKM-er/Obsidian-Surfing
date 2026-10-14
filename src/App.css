@@ -1462,6 +1462,10 @@ div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
 }
 
 .surfing-drag-ghost {
+	position: fixed;
+	pointer-events: none;
+	z-index: 9999;
+	opacity: 0.8;
 	background-color: var(--background-primary);
 	border-radius: var(--radius-s);
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -1476,6 +1480,10 @@ div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
 	background-color: var(--interactive-accent);
 	pointer-events: none;
 	display: none;
+}
+
+.surfing-drop-indicator.is-visible {
+	display: block;
 }
 
 .surfing-drop-target-group {
@@ -1681,4 +1689,23 @@ div[data-type^="surfing-bookmark-manager"] .ant-table-thead {
 .wb-reader-mode-content img {
 	max-width: 100%;
 	height: auto;
+}
+
+/* Settings tab: title bar, search box, tab headings and the "no results" message. */
+.wb-setting-title > .setting-item-heading {
+	padding: 0;
+	border: none;
+}
+
+.wb-setting-search.setting-item {
+	border: none;
+}
+
+.wb-setting-heading .setting-item-name {
+	color: var(--color-accent);
+}
+
+.wb-search-zero-state {
+	justify-content: center;
+	text-align: center;
 }

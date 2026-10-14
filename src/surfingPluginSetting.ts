@@ -17,6 +17,14 @@ import {
 } from "./ai/providerFactory";
 import { TreeNode } from "./component/TabTreeView/types";
 import { FilterListEntry } from "./types/adblock";
+import {
+	BridgeSettings,
+	DEFAULT_SETTINGS as DEFAULT_BRIDGE_SETTINGS,
+} from "./extensions/types";
+import { renderBridgeSettings } from "./extensions/ui/settings-tab";
+import { SEARCH_ENGINES, SearchEngine } from "./searchEngines";
+
+export { SEARCH_ENGINES, type SearchEngine };
 
 type settingSearchInfo = {
 	containerEl: HTMLElement;
@@ -91,15 +99,13 @@ export interface SurfingSettings {
 		enabled: boolean;
 		filterLists: FilterListEntry[];
 	};
+	/** Chrome extensions (src/extensions). */
+	chromeExtensions: BridgeSettings;
 	elementHiding: {
 		enabled: boolean;
 	};
 }
 
-export interface SearchEngine {
-	name: string;
-	url: string;
-}
 
 export const DEFAULT_SETTINGS: SurfingSettings = {
 	defaultSearchEngine: "duckduckgo",
@@ -162,47 +168,20 @@ export const DEFAULT_SETTINGS: SurfingSettings = {
 	elementHiding: {
 		enabled: true,
 	},
+	chromeExtensions: DEFAULT_BRIDGE_SETTINGS,
 };
-// Add search engines here for the future used.
-export const SEARCH_ENGINES: SearchEngine[] = [
-	{
-		name: "Google",
-		url: "https://www.google.com/search?q=",
-	},
-	{
-		name: "Bing",
-		url: "https://www.bing.com/search?q=",
-	},
-	{
-		name: "Duckduckgo",
-		url: "https://duckduckgo.com/?q=",
-	},
-	{
-		name: "Yahoo",
-		url: "https://search.yahoo.com/search?p=",
-	},
-	{
-		name: "Baidu",
-		url: "https://www.baidu.com/s?wd=",
-	},
-	{
-		name: "Yandex",
-		url: "https://yandex.com/search/?text=",
-	},
-	{
-		name: "Wikipedia",
-		url: "https://en.wikipedia.org/w/index.php?search=",
-	},
-];
 
-const tabNameToTabIconId: Record<string, string> = {
+const tabNameToTabIconId = {
 	General: "chrome",
 	Search: "search",
 	Theme: "brush",
 	Bookmark: "bookmark",
 	"Ad Block": "shield",
+	Extensions: "puzzle",
 	AI: "bot",
-};
+} as const;
+
+type TabName = keyof typeof tabNameToTabIconId;
 
 export class DropdownRecord {
 	public value: string;
@@ -222,10 +201,10 @@ export class SurfingSettingTab extends PluginSettingTab {
 		TabContentInfo
 	>();
 	private selectedTab = "General";
-	private search: SearchComponent;
+	private search!: SearchComponent;
 	private searchSettingInfo: Map<string, settingSearchInfo[]> = new Map();
-	private searchZeroState: HTMLDivElement;
-	private navigateEl: HTMLElement;
+	private searchZeroState!: HTMLDivElement;
+	private navigateEl!: HTMLElement;
 
 	constructor(app: App, plugin: SurfingPlugin) {
 		super(app, plugin);
@@ -233,10 +212,10 @@ export class SurfingSettingTab extends PluginSettingTab {
 	}
 
 	public applySettingsUpdate() {
-		clearTimeout(this.applyDebounceTimer);
+		window.clearTimeout(this.applyDebounceTimer);
 		const plugin = this.plugin;
 		this.applyDebounceTimer = window.setTimeout(() => {
-			plugin.saveSettings();
+			void plugin.saveSettings();
 		}, 100);
 	}
 
@@ -250,7 +229,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 	private generateSettingsTitle() {
 		const linterHeader = this.containerEl.createDiv("wb-setting-title");
-		linterHeader.createEl("h2", { text: "Web Browser" });
+		new Setting(linterHeader).setName("Web browser").setHeading();
 		this.generateSearchBar(linterHeader);
 	}
 
@@ -297,6 +276,14 @@ export class SurfingSettingTab extends PluginSettingTab {
 				this.generateAdBlockSettings(tabName, el),
 		);
 		Platform.isDesktop &&
+			this.plugin.chromeExtensions &&
+			this.createTabAndContent(
+				"Extensions",
+				this.navigateEl,
+				settingsEl,
+				(el: HTMLElement) => this.generateExtensionsSettings(el),
+			);
+		Platform.isDesktop &&
 			this.createTabAndContent(
 				"AI",
 				this.navigateEl,
@@ -311,7 +298,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 	generateSearchBar(containerEl: HTMLElement) {
 		// based on https://github.com/valentine195/obsidian-settings-search/blob/master/src/main.ts#L294-L308
 		const searchSetting = new Setting(containerEl);
-		searchSetting.settingEl.style.border = "none";
+		searchSetting.settingEl.addClass("wb-setting-search");
 		searchSetting.addSearch((s: SearchComponent) => {
 			this.search = s;
 		});
@@ -322,8 +309,8 @@ export class SurfingSettingTab extends PluginSettingTab {
 			for (const tabInfo of this.tabContent) {
 				const tab = tabInfo[1];
 				tab.navButton.removeClass("wb-navigation-item-selected");
-				(tab.content as HTMLElement).show();
-				(tab.heading as HTMLElement).show();
+				tab.content.show();
+				tab.heading.show();
 
 				const searchVal = this.search.getValue();
 				if (this.selectedTab == "" && searchVal.trim() != "") {
@@ -354,10 +341,10 @@ export class SurfingSettingTab extends PluginSettingTab {
 	}
 
 	createTabAndContent(
-		tabName: string,
+		tabName: TabName,
 		navigateEl: HTMLElement,
 		containerEl: HTMLElement,
-		generateTabContent?: (el: HTMLElement, tabName: string) => void,
+		generateTabContent?: (el: HTMLElement, tabName: TabName) => void,
 	) {
 		const displayTabContent = this.selectedTab === tabName;
 		const tabEl = navigateEl.createDiv("wb-navigation-item");
@@ -366,10 +353,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 		tabEl.addClass(tabClass);
 
 		setIcon(
-			tabEl.createEl("div", { cls: "wb-navigation-item-icon" }),
+			tabEl.createDiv({ cls: "wb-navigation-item-icon" }),
 			tabNameToTabIconId[tabName],
 		);
-		// @ts-ignore
 		tabEl.createSpan().setText(t(tabName));
 
 		tabEl.onclick = () => {
@@ -390,15 +376,15 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 				for (const settingTab of this.searchSettingInfo) {
 					for (const setting of settingTab[1]) {
-						(setting.containerEl as HTMLElement).show();
+						setting.containerEl.show();
 					}
 				}
 
 				for (const tabInfo of this.tabContent) {
 					const tab = tabInfo[1];
-					(tab.heading as HTMLElement).hide();
+					tab.heading.hide();
 					if (tabName !== tabInfo[0]) {
-						(tab.content as HTMLElement).hide();
+						tab.content.hide();
 					}
 				}
 			}
@@ -408,11 +394,11 @@ export class SurfingSettingTab extends PluginSettingTab {
 
 		const tabContent = containerEl.createDiv("wb-tab-settings");
 
-		const tabHeader = tabContent.createEl("h2", {
-			cls: "wb-setting-heading",
-			text: tabName + " Settings",
-		});
-		(tabHeader as HTMLElement).hide();
+		const tabHeader = new Setting(tabContent)
+			.setName(tabName)
+			.setHeading().settingEl;
+		tabHeader.addClass("wb-setting-heading");
+		tabHeader.hide();
 
 		tabContent.id = tabName.toLowerCase().replace(" ", "-");
 		if (!displayTabContent) {
@@ -438,7 +424,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			settingContainer: HTMLElement,
 			tabName: string,
 		) => {
-			(settingContainer as HTMLElement).show();
+			settingContainer.show();
 
 			if (!tabsWithSettingsInSearchResults.has(tabName)) {
 				tabsWithSettingsInSearchResults.add(tabName);
@@ -495,10 +481,10 @@ export class SurfingSettingTab extends PluginSettingTab {
 							}
 						}
 
-						(settingInfo.containerEl as HTMLElement).hide();
+						settingInfo.containerEl.hide();
 					}
 				} else {
-					(settingInfo.containerEl as HTMLElement).hide();
+					settingInfo.containerEl.hide();
 				}
 			}
 		}
@@ -506,9 +492,9 @@ export class SurfingSettingTab extends PluginSettingTab {
 		// display any headings that have setting results and hide any that do not
 		for (const tabInfo of this.tabContent) {
 			if (tabsWithSettingsInSearchResults.has(tabInfo[0])) {
-				(tabInfo[1].heading as HTMLElement).show();
+				tabInfo[1].heading.show();
 			} else {
-				(tabInfo[1].heading as HTMLElement).hide();
+				tabInfo[1].heading.hide();
 			}
 		}
 
@@ -558,6 +544,22 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addMyIcons(tabName, wbContainerEl);
 	}
 
+	/** Show this page the next time the settings open. */
+	selectTab(tabName: string) {
+		this.selectedTab = tabName;
+	}
+
+	private generateExtensionsSettings(wbContainerEl: HTMLElement): void {
+		const bridge = this.plugin.chromeExtensions;
+		if (!bridge) return;
+		const content = wbContainerEl.createDiv();
+		const render = () => {
+			content.empty();
+			renderBridgeSettings(content, bridge, render);
+		};
+		render();
+	}
+
 	private generateBookmarkManagerSettings(
 		tabName: string,
 		wbContainerEl: HTMLElement,
@@ -565,7 +567,6 @@ export class SurfingSettingTab extends PluginSettingTab {
 		this.addBookmarkManagerSettings(tabName, wbContainerEl);
 	}
 
-	// @ts-ignore
 	private addSettingToMasterSettingsList(
 		tabName: string,
 		containerEl: HTMLElement,
@@ -592,9 +593,10 @@ export class SurfingSettingTab extends PluginSettingTab {
 	private createSearchZeroState(containerEl: HTMLElement) {
 		this.searchZeroState = containerEl.createDiv();
 		(this.searchZeroState as HTMLElement).hide();
-		this.searchZeroState.createEl(Platform.isMobile ? "h3" : "h2", {
-			text: "No settings match search",
-		}).style.textAlign = "center";
+		new Setting(this.searchZeroState)
+			.setName("No matches found")
+			.setHeading()
+			.settingEl.addClass("wb-search-zero-state");
 	}
 
 	private addRefreshButton(tabName: string, wbContainerEl: HTMLElement) {
@@ -631,7 +633,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.aiAssistant.enabled = value;
 						this.applySettingsUpdate();
-						setTimeout(() => {
+						window.setTimeout(() => {
 							this.display();
 						}, 200);
 					});
@@ -730,12 +732,14 @@ export class SurfingSettingTab extends PluginSettingTab {
 				text: t("Refresh Status"),
 				href: "#",
 			});
-			refreshLink.addEventListener("click", async (e) => {
+			refreshLink.addEventListener("click", (e) => {
+				void (async () => {
 				e.preventDefault();
 				await checkProviderAvailability(
 					this.plugin.settings.aiAssistant,
 				);
 				this.display();
+				})();
 			});
 		});
 		setting = new Setting(wbContainerEl)
@@ -983,7 +987,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.showSearchBarInPage = value;
 						this.applySettingsUpdate();
 
-						setTimeout(() => {
+						window.setTimeout(() => {
 							this.display();
 						}, 200);
 					});
@@ -1083,7 +1087,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 						this.plugin.settings.focusSearchBarViaKeyboard = value;
 						this.applySettingsUpdate();
 
-						setTimeout(() => {
+						window.setTimeout(() => {
 							this.display();
 						}, 200);
 					});
@@ -1192,17 +1196,14 @@ export class SurfingSettingTab extends PluginSettingTab {
 							}),
 					);
 
-				const mainSettingsEl = topLevelSetting.settingEl.createEl(
-					"div",
+				const mainSettingsEl = topLevelSetting.settingEl.createDiv(
 					"search-engine-main-settings",
 				);
 
-				const mainSettingsNameEl = mainSettingsEl.createEl(
-					"div",
+				const mainSettingsNameEl = mainSettingsEl.createDiv(
 					"search-engine-main-settings-name",
 				);
-				const mainSettingsUrlEl = mainSettingsEl.createEl(
-					"div",
+				const mainSettingsUrlEl = mainSettingsEl.createDiv(
 					"search-engine-main-settings-url",
 				);
 
@@ -1532,7 +1533,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 		});
 
 		bookmarkLetsBtn.createEl("a", {
-			text: `Obsidian BookmarkLets Code`,
+			text: "Obsidian bookmarklets code",
 			cls: "cm-url",
 			href: "javascript:(function(){var%20i%20%3Ddocument.location.href%3B%20document.location.href%3D%22obsidian%3A%2F%2Fweb-open%3Furl%3D%22%20%2B%20encodeURIComponent%28i%29%3B})();",
 		});
@@ -1543,7 +1544,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			);
 			new Notice(t("Copy BookmarkLets Success"));
 		});
-		bookmarkLetsContainerEl.createEl("span", {
+		bookmarkLetsContainerEl.createSpan({
 			cls: "wb-btn-tip",
 			text: t("   <- Drag or click on me"),
 		});
@@ -1565,7 +1566,7 @@ export class SurfingSettingTab extends PluginSettingTab {
 			"surfing",
 		);
 
-		bookmarkLetsContainerEl.createEl("div", {
+		bookmarkLetsContainerEl.createDiv({
 			cls: "wb-about-text",
 			text: "Surfing",
 		});

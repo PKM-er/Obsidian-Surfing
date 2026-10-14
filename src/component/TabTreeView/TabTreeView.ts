@@ -9,9 +9,9 @@ import { random, SaveWorkspaceModal } from "./workspace";
 export const WEB_BROWSER_TAB_TREE_ID = "surfing-tab-tree";
 
 export class TabTreeView extends ItemView {
-	private store: TreeStore;
-	private dragReorder: DragReorder;
-	private containerEl_tree: HTMLElement;
+	private store!: TreeStore;
+	private dragReorder!: DragReorder;
+	private containerEl_tree!: HTMLElement;
 	private collapsedGroups: Set<string> = new Set();
 	private selectedNodeId: string | null = null;
 
@@ -46,7 +46,7 @@ export class TabTreeView extends ItemView {
 		// Initialize store from saved settings
 		const saved = this.plugin.settings.treeData || [];
 		// Map saved data to TreeNode format (backwards compatible with NodeModel)
-		const initial: TreeNode[] = saved.map((n: any) => ({
+		const initial: TreeNode[] = saved.map((n) => ({
 			id: String(n.id),
 			parent: n.parent,
 			droppable: n.droppable,
@@ -83,7 +83,6 @@ export class TabTreeView extends ItemView {
 		// Register workspace events
 		this.registerEvent(
 			this.app.workspace.on(
-				// @ts-ignore - custom event
 				"surfing:page-change",
 				(url: string, view: SurfingView) => {
 					this.updateTabData(view, url);
@@ -211,7 +210,7 @@ export class TabTreeView extends ItemView {
 	}
 
 	private persistTree(): void {
-		this.plugin.settings.treeData = this.store.toJSON() as any;
+		this.plugin.settings.treeData = this.store.toJSON();
 		this.plugin.settingsTab.applySettingsUpdate();
 	}
 

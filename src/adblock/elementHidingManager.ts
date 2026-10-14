@@ -24,7 +24,7 @@ export class ElementHidingManager {
 			if (exists) {
 				const data =
 					await this.plugin.app.vault.adapter.read(this.savePath);
-				this.rules = JSON.parse(data);
+				this.rules = JSON.parse(data) as ElementHidingRules;
 			}
 		} catch {
 			this.rules = {};
